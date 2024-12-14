@@ -396,7 +396,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
 
     # Create Analysis Summary table
     analysis_summary = go.Table(
-        domain=dict(x=[0, 0.45], y=[0, 0.35]),  # Position in bottom left
+        domain=dict(x=[0, 0.45], y=[0, 0.39]),  # Position in bottom left
         header=dict(
             values=['<b>Metric</b>', '<b>Value</b>'],
             fill_color='lightgrey',
