@@ -568,7 +568,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
             # Add table titles
             dict(
                 x=0.02,
-                y=0.35,
+                y=0.25,
                 xref='paper',
                 yref='paper',
                 text='<b>Analysis Summary</b>',
@@ -578,7 +578,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
             ),
             dict(
                 x=0.75,
-                y=0.35,
+                y=0.25,
                 xref='paper',
                 yref='paper',
                 text='<b>Trading Signal Analysis</b>',
