@@ -521,7 +521,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
                 align='left'
             ),
             dict(
-                x=0.75,
+                x=0.80,
                 y=0.98,
                 xref='paper',
                 yref='paper',
@@ -551,7 +551,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
                 align='left'
             ),
             dict(
-                x=0.90,
+                x=0.95,
                 y=0.98,
                 xref='paper',
                 yref='paper',
