@@ -450,7 +450,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
                 buy_signal = None
 
         trading_table = go.Table(
-            domain=dict(x=[0.55, 1], y=[0, 0.35]),  # Position in bottom right
+            domain=dict(x=[0.55, 1], y=[0, 0.39]),  # Position in bottom right
             header=dict(
                 values=['<b>Entry Date</b>', '<b>Entry Price</b>', '<b>Exit Date</b>', 
                        '<b>Exit Price</b>', '<b>Return</b>', '<b>Status</b>'],
@@ -473,7 +473,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
         )
     else:
         trading_table = go.Table(
-            domain=dict(x=[0.55, 1], y=[0, 0.35]),
+            domain=dict(x=[0.55, 1], y=[0, 0.39]),
             header=dict(
                 values=['<b>Notice</b>'],
                 fill_color='lightgrey',
