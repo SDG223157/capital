@@ -1,66 +1,76 @@
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('analysis-form');
+    const tickerInput = document.getElementById('ticker');
+    const suggestionsDiv = document.createElement('div');
+    suggestionsDiv.className = 'suggestions';
+    tickerInput.parentNode.appendChild(suggestionsDiv);
+    
+    let debounceTimeout;
+    
+    tickerInput.addEventListener('input', function() {
+        clearTimeout(debounceTimeout);
+        const query = this.value.trim();
+        
+        if (query.length < 1) {
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+        
+        debounceTimeout = setTimeout(() => {
+            fetch(`/search_ticker?query=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    suggestionsDiv.innerHTML = '';
+                    
+                    if (data.length > 0) {
+                        data.forEach(item => {
+                            const div = document.createElement('div');
+                            div.className = 'suggestion-item';
+                            div.innerHTML = `
+                                <span class="symbol">${item.symbol}</span>
+                                <span class="name">${item.name}</span>
+                            `;
+                            div.addEventListener('click', function() {
+                                tickerInput.value = `${item.symbol} ${item.name}`;
+                                suggestionsDiv.style.display = 'none';
+                            });
+                            suggestionsDiv.appendChild(div);
+                        });
+                        suggestionsDiv.style.display = 'block';
+                    } else {
+                        suggestionsDiv.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Search error:', error);
+                    suggestionsDiv.style.display = 'none';
+                });
+        }, 300);  // 300ms debounce delay
+    });
+    
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!tickerInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+            suggestionsDiv.style.display = 'none';
+        }
+    });
+    
     const loadingDiv = document.createElement('div');
     loadingDiv.className = 'loading';
     loadingDiv.innerHTML = 'Analyzing data, please wait...';
     form.appendChild(loadingDiv);
     
     form.addEventListener('submit', function(e) {
-        // Clear any existing error messages
-        const existingErrors = document.querySelectorAll('.error-message');
-        existingErrors.forEach(error => error.remove());
-        
-        // Validate ticker
-        const ticker = document.getElementById('ticker').value.trim();
+        const ticker = tickerInput.value.trim().split(' ')[0];
         if (!ticker) {
             e.preventDefault();
-            showError('ticker', 'Please enter a stock ticker symbol');
+            alert('Please enter a stock ticker symbol');
             return;
         }
         
-        // Validate date if provided
-        const endDate = document.getElementById('end_date').value;
-        if (endDate) {
-            const selectedDate = new Date(endDate);
-            const today = new Date();
-            if (selectedDate > today) {
-                e.preventDefault();
-                showError('end_date', 'End date cannot be in the future');
-                return;
-            }
-        }
-        
-        // Validate lookback days
-        const lookbackDays = parseInt(document.getElementById('lookback_days').value);
-        if (isNaN(lookbackDays) || lookbackDays < 30 || lookbackDays > 1825) {
-            e.preventDefault();
-            showError('lookback_days', 'Lookback days must be between 30 and 1825');
-            return;
-        }
-        
-        // Validate crossover days
-        const crossoverDays = parseInt(document.getElementById('crossover_days').value);
-        if (isNaN(crossoverDays) || crossoverDays < 30 || crossoverDays > 365) {
-            e.preventDefault();
-            showError('crossover_days', 'Crossover days must be between 30 and 365');
-            return;
-        }
-        
-        // Show loading message
         loadingDiv.style.display = 'block';
-        
-        // Hide loading after submission to new window
         setTimeout(() => {
             loadingDiv.style.display = 'none';
         }, 1000);
     });
-    
-    function showError(fieldId, message) {
-        const field = document.getElementById(fieldId);
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'error-message';
-        errorDiv.textContent = message;
-        field.parentNode.appendChild(errorDiv);
-        field.focus();
-    }
 });
