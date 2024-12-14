@@ -509,7 +509,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
         annotations=[
             dict(
                 x=0.02,
-                y=0.98,
+                y=0.99,
                 xref='paper',
                 yref='paper',
                 text=f'<b>Annualized Return: {annual_return:.2f}%</b>',
@@ -522,7 +522,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
             ),
             dict(
                 x=0.82,
-                y=0.98,
+                y=0.99,
                 xref='paper',
                 yref='paper',
                 text=(f'<b>Regression Analysis<br>'
@@ -537,7 +537,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
             ),
             dict(
                 x=0.15,
-                y=0.98,
+                y=0.99,
                 xref='paper',
                 yref='paper',
                 text=(f'<b>Volatility<br>'
@@ -552,7 +552,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
             ),
             dict(
                 x=0.92,
-                y=0.98,
+                y=0.99,
                 xref='paper',
                 yref='paper',
                 text=(f'<b>Signal Returns<br>'
