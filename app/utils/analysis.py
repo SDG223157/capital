@@ -498,21 +498,14 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
             xanchor='center',
             font=dict(size=24)
         ),
-        height=total_height,
-        grid=dict(
-            rows=2,
-            columns=2,
-            pattern='independent'
-        ),
-        showlegend=True,
-        hovermode='x unified',
         annotations=[
             dict(
                 x=0.02,
                 y=1.00,
                 xref='paper',
                 yref='paper',
-                text=f'<b>Annualized Return: {annual_return:.2f}%</b>',
+                text=(f"<b>Annual Return: "
+                      f"$r_a = {annual_return:.2f}\\%$</b>"),
                 showarrow=False,
                 font=dict(size=14),
                 bgcolor='rgba(255, 255, 255, 0.8)',
@@ -525,9 +518,9 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
                 y=1.00,
                 xref='paper',
                 yref='paper',
-                text=(f'<b>Regression Analysis<br>'
-                      f'{regression_results["equation"]}<br>'
-                      f'R² = {regression_results["r2"]:.4f}</b>'),
+                text=(f"<b>Regression Analysis<br>"
+                      f"${regression_results['equation']}$<br>"
+                      f"$R^2 = {regression_results['r2']:.4f}$</b>"),
                 showarrow=False,
                 font=dict(size=14),
                 bgcolor='rgba(255, 255, 255, 0.8)',
@@ -540,9 +533,9 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
                 y=1.00,
                 xref='paper',
                 yref='paper',
-                text=(f'<b>Volatility<br>'
-                      f'Daily: {daily_volatility:.3f}<br>'
-                      f'Annual: {annualized_volatility:.3f}</b>'),
+                text=(f"<b>Volatility<br>"
+                      f"$\\sigma_d = {daily_volatility:.3f}$<br>"
+                      f"$\\sigma_a = {annualized_volatility:.3f}$</b>"),
                 showarrow=False,
                 font=dict(size=14),
                 bgcolor='rgba(255, 255, 255, 0.8)',
@@ -555,35 +548,14 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
                 y=1.00,
                 xref='paper',
                 yref='paper',
-                text=(f'<b>Signal Returns<br>'
-                      f'Total Return: {total_return:.2f}%<br>'
-                      f'Number of Trades: {len([s for s in signal_returns if s["Signal"] == "Buy"])}</b>'),
+                text=(f"<b>Signal Returns<br>"
+                      f"$R_t = {total_return:.2f}\\%$<br>"
+                      f"$n = {len([s for s in signal_returns if s['Signal'] == 'Buy'])}$ trades</b>"),
                 showarrow=False,
                 font=dict(size=14),
                 bgcolor='rgba(255, 255, 255, 0.8)',
                 bordercolor='rgba(0, 0, 0, 0.2)',
                 borderwidth=1,
-                align='left'
-            ),
-            # Add table titles
-            dict(
-                x=0.02,
-                y=0.40,
-                xref='paper',
-                yref='paper',
-                text='<b>Analysis Summary</b>',
-                showarrow=False,
-                font=dict(size=14),
-                align='left'
-            ),
-            dict(
-                x=0.75,
-                y=0.40,
-                xref='paper',
-                yref='paper',
-                text='<b>Trading Signal Analysis</b>',
-                showarrow=False,
-                font=dict(size=14),
                 align='left'
             )
         ],
