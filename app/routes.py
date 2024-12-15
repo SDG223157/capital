@@ -152,7 +152,7 @@ def analyze():
             raise ValueError("Lookback days must be between 30 and 10000")
         logger.info(f"Using lookback days: {lookback_days}")
             
-        crossover_days = int(request.form.get('crossover_days', 180))
+        crossover_days = int(request.form.get('crossover_days', 365))
         if crossover_days < 30 or crossover_days > 1000:
             raise ValueError("Crossover days must be between 30 and 1000")
         logger.info(f"Using crossover days: {crossover_days}")
