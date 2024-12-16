@@ -11,6 +11,7 @@ from dateutil.relativedelta import relativedelta
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
+from .roic_v4 import create_metrics_table, create_financial_metrics_table
 
 def debug_print(*args, **kwargs):
     print(*args, file=sys.stderr, flush=True, **kwargs)
@@ -134,20 +135,52 @@ def perform_polynomial_regression(data, future_days=180):
         'equation': equation,
         'max_x': max_x
     }
-
-# [continuing in next message due to length...]
-def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,crossover_days=180):
+def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365, crossover_days=180, custom_metrics=None):
     """
-    Perform combined technical analysis including retracement ratios and polynomial regression
+    Perform combined technical and financial analysis including retracement ratios,
+    polynomial regression, and financial metrics.
     
     Parameters:
     ticker_symbol (str): Stock ticker symbol
     end_date (str): End date in YYYY-MM-DD format
     lookback_days (int): Days of historical data to analyze
+    crossover_days (int): Days to look back for crossover analysis
     
     Returns:
     tuple: (summary_df, fig, crossover_df, signals_df) - DataFrames and Plotly figure
+    
     """
+    
+    DEFAULT_METRICS = [
+    "total revenues",
+    "operating cash flow",
+    "net income",
+    "earnings per share",
+    "operating margin",
+    "capital expenditures",
+    "return on invested capital",
+    "Diluted Weighted Avg Shares"
+]
+   # Define metrics at the very beginning of the function
+    metrics_to_fetch = [
+        "total revenues",
+        "operating cash flow",
+        "net income",
+        "earnings per share",
+        "operating margin",
+        "capital expenditures",
+        "return on invested capital",
+        "Diluted Weighted Avg Shares"
+    ] if custom_metrics is None else custom_metrics
+
+    # Ensure required metrics are included
+    required_metrics = {
+        "total revenues",
+        "operating cash flow",
+        "net income",
+        "earnings per share"
+    }
+    metrics_to_fetch = list(set(metrics_to_fetch) | required_metrics)
     # Handle end date
     if end_date is None:
         end_date = datetime.now().strftime('%Y-%m-%d')
@@ -214,7 +247,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
     crossover_dates, crossover_values, crossover_directions, crossover_prices = \
         find_crossover_points(analysis_dates, ratios, appreciation_pcts, prices)
     
-    # Calculate returns from crossover signals with holding period
+    # Calculate returns from crossover signals
     signal_returns = []
     current_position = None
     entry_price = None
@@ -260,6 +293,25 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
             if signal_returns and signal_returns[-1]['Signal'] == 'Buy':
                 signal_returns[-1]['Trade Return'] = open_trade_return
                 signal_returns[-1]['Current Price'] = last_price
+
+    # Get financial metrics data
+    
+
+    # Get current year and calculate start year
+    current_year = datetime.now().year
+    start_year = current_year - 20
+
+# Update metrics table creation
+    metrics_df = create_metrics_table(
+        ticker=ticker_symbol,
+        metrics=metrics_to_fetch,
+        start_year=str(start_year),
+        end_year=str(current_year)
+    )
+    # Calculate height needed for tables
+    base_height = 1000
+    metrics_table_height = 400 if metrics_df is not None else 0
+    total_height = base_height + metrics_table_height
     
     # Create figure
     fig = go.Figure()
@@ -377,26 +429,16 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
                     customdata=[price]
                 )
             )
-    
-    # Add horizontal lines at key levels
-    fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.5)
-    fig.add_hline(y=50, line_dash="dash", line_color="gray", opacity=0.5)
-    fig.add_hline(y=100, line_dash="dash", line_color="gray", opacity=0.5)
-    
+
     # Calculate metrics for annotations
     start_price = df['Close'].iloc[0]
     end_price = df['Close'].iloc[-1]
     days = (df.index[-1] - df.index[0]).days
     annual_return = ((end_price / start_price) ** (365 / days) - 1) * 100
 
-    # Calculate height needed for tables
-    base_height = 1000
-    table_height = 400  # Additional height for tables
-    total_height = base_height + table_height
-
     # Create Analysis Summary table
     analysis_summary = go.Table(
-        domain=dict(x=[0, 0.45], y=[0, 0.39]),  # Position in bottom left
+        domain=dict(x=[0, 0.45], y=[0.09, 0.24]),  # Position in top left
         header=dict(
             values=['<b>Metric</b>', '<b>Value</b>'],
             fill_color='lightgrey',
@@ -450,7 +492,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
                 buy_signal = None
 
         trading_table = go.Table(
-            domain=dict(x=[0.55, 1], y=[0, 0.39]),  # Position in bottom right
+            domain=dict(x=[0.55, 1], y=[0.09, 0.24]),  # Position in top right
             header=dict(
                 values=['<b>Entry Date</b>', '<b>Entry Price</b>', '<b>Exit Date</b>', 
                        '<b>Exit Price</b>', '<b>Return</b>', '<b>Status</b>'],
@@ -473,7 +515,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
         )
     else:
         trading_table = go.Table(
-            domain=dict(x=[0.55, 1], y=[0, 0.39]),
+            domain=dict(x=[0.55, 1], y=[0.6, 0.99]),
             header=dict(
                 values=['<b>Notice</b>'],
                 fill_color='lightgrey',
@@ -485,90 +527,114 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
             )
         )
 
-    # Update figure with tables
+    # Add financial metrics tables if available
+    if metrics_df is not None:
+        metrics_table, growth_table = create_financial_metrics_table(metrics_df)
+        fig.add_trace(metrics_table)
+        if growth_table is not None:
+            fig.add_trace(growth_table)
+
+    # Add all tables to figure
     fig.add_trace(analysis_summary)
     fig.add_trace(trading_table)
-    
+
+    # Add horizontal lines at key levels
+    fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.5)
+    fig.add_hline(y=50, line_dash="dash", line_color="gray", opacity=0.5)
+    fig.add_hline(y=100, line_dash="dash", line_color="gray", opacity=0.5)
+
     # Update layout
-    # Update layout with optimized spacing
     fig.update_layout(
+        # Basic layout settings
+        
         title=dict(
             text=f'{ticker_symbol} Technical Analysis ({lookback_days} Days)',
             x=0.5,
             xanchor='center',
             font=dict(size=24)
         ),
-        height=total_height,
+        height=1200,
+        showlegend=True,
+        hovermode='x unified',
+        
+        # Grid and subplots configuration
         grid=dict(
             rows=2,
             columns=2,
             pattern='independent'
         ),
-        showlegend=True,
-        hovermode='x unified',
+        
+        # Annotations for metrics and analysis results
         annotations=[
+            # Technical Analysis Metrics
             dict(
                 x=0.02,
-                y=1.00,
+                y=0.98,
                 xref='paper',
                 yref='paper',
-                text=f'<b>Annualized Return: {annual_return:.2f}%</b>',
+                text=f'<b>Price Analysis</b><br>' + 
+                     f'Start: ${start_price:.2f}<br>' +
+                     f'Current: ${end_price:.2f}<br>' +
+                     f'Return: {annual_return:.2f}%',
                 showarrow=False,
-                font=dict(size=14),
+                font=dict(size=12),
                 bgcolor='rgba(255, 255, 255, 0.8)',
                 bordercolor='rgba(0, 0, 0, 0.2)',
                 borderwidth=1,
                 align='left'
             ),
+            # Regression Analysis
             dict(
-                x=0.82,
-                y=1.00,
+                x=0.25,
+                y=0.98,
                 xref='paper',
                 yref='paper',
-                text=(f'<b>Regression Analysis<br>'
+                text=(f'<b>Regression Analysis</b><br>'
                       f'{regression_results["equation"]}<br>'
-                      f'R² = {regression_results["r2"]:.4f}</b>'),
+                      f'R² = {regression_results["r2"]:.4f}'),
                 showarrow=False,
-                font=dict(size=14),
+                font=dict(size=12),
                 bgcolor='rgba(255, 255, 255, 0.8)',
                 bordercolor='rgba(0, 0, 0, 0.2)',
                 borderwidth=1,
                 align='left'
             ),
+            # Volatility Metrics
             dict(
-                x=0.15,
-                y=1.00,
+                x=0.48,
+                y=0.98,
                 xref='paper',
                 yref='paper',
-                text=(f'<b>Volatility<br>'
+                text=(f'<b>Volatility Analysis</b><br>'
                       f'Daily: {daily_volatility:.3f}<br>'
-                      f'Annual: {annualized_volatility:.3f}</b>'),
+                      f'Annual: {annualized_volatility:.3f}'),
                 showarrow=False,
-                font=dict(size=14),
+                font=dict(size=12),
                 bgcolor='rgba(255, 255, 255, 0.8)',
                 bordercolor='rgba(0, 0, 0, 0.2)',
                 borderwidth=1,
                 align='left'
             ),
+            # Trading Signals Summary
             dict(
-                x=0.93,
-                y=1.00,
+                x=0.71,
+                y=0.98,
                 xref='paper',
                 yref='paper',
-                text=(f'<b>Signal Returns<br>'
+                text=(f'<b>Signal Analysis</b><br>'
                       f'Total Return: {total_return:.2f}%<br>'
-                      f'Number of Trades: {len([s for s in signal_returns if s["Signal"] == "Buy"])}</b>'),
+                      f'Trades: {len([s for s in signal_returns if s["Signal"] == "Buy"])}'),
                 showarrow=False,
-                font=dict(size=14),
+                font=dict(size=12),
                 bgcolor='rgba(255, 255, 255, 0.8)',
                 bordercolor='rgba(0, 0, 0, 0.2)',
                 borderwidth=1,
                 align='left'
             ),
-            # Add table titles
+            # Table Headers
             dict(
                 x=0.02,
-                y=0.40,
+                y=0.25,
                 xref='paper',
                 yref='paper',
                 text='<b>Analysis Summary</b>',
@@ -577,16 +643,38 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
                 align='left'
             ),
             dict(
-                x=0.75,
-                y=0.40,
+                x=0.55,
+                y=0.25,
                 xref='paper',
                 yref='paper',
                 text='<b>Trading Signal Analysis</b>',
                 showarrow=False,
                 font=dict(size=14),
                 align='left'
+            ),
+            dict(
+                x=0.02,
+                y=0.54,
+                xref='paper',
+                yref='paper',
+                text='<b>Financial Metrics Growth</b>',
+                showarrow=False,
+                font=dict(size=14),
+                align='left'
+            ),
+            dict(
+                x=0.02,
+                y=0.43,
+                xref='paper',
+                yref='paper',
+                text='<b>Historical Financial Metrics</b>',
+                showarrow=False,
+                font=dict(size=14),
+                align='left'
             )
         ],
+        
+        # X-axis configuration
         xaxis=dict(
             title="Date",
             showgrid=True,
@@ -596,8 +684,10 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
             spikesnap='cursor',
             spikemode='across',
             spikethickness=1,
-            domain=[0, 0.95]  # Extend x-axis to use more space
+            domain=[0, 0.95]
         ),
+        
+        # Primary Y-axis (Ratio and Position)
         yaxis=dict(
             title="Ratio and Position (%)",
             ticksuffix="%",
@@ -608,8 +698,11 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
             showspikes=True,
             spikesnap='cursor',
             spikemode='across',
-            spikethickness=1
+            spikethickness=1,
+            domain=[0.58, 0.98]  # Adjusted to make room for tables
         ),
+        
+        # Secondary Y-axis (Price)
         yaxis2=dict(
             title="Price (Log Scale)",
             overlaying="y",
@@ -619,414 +712,11 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
             showspikes=True,
             spikesnap='cursor',
             spikemode='across',
-            spikethickness=1
+            spikethickness=1,
+            domain=[0.58, 0.98]
         ),
-        legend=dict(
-            yanchor="top",
-            y=0.99,
-            xanchor="right",
-            x=1.12,  # Move legend closer to chart
-            bgcolor='rgba(255, 255, 255, 0.8)',
-            bordercolor='rgba(0, 0, 0, 0.2)',
-            borderwidth=1,
-            font=dict(size=11)
-        ),
-        margin=dict(r=50)  # Reduce right margin
-    )
-    # Create summary dataframe
-    summary_df = pd.DataFrame({
-        'Date': analysis_dates,
-        'Price': prices,
-        'High': highest_prices,
-        'Low': lowest_prices,
-        'Retracement_Ratio_Pct': ratios,
-        'Price_Position_Pct': appreciation_pcts
-    })
-    
-    # Create crossover dataframe
-    crossover_df = pd.DataFrame({
-        'Date': crossover_dates,
-        'Crossover_Value': crossover_values,
-        'Direction': crossover_directions,
-        'Price': crossover_prices
-    })
-    
-    # Create signals dataframe
-    signals_df = pd.DataFrame(signal_returns)
-    
-    return summary_df, fig, crossover_df, signals_df
-    """
-    Perform combined technical analysis including retracement ratios and polynomial regression
-    
-    Parameters:
-    ticker_symbol (str): Stock ticker symbol
-    end_date (str): End date in YYYY-MM-DD format
-    lookback_days (int): Days of historical data to analyze
-    
-    Returns:
-    tuple: (summary_df, fig, crossover_df, signals_df) - DataFrames and Plotly figure
-    """
-    # Handle end date
-    if end_date is None:
-        end_date = datetime.now().strftime('%Y-%m-%d')
-    
-    # Get historical data
-    ticker = yf.Ticker(ticker_symbol)
-    start_date = get_analysis_dates(end_date, 'days', lookback_days)
-    df = ticker.history(start=start_date, end=end_date)
-    
-    if df.empty:
-        raise ValueError(f"No data found for {ticker_symbol} in the specified date range")
-    
-    # Convert index to datetime without timezone
-    df.index = df.index.tz_localize(None)
-    
-    # Calculate daily metrics
-    df['Daily_Return'] = df['Close'].pct_change()
-    daily_volatility = df['Daily_Return'].std()
-    annualized_volatility = daily_volatility * np.sqrt(252)
-    
-    # Calculate retracement metrics
-    analysis_dates = []
-    ratios = []
-    prices = []
-    highest_prices = []
-    lowest_prices = []
-    appreciation_pcts = []
-    
-    for current_date in df.index:
-        year_start = current_date - timedelta(days=365)
-        mask = (df.index > year_start) & (df.index <= current_date)
-        year_data = df.loc[mask]
         
-        if len(year_data) < 20:
-            continue
-            
-        current_price = year_data['Close'].iloc[-1]
-        highest_price = year_data['Close'].max()
-        lowest_price = year_data['Close'].min()
-        
-        # Calculate ratio
-        total_move = highest_price - lowest_price
-        if total_move > 0:
-            current_retracement = highest_price - current_price
-            ratio = (current_retracement / total_move) * 100
-        else:
-            ratio = 0
-            
-        # Calculate appreciation percentage
-        appreciation_pct = calculate_price_appreciation_pct(
-            current_price, highest_price, lowest_price)
-        
-        analysis_dates.append(current_date)
-        ratios.append(ratio)
-        prices.append(current_price)
-        highest_prices.append(highest_price)
-        lowest_prices.append(lowest_price)
-        appreciation_pcts.append(appreciation_pct)
-    
-    # Perform polynomial regression
-    regression_results = perform_polynomial_regression(df, lookback_days)
-    
-    # Find crossover points
-    crossover_dates, crossover_values, crossover_directions, crossover_prices = \
-        find_crossover_points(analysis_dates, ratios, appreciation_pcts, prices)
-    
-    # Calculate returns from crossover signals with holding period
-    signal_returns = []
-    current_position = None
-    entry_price = None
-    total_return = 0
-    
-    if crossover_dates:
-        last_price = prices[-1]  # Current price for open positions
-        
-        for date, value, direction, price in zip(crossover_dates, crossover_values, 
-                                               crossover_directions, crossover_prices):
-            if direction == 'up' and current_position is None:  # Buy signal
-                entry_price = price
-                current_position = 'long'
-                signal_returns.append({
-                    'Entry Date': date,
-                    'Entry Price': price,
-                    'Signal': 'Buy',
-                    'Status': 'Open'
-                })
-            elif direction == 'down' and current_position == 'long':  # Sell signal
-                exit_price = price
-                trade_return = ((exit_price / entry_price) - 1) * 100
-                total_return = (1 + total_return/100) * (1 + trade_return/100) * 100 - 100
-                current_position = None
-                
-                # Update the previous buy signal status
-                signal_returns[-1]['Status'] = 'Closed'
-                
-                signal_returns.append({
-                    'Entry Date': date,
-                    'Entry Price': price,
-                    'Signal': 'Sell',
-                    'Trade Return': trade_return,
-                    'Status': 'Closed'
-                })
-        
-        # Handle open position at the end of the period
-        if current_position == 'long':
-            open_trade_return = ((last_price / entry_price) - 1) * 100
-            total_return = (1 + total_return/100) * (1 + open_trade_return/100) * 100 - 100
-            
-            # Add open trade return to the last buy signal
-            if signal_returns and signal_returns[-1]['Signal'] == 'Buy':
-                signal_returns[-1]['Trade Return'] = open_trade_return
-                signal_returns[-1]['Current Price'] = last_price
-    
-    # Create signals dataframe
-    signals_df = pd.DataFrame(signal_returns)
-    
-    # Create figure
-    fig = go.Figure()
-    
-    # Add price line
-    fig.add_trace(
-        go.Scatter(
-            x=analysis_dates,
-            y=prices,
-            name='Price (Log Scale)',
-            line=dict(color='green', width=3),
-            yaxis='y2',
-            hovertemplate='<b>Date</b>: %{x}<br>' +
-                         '<b>Price</b>: $%{y:.2f}<extra></extra>'
-        )
-    )
-    
-    # Add regression line and bands
-    future_dates = pd.date_range(
-        start=df.index[0],
-        periods=len(regression_results['predictions']),
-        freq='D'
-    )
-    
-    fig.add_trace(
-        go.Scatter(
-            x=future_dates,
-            y=regression_results['predictions'],
-            name='Regression',
-            line=dict(color='blue', width=2, dash='dash'),
-            yaxis='y2',
-            hovertemplate='<b>Date</b>: %{x}<br>' +
-                         '<b>Predicted</b>: $%{y:.2f}<extra></extra>'
-        )
-    )
-    
-    fig.add_trace(
-        go.Scatter(
-            x=future_dates,
-            y=regression_results['upper_band'],
-            name='Upper Band',
-            line=dict(color='lightblue', width=1),
-            yaxis='y2',
-            showlegend=False,
-            hovertemplate='<b>Date</b>: %{x}<br>' +
-                         '<b>Upper Band</b>: $%{y:.2f}<extra></extra>'
-        )
-    )
-    
-    fig.add_trace(
-        go.Scatter(
-            x=future_dates,
-            y=regression_results['lower_band'],
-            name='Lower Band',
-            fill='tonexty',
-            fillcolor='rgba(173, 216, 230, 0.2)',
-            line=dict(color='lightblue', width=1),
-            yaxis='y2',
-            showlegend=False,
-            hovertemplate='<b>Date</b>: %{x}<br>' +
-                         '<b>Lower Band</b>: $%{y:.2f}<extra></extra>'
-        )
-    )
-    
-    # Add retracement ratio line
-    fig.add_trace(
-        go.Scatter(
-            x=analysis_dates,
-            y=ratios,
-            name='Retracement Ratio',
-            line=dict(color='purple', width=1),
-            hovertemplate='<b>Date</b>: %{x}<br>' +
-                         '<b>Ratio</b>: %{y:.1f}%<extra></extra>'
-        )
-    )
-    
-    # Add price position line
-    fig.add_trace(
-        go.Scatter(
-            x=analysis_dates,
-            y=appreciation_pcts,
-            name='Price Position',
-            line=dict(color='orange', width=2, dash='dot'),
-            hovertemplate='<b>Date</b>: %{x}<br>' +
-                         '<b>Position</b>: %{y:.1f}%<extra></extra>'
-        )
-    )
-    
-    # Add crossover points
-    if crossover_dates:
-        for date, value, direction, price in zip(crossover_dates, crossover_values, 
-                                               crossover_directions, crossover_prices):
-            color = 'green' if direction == 'up' else 'red'
-            formatted_date = date.strftime('%Y-%m-%d')
-            base_name = 'Bullish Crossover' if direction == 'up' else 'Bearish Crossover'
-            detailed_name = f"{base_name} ({formatted_date}, ${price:.2f})"
-            
-            fig.add_trace(
-                go.Scatter(
-                    x=[date],
-                    y=[value],
-                    mode='markers',
-                    name=detailed_name,
-                    marker=dict(
-                        symbol='star',
-                        size=12,
-                        color=color,
-                        line=dict(width=1, color=color)
-                    ),
-                    hovertemplate='<b>%{text}</b><br>' +
-                                 '<b>Date</b>: %{x}<br>' +
-                                 '<b>Value</b>: %{y:.1f}%<br>' +
-                                 '<b>Price</b>: $%{customdata:.2f}<extra></extra>',
-                    text=[detailed_name],
-                    customdata=[price]
-                )
-            )
-    
-    # Add horizontal lines at key levels
-    fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.5)
-    fig.add_hline(y=50, line_dash="dash", line_color="gray", opacity=0.5)
-    fig.add_hline(y=100, line_dash="dash", line_color="gray", opacity=0.5)
-    
-    # Calculate metrics for annotations
-    start_price = df['Close'].iloc[0]
-    end_price = df['Close'].iloc[-1]
-    days = (df.index[-1] - df.index[0]).days
-    annual_return = ((end_price / start_price) ** (365 / days) - 1) * 100
-    
-    if signal_returns:
-        first_signal_date = min(date for date, _, _, _ in zip(crossover_dates, crossover_values, 
-                                                            crossover_directions, crossover_prices))
-        last_signal_date = max(date for date, _, _, _ in zip(crossover_dates, crossover_values, 
-                                                            crossover_directions, crossover_prices))
-        years = (last_signal_date - first_signal_date).days / 365.25
-        if years > 0:
-            signal_cagr = ((1 + total_return/100) ** (1/years) - 1) * 100
-        else:
-            signal_cagr = 0
-    else:
-        signal_cagr = 0
-        #Update layout
-    fig.update_layout(
-        title=dict(
-            text=f'{ticker_symbol} Technical Analysis ({lookback_days} Days)',
-            x=0.5,
-            xanchor='center',
-            font=dict(size=24)
-        ),
-        hovermode='x unified',
-        showlegend=True,
-        height=1000,
-        annotations=[
-            dict(
-                x=0.02,
-                y=0.98,
-                xref='paper',
-                yref='paper',
-                text=f'<b>Annualized Return: {annual_return:.2f}%</b>',
-                showarrow=False,
-                font=dict(size=14),
-                bgcolor='rgba(255, 255, 255, 0.8)',
-                bordercolor='rgba(0, 0, 0, 0.2)',
-                borderwidth=1,
-                align='left'
-            ),
-            dict(
-                x=0.25,
-                y=0.98,
-                xref='paper',
-                yref='paper',
-                text=(f'<b>Regression Analysis<br>'
-                      f'{regression_results["equation"]}<br>'
-                      f'R² = {regression_results["r2"]:.4f}</b>'),
-                showarrow=False,
-                font=dict(size=14),
-                bgcolor='rgba(255, 255, 255, 0.8)',
-                bordercolor='rgba(0, 0, 0, 0.2)',
-                borderwidth=1,
-                align='left'
-            ),
-            dict(
-                x=0.02,
-                y=0.94,
-                xref='paper',
-                yref='paper',
-                text=(f'<b>Volatility<br>'
-                      f'Daily: {daily_volatility:.3f}<br>'
-                      f'Annual: {annualized_volatility:.3f}</b>'),
-                showarrow=False,
-                font=dict(size=14),
-                bgcolor='rgba(255, 255, 255, 0.8)',
-                bordercolor='rgba(0, 0, 0, 0.2)',
-                borderwidth=1,
-                align='left'
-            ),
-            dict(
-                x=0.85,  # or whatever x position you're using
-                y=0.98,
-                xref='paper',
-                yref='paper',
-                text=(f'<b>Signal Returns<br>'
-                    f'Total Return: {total_return:.2f}%<br>'
-                    f'CAGR: {signal_cagr:.2f}%<br>'
-                    f'Number of Trades: {len([s for s in signal_returns if s["Signal"] == "Buy"])}</b>'),
-                showarrow=False,
-                font=dict(size=14),
-                bgcolor='rgba(255, 255, 255, 0.8)',
-                bordercolor='rgba(0, 0, 0, 0.2)',
-                borderwidth=1,
-                align='left'
-            )
-        ],
-        xaxis=dict(
-            title="Date",
-            showgrid=True,
-            gridwidth=1,
-            gridcolor='rgba(128, 128, 128, 0.2)',
-            showspikes=True,
-            spikesnap='cursor',
-            spikemode='across',
-            spikethickness=1
-        ),
-        yaxis=dict(
-            title="Ratio and Position (%)",
-            ticksuffix="%",
-            range=[-10, 120],
-            showgrid=True,
-            gridwidth=1,
-            gridcolor='rgba(128, 128, 128, 0.2)',
-            showspikes=True,
-            spikesnap='cursor',
-            spikemode='across',
-            spikethickness=1
-        ),
-        yaxis2=dict(
-            title="Price (Log Scale)",
-            overlaying="y",
-            side="right",
-            type="log",
-            showgrid=False,
-            showspikes=True,
-            spikesnap='cursor',
-            spikemode='across',
-            spikethickness=1
-        ),
+        # Legend configuration
         legend=dict(
             yanchor="top",
             y=0.99,
@@ -1037,26 +727,19 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
             borderwidth=1,
             font=dict(size=11)
         ),
-        margin=dict(r=150)
+        
+        # Margins
+        margin=dict(
+            l=50,
+            r=50,
+            t=120,  # Increased top margin for annotations
+            b=50
+        ),
+        
+        # Plot background
+        plot_bgcolor='white',
+        paper_bgcolor='white'
     )
-    
-    # Create summary dataframe
-    summary_df = pd.DataFrame({
-        'Date': analysis_dates,
-        'Price': prices,
-        'High': highest_prices,
-        'Low': lowest_prices,
-        'Retracement_Ratio_Pct': ratios,
-        'Price_Position_Pct': appreciation_pcts
-    })
-    
-    # Create crossover dataframe
-    crossover_df = pd.DataFrame({
-        'Date': crossover_dates,
-        'Crossover_Value': crossover_values,
-        'Direction': crossover_directions,
-        'Price': crossover_prices
-    })
     # Create summary dataframe
     summary_df = pd.DataFrame({
         'Date': analysis_dates,
@@ -1079,18 +762,6 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365,cro
     signals_df = pd.DataFrame(signal_returns)
     
     return summary_df, fig, crossover_df, signals_df
-    """
-    Perform combined technical analysis including retracement ratios and polynomial regression
-    
-    Parameters:
-    ticker_symbol (str): Stock ticker symbol
-    end_date (str): End date in YYYY-MM-DD format
-    lookback_days (int): Days of historical data to analyze
-    
-    Returns:
-    tuple: (summary_df, fig, crossover_df, signals_df) - DataFrames and Plotly figure
-    """
-    # Handle end date
 def print_signal_analysis(signals_df):
     """
     Print detailed analysis of trading signals including open positions
