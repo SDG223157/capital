@@ -102,9 +102,9 @@ def format_number(x):
         if abs(x) >= 1_000_000:
             # For negative numbers, ensure the minus sign is preserved
             if x < 0:
-                return f"-{abs(x/1_000_000):,.2f}M"
+                return f"-{abs(x/1_000_000):,.0f}M"
             else:
-                return f"{x/1_000_000:,.2f}M"
+                return f"{x/1_000_000:,.0f}M"
         else:
             # For smaller numbers, use comma separator
             return f"{x:,.2f}"
@@ -224,7 +224,7 @@ def create_financial_metrics_table(df):
                 growth_table = go.Table(
                     domain=dict(x=[0, 1], y=[0.45, 0.53]),  # Position for growth table
                     header=dict(
-                        values=['<b>Metric</b>'] + [f'<b>{df.columns[i]} Growth</b>' 
+                        values=['<b>Metric</b>'] + [f'<b>{df.columns[i]}</b>' 
                                for i in range(1, len(df.columns)-1)],
                         fill_color='lightgrey',
                         align='left',
