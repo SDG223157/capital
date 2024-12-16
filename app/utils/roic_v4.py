@@ -81,17 +81,31 @@ def get_financial_data(ticker, metric_description, start_year, end_year):
     except Exception as e:
         print(f"Error fetching {metric_description}: {str(e)}")
         return None
-
+def format_number(x):
+    """
+    Format numbers with comprehensive handling:
+    - None values: return "N/A"
+    - Numbers >= 1 million (or <= -1 million): display in millions with 2 decimal places
+    - Numbers between -1 million and 1 million: display with comma separators and 2 decimal places
+    - Negative numbers: maintain the minus sign in all formats
+    """
+    if pd.isna(x) or x is None:
+        return "N/A"
+    try:
+        # Check for absolute value >= 1 million
+        if abs(x) >= 1_000_000:
+            # For negative numbers, ensure the minus sign is preserved
+            if x < 0:
+                return f"-{abs(x/1_000_000):,.2f}M"
+            else:
+                return f"{x/1_000_000:,.2f}M"
+        else:
+            # For smaller numbers, use comma separator
+            return f"{x:,.2f}"
+    except (TypeError, ValueError):
+        return "N/A"
 def calculate_growth_rates(df):
-    """
-    Calculate period-over-period growth rates for financial metrics
-    
-    Parameters:
-    df (pandas.DataFrame): DataFrame containing financial metrics
-    
-    Returns:
-    dict: Dictionary containing growth rates for each metric
-    """
+    """Calculate period-over-period growth rates for financial metrics"""
     growth_rates = {}
     
     for metric in df.index:
@@ -101,7 +115,7 @@ def calculate_growth_rates(df):
             for i in range(1, len(values)):
                 prev_val = float(values.iloc[i-1])
                 curr_val = float(values.iloc[i])
-                if prev_val > 0:
+                if prev_val and prev_val != 0:  # Avoid division by zero
                     growth = ((curr_val / prev_val) - 1) * 100
                     growth_rates[metric].append(growth)
                 else:
@@ -110,15 +124,21 @@ def calculate_growth_rates(df):
     return growth_rates
 
 def format_growth_values(growth_rates):
-    """Format growth rates for display in table"""
+    """Format growth rates for display in table with sign handling"""
     if not growth_rates:
         return []
-        
-    metrics = list(growth_rates.keys())
-    periods = len(list(growth_rates.values())[0])
     
+    # Get list of metrics and periods
+    metrics = list(growth_rates.keys())
+    if not metrics or not growth_rates[metrics[0]]:
+        return []
+    
+    periods = len(growth_rates[metrics[0]])
+    
+    # Format metric names
     formatted_values = [metrics]
     
+    # Format growth rates for each period
     for i in range(periods):
         period_values = []
         for metric in metrics:
@@ -126,11 +146,11 @@ def format_growth_values(growth_rates):
             if value is None:
                 period_values.append("N/A")
             else:
-                period_values.append(f"{value:.1f}%")
+                # Format with sign and one decimal place
+                period_values.append(f"{value:+.1f}%" if value != 0 else "0.0%")
         formatted_values.append(period_values)
     
     return formatted_values
-
 def format_large_number(x):
     """
     Format numbers:
@@ -142,21 +162,32 @@ def format_large_number(x):
     return f"{x:,.2f}"
 
 def create_financial_metrics_table(df):
-    """Creates a formatted financial metrics table for display"""
+    """
+    Creates a formatted financial metrics table for display
+    
+    Parameters:
+    df (pandas.DataFrame): DataFrame containing financial metrics
+    
+    Returns:
+    tuple: (metrics_table, growth_table) - Plotly table objects
+    """
     if df is None or df.empty:
         return None, None
 
-    # Format numbers based on size
+    # Format numbers with comprehensive handling
     formatted_df = df.copy()
     for col in df.columns:
         if col != 'CAGR %':
-            formatted_df[col] = formatted_df[col].apply(format_large_number)
+            formatted_df[col] = formatted_df[col].apply(format_number)
         else:
-            formatted_df[col] = formatted_df[col].apply(lambda x: f"{x:.0f}")
+            # Handle CAGR formatting with negative check and sign
+            formatted_df[col] = formatted_df[col].apply(
+                lambda x: f"{x:+.2f}" if pd.notna(x) and x is not None else "N/A"
+            )
 
     # Create the metrics table
     metrics_table = go.Table(
-        domain=dict(x=[0, 1], y=[0.27, 0.42]),
+        domain=dict(x=[0, 1], y=[0.27, 0.42]),  # Position for metrics table
         header=dict(
             values=['<b>Metric</b>'] + [f'<b>{col}</b>' for col in df.columns],
             fill_color='lightgrey',
@@ -170,7 +201,10 @@ def create_financial_metrics_table(df):
             ],
             align=['left'] + ['right'] * len(df.columns),  # Left align text, right align numbers
             font=dict(size=11),
-            format=None  # Remove format since we're pre-formatting the values
+            fill_color=[
+                ['white'] * len(formatted_df),  # Background color for each row
+                *[['white'] * len(formatted_df)] * len(df.columns)
+            ]
         )
     )
     
@@ -179,20 +213,27 @@ def create_financial_metrics_table(df):
     if df is not None and not df.empty:
         growth_rates = calculate_growth_rates(df)
         if growth_rates:
-            growth_table = go.Table(
-                domain=dict(x=[0, 1], y=[0.45, 0.53]),
-                header=dict(
-                    values=['<b>Metric</b>'] + [f'<b>{col} Growth</b>' for col in df.columns[1:-1]],
-                    fill_color='lightgrey',
-                    align='left',
-                    font=dict(size=12)
-                ),
-                cells=dict(
-                    values=format_growth_values(growth_rates),
-                    align=['left'] + ['right'] * (len(df.columns) - 2),
-                    font=dict(size=11)
+            formatted_values = format_growth_values(growth_rates)
+            if formatted_values:
+                growth_table = go.Table(
+                    domain=dict(x=[0, 1], y=[0.45, 0.53]),  # Position for growth table
+                    header=dict(
+                        values=['<b>Metric</b>'] + [f'<b>{df.columns[i]} Growth</b>' 
+                               for i in range(1, len(df.columns)-1)],
+                        fill_color='lightgrey',
+                        align='left',
+                        font=dict(size=12)
+                    ),
+                    cells=dict(
+                        values=formatted_values,
+                        align=['left'] + ['right'] * (len(formatted_values) - 1),  # Left align text, right align numbers
+                        font=dict(size=11),
+                        fill_color=[
+                            ['white'] * len(formatted_values[0]),  # Background color for each row
+                            *[['white'] * len(formatted_values[0])] * (len(formatted_values) - 1)
+                        ]
+                    )
                 )
-            )
     
     return metrics_table, growth_table
 
