@@ -217,6 +217,8 @@ def create_financial_metrics_table(df):
     # Create growth rates table
     growth_table = None
     if df is not None and not df.empty:
+        df_columns = list(df.columns)
+        year_columns = df_columns[1:-1]  # Define year_columns here
         growth_rates = calculate_growth_rates(df)
         if growth_rates:
             formatted_values = format_growth_values(growth_rates)
@@ -227,7 +229,7 @@ def create_financial_metrics_table(df):
                         values=['<b>Metric</b>'] + [f'<b>{df.columns[i]}</b>' 
                                for i in range(1, len(df.columns)-1)],
                         fill_color='lightgrey',
-                        align='left',
+                        align=['left'] + ['center'] * len(year_columns)
                         font=dict(size=12)
                     ),
                     cells=dict(
