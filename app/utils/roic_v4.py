@@ -229,7 +229,7 @@ def create_financial_metrics_table(df):
                         values=['<b>Metric</b>'] + [f'<b>{df.columns[i]}</b>' 
                                for i in range(1, len(df.columns)-1)],
                         fill_color='lightgrey',
-                        align=['left'] + ['center'] * len(year_columns)
+                        align=['left'] + ['center'] * len(year_columns),
                         font=dict(size=12)
                     ),
                     cells=dict(
