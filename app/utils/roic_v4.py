@@ -33,7 +33,13 @@ metrics_to_fetch = [
 # Initial financial metrics dictionary
 METRICS = {
     "total revenues": "is_sales_and_services_revenues",
-    "operating cash flow": "cf_cash_from_oper"
+    "operating cash flow": "cf_cash_from_oper",
+    "net income": "is_net_income",
+    "earnings per share": "eps",
+    "operating margin": "oper_margin",
+    "capital expenditures": "cf_cap_expenditures",
+    "return on invested capital": "return_on_inv_capital",
+    "Diluted Weighted Avg Shares": "is_sh_for_diluted_eps"
 }
 
 def add_metric(description, field_name):
