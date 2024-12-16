@@ -664,7 +664,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365, cr
             ),
             dict(
                 x=0.02,
-                y=0.38,
+                y=0.43,
                 xref='paper',
                 yref='paper',
                 text='<b>Historical Financial Metrics</b>',
