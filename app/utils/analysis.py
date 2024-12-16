@@ -733,7 +733,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365, cr
             l=50,
             r=50,
             t=120,  # Increased top margin for annotations
-            b=10
+            b=50
         ),
         
         # Plot background
