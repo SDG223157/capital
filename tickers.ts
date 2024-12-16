@@ -66,7 +66,7 @@ export const tickers = [
   { symbol: "BLK", name: "BlackRock" },
   { symbol: "BX", name: "Blackstone Inc." },
   { symbol: "BK", name: "BNY Mellon" },
-  { symbol: "BA", name: "Boeing" },
+  { symbol: "BA", name: "The Boeing Company" },
   { symbol: "BKNG", name: "Booking Holdings" },
   { symbol: "BWA", name: "BorgWarner" },
   { symbol: "BSX", name: "Boston Scientific" },
