@@ -438,7 +438,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365, cr
 
     # Create Analysis Summary table
     analysis_summary = go.Table(
-        domain=dict(x=[0, 0.45], y=[0.12, 0.02]),  # Position in top left
+        domain=dict(x=[0, 0.45], y=[0.22, 0.02]),  # Position in top left
         header=dict(
             values=['<b>Metric</b>', '<b>Value</b>'],
             fill_color='lightgrey',
@@ -492,7 +492,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365, cr
                 buy_signal = None
 
         trading_table = go.Table(
-            domain=dict(x=[0.55, 1], y=[0.12, 0.02]),  # Position in top right
+            domain=dict(x=[0.55, 1], y=[0.22, 0.02]),  # Position in top right
             header=dict(
                 values=['<b>Entry Date</b>', '<b>Entry Price</b>', '<b>Exit Date</b>', 
                        '<b>Exit Price</b>', '<b>Return</b>', '<b>Status</b>'],
@@ -634,7 +634,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365, cr
             # Table Headers
             dict(
                 x=0.02,
-                y=0.13,
+                y=0.23,
                 xref='paper',
                 yref='paper',
                 text='<b>Analysis Summary</b>',
@@ -644,7 +644,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365, cr
             ),
             dict(
                 x=0.55,
-                y=0.13,
+                y=0.23,
                 xref='paper',
                 yref='paper',
                 text='<b>Trading Signal Analysis</b>',
