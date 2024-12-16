@@ -546,7 +546,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365, cr
     # Update layout
     fig.update_layout(
         # Basic layout settings
-        
+        scrollZoom=True,
         title=dict(
             text=f'{ticker_symbol} Technical Analysis ({lookback_days} Days)',
             x=0.5,
