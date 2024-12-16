@@ -150,7 +150,8 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365, cr
     tuple: (summary_df, fig, crossover_df, signals_df) - DataFrames and Plotly figure
     
     """
-    
+    current_year = datetime.now().year
+    start_year = current_year - 10
     DEFAULT_METRICS = [
     "total revenues",
     "operating cash flow",
@@ -298,8 +299,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365, cr
     
 
     # Get current year and calculate start year
-    current_year = datetime.now().year
-    start_year = current_year - 20
+    
 
 # Update metrics table creation
     metrics_df = create_metrics_table(
