@@ -197,7 +197,7 @@ def create_financial_metrics_table(df):
         header=dict(
             values=['<b>Metric</b>'] + [f'<b>{col}</b>' for col in df.columns],
             fill_color='lightgrey',
-            align='left',
+            align=['left'] + ['center'] * len(df.columns),
             font=dict(size=12)
         ),
         cells=dict(
