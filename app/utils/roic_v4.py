@@ -300,7 +300,7 @@ def create_metrics_table(ticker, metrics, start_year, end_year):
         header=dict(
             values=['<b>Metric</b>'] + [f'<b>{col}</b>' for col in df.columns],
             fill_color='lightgrey',
-            align='left',
+            align=['left'] + ['center'] * len(df.columns),
             font=dict(size=12)
         ),
         cells=dict(
@@ -325,7 +325,7 @@ def create_metrics_table(ticker, metrics, start_year, end_year):
                 header=dict(
                     values=['<b>Metric</b>'] + [f'<b>{col} Growth</b>' for col in df.columns[1:-1]],
                     fill_color='lightgrey',
-                    align='left',
+                    align=['left'] + ['center'] * len(df.columns),
                     font=dict(size=12)
                 ),
                 cells=dict(
