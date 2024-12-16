@@ -205,7 +205,7 @@ def create_financial_metrics_table(df):
                 formatted_df.index.tolist(),
                 *[formatted_df[col].tolist() for col in formatted_df.columns]
             ],
-            align=['left'] + ['right'] * len(df.columns),  # Left align text, right align numbers
+            align=['left'] + ['center'] * len(df.columns),  # Left align text, right align numbers
             font=dict(size=11),
             fill_color=[
                 ['white'] * len(formatted_df),  # Background color for each row
@@ -232,7 +232,7 @@ def create_financial_metrics_table(df):
                     ),
                     cells=dict(
                         values=formatted_values,
-                        align=['left'] + ['right'] * (len(formatted_values) - 1),  # Left align text, right align numbers
+                        align=['left'] + ['center'] * (len(formatted_values) - 1),  # Left align text, right align numbers
                         font=dict(size=11),
                         fill_color=[
                             ['white'] * len(formatted_values[0]),  # Background color for each row
