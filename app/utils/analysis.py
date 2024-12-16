@@ -515,7 +515,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365, cr
         )
     else:
         trading_table = go.Table(
-            domain=dict(x=[0.55, 1], y=[0.6, 0.99]),
+            domain=dict(x=[0.85, 1], y=[0.6, 0.99]),
             header=dict(
                 values=['<b>Notice</b>'],
                 fill_color='lightgrey',
