@@ -193,7 +193,7 @@ def create_financial_metrics_table(df):
 
     # Create the metrics table
     metrics_table = go.Table(
-        domain=dict(x=[0, 1], y=[0.12, 0.37]),  # Position for metrics table
+        domain=dict(x=[0, 1], y=[0.22, 0.37]),  # Position for metrics table
         header=dict(
             values=['<b>Metric</b>'] + [f'<b>{col}</b>' for col in df.columns],
             fill_color='lightgrey',
