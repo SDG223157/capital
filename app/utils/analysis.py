@@ -569,7 +569,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365, cr
             # Technical Analysis Metrics
             dict(
                 x=0.02,
-                y=0.98,
+                y=1.00,
                 xref='paper',
                 yref='paper',
                 text=f'<b>Price Analysis</b><br>' + 
@@ -586,7 +586,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365, cr
             # Regression Analysis
             dict(
                 x=0.25,
-                y=0.98,
+                y=1.00,
                 xref='paper',
                 yref='paper',
                 text=(f'<b>Regression Analysis</b><br>'
@@ -602,7 +602,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365, cr
             # Volatility Metrics
             dict(
                 x=0.48,
-                y=0.98,
+                y=1.00,
                 xref='paper',
                 yref='paper',
                 text=(f'<b>Volatility Analysis</b><br>'
@@ -618,7 +618,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365, cr
             # Trading Signals Summary
             dict(
                 x=0.71,
-                y=0.98,
+                y=1.00,
                 xref='paper',
                 yref='paper',
                 text=(f'<b>Signal Analysis</b><br>'
