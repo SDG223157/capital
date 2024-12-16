@@ -553,7 +553,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365, cr
             xanchor='center',
             font=dict(size=24)
         ),
-        height=1200,
+        height=total_height,
         showlegend=True,
         hovermode='x unified',
         
