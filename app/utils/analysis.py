@@ -181,7 +181,7 @@ def create_combined_analysis(ticker_symbol, end_date=None, lookback_days=365, cr
         "net income",
         "earnings per share"
     }
-    metrics_to_fetch = list(set(metrics_to_fetch) | required_metrics)
+    # metrics_to_fetch = list(set(metrics_to_fetch) | required_metrics)
     # Handle end date
     if end_date is None:
         end_date = datetime.now().strftime('%Y-%m-%d')
