@@ -34,10 +34,10 @@ LAYOUT_CONFIG = {
             'growth': {'x': 0.05, 'y': 0.16}
         },
         'stats': {
-            'price': {'x': 0.07, 'y': 0.92},
-            'regression': {'x': 0.30, 'y': 0.92},
-            'volatility': {'x': 0.53, 'y': 0.92},
-            'signals': {'x': 0.76, 'y': 0.92}
+            'price': {'x': 0.07, 'y': 0.93},
+            'regression': {'x': 0.30, 'y': 0.93},
+            'volatility': {'x': 0.53, 'y': 0.93},
+            'signals': {'x': 0.76, 'y': 0.93}
         }
     },
     'spacing': {
