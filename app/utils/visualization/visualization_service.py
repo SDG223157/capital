@@ -266,7 +266,6 @@ class VisualizationService:
 
         # Add table headers
         table_headers = {
-            'chart': 'Technical Analysis',
             'analysis_summary': 'Analysis Summary',
             'trading_signals': 'Trading Signal Analysis',
             'metrics': 'Financial Metrics',
