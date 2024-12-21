@@ -6,8 +6,7 @@ import sys
 import re
 import os
 import traceback
-from app.utils.analysis import create_combined_analysis
-
+from app.utils.analyzer.stock_analyzer import create_stock_visualization
 # Configure logging
 logging.basicConfig(
     level=logging.DEBUG,
@@ -157,7 +156,7 @@ def analyze():
             raise ValueError("Crossover days must be between 30 and 1000")
         logger.info(f"Using crossover days: {crossover_days}")
         
-        _, fig, _, _ = create_combined_analysis(
+        fig = create_stock_visualization(
             ticker,
             end_date=end_date,
             lookback_days=lookback_days,
