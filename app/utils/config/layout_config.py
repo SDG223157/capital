@@ -5,7 +5,7 @@ Configuration file for visualization layout settings
 LAYOUT_CONFIG = {
     'total_height': 1200,
     'chart_area': {
-        'domain': {'x': [0.05, 0.95], 'y': [0.65, 0.95]},  # Main chart top 40%
+        'domain': {'x': [0.05, 0.95], 'y': [0.65, 1.00]},  # Main chart top 40%
     },
     'tables': {
         'analysis_summary': {
@@ -45,10 +45,10 @@ LAYOUT_CONFIG = {
         'horizontal_gap': 0.04,
         'header_gap': 0.01,
         'margin': {
-            'top': 0.10,
-            'bottom': 0.05,
-            'left': 0.05,
-            'right': 0.05
+            'top': 120,
+            'bottom': 50,
+            'left': 50,
+            'right': 50
         }
     }
 }
