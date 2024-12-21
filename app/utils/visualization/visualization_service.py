@@ -466,7 +466,7 @@ class VisualizationService:
         # Update layout
         fig.update_layout(
             title=dict(
-                text=f'{symbol} Technical Analysis ({days} Days)',
+                text=f'{symbol} Technical Analysis',
                 x=0.5,
                 xanchor='center',
                 y=0.95,
