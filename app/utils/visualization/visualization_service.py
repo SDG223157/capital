@@ -292,7 +292,7 @@ class VisualizationService:
     def create_stock_analysis_chart(symbol, data, analysis_dates, ratios, prices, 
                                   appreciation_pcts, regression_results, 
                                   crossover_data, signal_returns, 
-                                  metrics_df, total_height=1000):
+                                  metrics_df, total_height=1400):
         """Create the complete stock analysis chart with all components"""
         fig = go.Figure()
 
