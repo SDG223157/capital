@@ -225,8 +225,7 @@ class VisualizationService:
                 'pos': config['stats']['price'],
                 'text': f'<b>Price Analysis</b><br>' + 
                        f'Start: ${start_price:.2f}<br>' +
-                       f'Current: ${end_price:.2f}<br>' +
-                       f'Return: {annual_return:.2f}%'
+                       f'Current: ${end_price:.2f}<br>' 
             },
             {
                 'pos': config['stats']['regression'],
