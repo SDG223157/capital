@@ -456,10 +456,10 @@ class VisualizationService:
         fig.add_trace(trading_table)
 
         # Create and add annotations
-        annotations = VisualizationService._create_chart_annotations(
-            start_price, end_price, annual_return, daily_volatility,
-            annualized_volatility, regression_results, total_return, signal_returns
-        )
+        # annotations = VisualizationService._create_chart_annotations(
+        #     start_price, end_price, annual_return, daily_volatility,
+        #     annualized_volatility, regression_results, total_return, signal_returns
+        # )
 
         # Update layout
         fig.update_layout(
@@ -474,7 +474,7 @@ class VisualizationService:
             height=total_height,
             showlegend=True,
             hovermode='x unified',
-            annotations=annotations,
+            # annotations=annotations,
             xaxis=dict(
                 title="Date",
                 showgrid=True,
