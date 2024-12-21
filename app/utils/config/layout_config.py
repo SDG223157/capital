@@ -3,7 +3,7 @@ Configuration file for visualization layout settings
 """
 
 LAYOUT_CONFIG = {
-    'total_height': 1400,
+    'total_height': 1200,
     'chart_area': {
         'domain': {'x': [0.05, 0.95], 'y': [0.65, 0.95]},  # Main chart top 40%
     },
@@ -41,11 +41,11 @@ LAYOUT_CONFIG = {
         }
     },
     'spacing': {
-        'vertical_gap': 0.07,
+        'vertical_gap': 0.05,
         'horizontal_gap': 0.04,
         'header_gap': 0.01,
         'margin': {
-            'top': 0.05,
+            'top': 0.10,
             'bottom': 0.05,
             'left': 0.05,
             'right': 0.05
