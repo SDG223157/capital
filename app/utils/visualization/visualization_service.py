@@ -291,7 +291,7 @@ class VisualizationService:
     def create_stock_analysis_chart(symbol, data, analysis_dates, ratios, prices, 
                                   appreciation_pcts, regression_results, 
                                   crossover_data, signal_returns, 
-                                  metrics_df, total_height=1400):
+                                  metrics_df, total_height=LAYOUT_CONFIG['total_height']):
         """Create the complete stock analysis chart with all components"""
         fig = go.Figure()
 
@@ -468,7 +468,7 @@ class VisualizationService:
                 text=f'{symbol} Technical Analysis ({days} Days)',
                 x=0.5,
                 xanchor='center',
-                font=dict(size=24)
+                font=dict(size=30)
             ),
             height=total_height,
             showlegend=True,

@@ -3,8 +3,9 @@ Configuration file for visualization layout settings
 """
 
 LAYOUT_CONFIG = {
+    'total_height': 1400,
     'chart_area': {
-        'domain': {'x': [0.05, 0.95], 'y': [0.62, 0.95]},  # Main chart top 40%
+        'domain': {'x': [0.05, 0.95], 'y': [0.65, 0.95]},  # Main chart top 40%
     },
     'tables': {
         'analysis_summary': {
