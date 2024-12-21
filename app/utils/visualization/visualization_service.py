@@ -220,48 +220,48 @@ class VisualizationService:
         config = LAYOUT_CONFIG['annotations']
         
         # Stats annotations
-        stats_info = [
-            {
-                'pos': config['stats']['price'],
-                'text': f'<b>Price Analysis</b><br>' + 
-                       f'Start: ${start_price:.2f}<br>' +
-                       f'Current: ${end_price:.2f}<br>' 
-            },
-            {
-                'pos': config['stats']['regression'],
-                'text': f'<b>Regression Analysis</b><br>' +
-                       f'{regression_results["equation"]}<br>' +
-                       f'R² = {regression_results["r2"]:.4f}'
-            },
-            {
-                'pos': config['stats']['volatility'],
-                'text': f'<b>Volatility Analysis</b><br>' +
-                       f'Daily: {daily_volatility:.3f}<br>' +
-                       f'Annual: {annualized_volatility:.3f}'
-            },
-            {
-                'pos': config['stats']['signals'],
-                'text': f'<b>Signal Analysis</b><br>' +
-                       f'Total Return: {total_return:.2f}%<br>' +
-                       f'Trades: {len([s for s in signal_returns if s["Signal"] == "Buy"])}'
-            }
-        ]
+        # stats_info = [
+        #     {
+        #         'pos': config['stats']['price'],
+        #         'text': f'<b>Price Analysis</b><br>' + 
+        #                f'Start: ${start_price:.2f}<br>' +
+        #                f'Current: ${end_price:.2f}<br>' 
+        #     },
+        #     {
+        #         'pos': config['stats']['regression'],
+        #         'text': f'<b>Regression Analysis</b><br>' +
+        #                f'{regression_results["equation"]}<br>' +
+        #                f'R² = {regression_results["r2"]:.4f}'
+        #     },
+        #     {
+        #         'pos': config['stats']['volatility'],
+        #         'text': f'<b>Volatility Analysis</b><br>' +
+        #                f'Daily: {daily_volatility:.3f}<br>' +
+        #                f'Annual: {annualized_volatility:.3f}'
+        #     },
+        #     {
+        #         'pos': config['stats']['signals'],
+        #         'text': f'<b>Signal Analysis</b><br>' +
+        #                f'Total Return: {total_return:.2f}%<br>' +
+        #                f'Trades: {len([s for s in signal_returns if s["Signal"] == "Buy"])}'
+        #     }
+        # ]
 
-        # Add stats annotations
-        for info in stats_info:
-            annotations.append(dict(
-                x=info['pos']['x'],
-                y=info['pos']['y'],
-                xref='paper',
-                yref='paper',
-                text=info['text'],
-                showarrow=False,
-                font=dict(size=12),
-                bgcolor='rgba(255, 255, 255, 0.8)',
-                bordercolor='rgba(0, 0, 0, 0.2)',
-                borderwidth=1,
-                align='left'
-            ))
+        # # Add stats annotations
+        # for info in stats_info:
+        #     annotations.append(dict(
+        #         x=info['pos']['x'],
+        #         y=info['pos']['y'],
+        #         xref='paper',
+        #         yref='paper',
+        #         text=info['text'],
+        #         showarrow=False,
+        #         font=dict(size=12),
+        #         bgcolor='rgba(255, 255, 255, 0.8)',
+        #         bordercolor='rgba(0, 0, 0, 0.2)',
+        #         borderwidth=1,
+        #         align='left'
+        #     ))
 
         # Add table headers
         table_headers = {
@@ -456,10 +456,10 @@ class VisualizationService:
         fig.add_trace(trading_table)
 
         # Create and add annotations
-        # annotations = VisualizationService._create_chart_annotations(
-        #     start_price, end_price, annual_return, daily_volatility,
-        #     annualized_volatility, regression_results, total_return, signal_returns
-        # )
+        annotations = VisualizationService._create_chart_annotations(
+            start_price, end_price, annual_return, daily_volatility,
+            annualized_volatility, regression_results, total_return, signal_returns
+        )
 
         # Update layout
         fig.update_layout(
@@ -474,7 +474,7 @@ class VisualizationService:
             height=total_height,
             showlegend=True,
             hovermode='x unified',
-            # annotations=annotations,
+            annotations=annotations,
             xaxis=dict(
                 title="Date",
                 showgrid=True,
