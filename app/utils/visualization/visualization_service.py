@@ -468,6 +468,8 @@ class VisualizationService:
                 text=f'{symbol} Technical Analysis ({days} Days)',
                 x=0.5,
                 xanchor='center',
+                y=0.95,
+                yanchor='top',
                 font=dict(size=30)
             ),
             height=total_height,
