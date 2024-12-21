@@ -116,7 +116,7 @@ class VisualizationService:
 
     @staticmethod
     def _create_analysis_summary_table(days, end_price, annual_return, 
-                                     daily_volatility, annualized_volatility, r2):
+                                     daily_volatility, annualized_volatility, r2, regression_formula):
         """Create the analysis summary table"""
         return go.Table(
             domain=dict(
@@ -130,14 +130,15 @@ class VisualizationService:
             cells=dict(
                 values=[
                     ['Total Days', 'Current Price', 'Annualized Return', 
-                     'Daily Volatility', 'Annual Volatility', 'Regression R²'],
+                     'Daily Volatility', 'Annual Volatility', 'Regression R²', 'Regression Formula'],
                     [
                         f"{days:,d}",
                         f"${end_price:.2f}",
                         f"{annual_return:.2f}%",
                         f"{daily_volatility:.3f}",
                         f"{annualized_volatility:.3f}",
-                        f"{r2:.4f}"
+                        f"{r2:.4f}",
+                        f"{regression_formula}"
                     ]
                 ],
                 **TABLE_STYLE['cells']
@@ -447,7 +448,8 @@ class VisualizationService:
             annual_return=annual_return,
             daily_volatility=daily_volatility,
             annualized_volatility=annualized_volatility,
-            r2=regression_results['r2']
+            r2=regression_results['r2'],
+            regression_formula=regression_results['equation']
         )
         fig.add_trace(analysis_table)
 
