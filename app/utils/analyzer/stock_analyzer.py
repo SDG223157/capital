@@ -78,7 +78,7 @@ def create_stock_visualization(
         print("Fetching financial metrics...")
         # Get financial metrics
         current_year = datetime.now().year
-        start_year = str(current_year - 5)
+        start_year = str(current_year - 10)
         end_year = str(current_year)
         
         metrics_df = data_service.create_metrics_table(
