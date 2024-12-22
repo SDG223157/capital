@@ -51,7 +51,6 @@ class DataService:
         except Exception as e:
             print(f"Error storing DataFrame in table {table_name}: {e}")
             return False
-
     def clean_ticker_for_table_name(self, ticker: str) -> str:
         """
         Clean ticker symbol for use in table name.
@@ -216,6 +215,7 @@ def store_financial_data(self, ticker: str, start_year: str = None, end_year: st
     except Exception as e:
         print(f"Error storing financial data for {ticker}: {e}")
         return False
+    
     def get_analysis_dates(self, end_date: str, lookback_type: str, 
                          lookback_value: int) -> str:
         """
