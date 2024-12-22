@@ -58,205 +58,205 @@ class DataService:
         """
         return ticker.replace('.', '').replace('^', '').replace('-', '').lower()
 
-def get_historical_data(self, ticker: str, start_date: str, end_date: str) -> pd.DataFrame:
-    """
-    Get historical data from MySQL database or yfinance if not exists.
-    """
-    cleaned_ticker = self.clean_ticker_for_table_name(ticker)
-    table_name = f"his_{cleaned_ticker}"
-    
-    try:
-        # First try to get data from database
-        if self.table_exists(table_name):
-            print(f"Getting historical data for {ticker} from database")
-            df = pd.read_sql_table(table_name, self.engine)
-            df.set_index('Date', inplace=True)
-            
-            # Filter for requested date range
-            mask = (df.index >= start_date) & (df.index <= end_date)
-            filtered_df = df[mask]
-            
-            if not filtered_df.empty:
-                return filtered_df
-
-        # If not in database, store it first
-        print(f"Data not found in database for {ticker}, fetching from yfinance")
-        success = self.store_historical_data(ticker, start_date, end_date)
-        if success:
-            # Get data from database after storing
-            df = pd.read_sql_table(table_name, self.engine)
-            df.set_index('Date', inplace=True)
-            return df
-        else:
-            raise ValueError(f"Failed to store data for {ticker}")
-            
-    except Exception as e:
-        print(f"Error in get_historical_data for {ticker}: {str(e)}")
-        raise
-
-def get_financial_data(self, ticker: str, metric_description: str, 
-                      start_year: str, end_year: str) -> pd.Series:
-    """
-    Get financial data from MySQL database or ROIC API if not exists.
-    """
-    cleaned_ticker = self.clean_ticker_for_table_name(ticker)
-    table_name = f"roic_{cleaned_ticker}"
-    
-    try:
-        # First try to get data from database
-        if self.table_exists(table_name):
-            print(f"Getting financial data for {ticker} from database")
-            df = pd.read_sql_table(table_name, self.engine)
-            
-            metric_field = self.METRICS.get(metric_description.lower())
-            if metric_field in df.columns:
-                # Filter for requested years
-                df['fiscal_year'] = df['fiscal_year'].astype(int)
-                mask = (df['fiscal_year'] >= int(start_year)) & (df['fiscal_year'] <= int(end_year))
-                filtered_df = df[mask]
-                
-                if not filtered_df.empty:
-                    return pd.Series(
-                        filtered_df[metric_field].values,
-                        index=filtered_df['fiscal_year'],
-                        name=metric_description
-                    )
-
-        # If not in database, store it first
-        print(f"Data not found in database for {ticker}, fetching from API")
-        success = self.store_financial_data(ticker, start_year, end_year)
-        if success:
-            # Get data from database after storing
-            df = pd.read_sql_table(table_name, self.engine)
-            metric_field = self.METRICS.get(metric_description.lower())
-            df['fiscal_year'] = df['fiscal_year'].astype(int)
-            
-            return pd.Series(
-                df[metric_field].values,
-                index=df['fiscal_year'],
-                name=metric_description
-            )
-        else:
-            return None
-            
-    except Exception as e:
-        print(f"Error in get_financial_data for {ticker}: {str(e)}")
-        return None
-
-def store_historical_data(self, ticker: str, start_date: str = None, end_date: str = None) -> bool:
-    """Fetch and store historical price data from yfinance"""
-    try:
-        print(f"Fetching historical data for {ticker} from yfinance")
-        ticker_obj = yf.Ticker(ticker)
-        
-        # If no dates specified, get all available data
-        if start_date and end_date:
-            df = ticker_obj.history(start=start_date, end=end_date)
-        else:
-            df = ticker_obj.history(period="max")
-        
-        if df.empty:
-            print(f"No historical data found for {ticker}")
-            return False
-        
-        # Process the data
-        df.index = df.index.tz_localize(None)
+    def get_historical_data(self, ticker: str, start_date: str, end_date: str) -> pd.DataFrame:
+        """
+        Get historical data from MySQL database or yfinance if not exists.
+        """
         cleaned_ticker = self.clean_ticker_for_table_name(ticker)
         table_name = f"his_{cleaned_ticker}"
         
-        # Store in database
-        return self.store_dataframe(df, table_name)
-            
-    except Exception as e:
-        print(f"Error storing historical data for {ticker}: {e}")
-        return False
+        try:
+            # First try to get data from database
+            if self.table_exists(table_name):
+                print(f"Getting historical data for {ticker} from database")
+                df = pd.read_sql_table(table_name, self.engine)
+                df.set_index('Date', inplace=True)
+                
+                # Filter for requested date range
+                mask = (df.index >= start_date) & (df.index <= end_date)
+                filtered_df = df[mask]
+                
+                if not filtered_df.empty:
+                    return filtered_df
 
-def store_financial_data(self, ticker: str, start_year: str = None, end_year: str = None) -> bool:
-    """Fetch and store financial data from ROIC API"""
-    try:
-        print(f"Fetching financial data for {ticker} from ROIC API")
-        
-        # If no years specified, use last 5 years
-        if not start_year or not end_year:
-            current_year = datetime.now().year
-            end_year = str(current_year)
-            start_year = str(current_year - 5)
+            # If not in database, store it first
+            print(f"Data not found in database for {ticker}, fetching from yfinance")
+            success = self.store_historical_data(ticker, start_date, end_date)
+            if success:
+                # Get data from database after storing
+                df = pd.read_sql_table(table_name, self.engine)
+                df.set_index('Date', inplace=True)
+                return df
+            else:
+                raise ValueError(f"Failed to store data for {ticker}")
+                
+        except Exception as e:
+            print(f"Error in get_historical_data for {ticker}: {str(e)}")
+            raise
 
-        all_metrics_data = []
-        
-        # Fetch data for each metric
-        for metric_description in self.METRICS:
-            metric_field = self.METRICS[metric_description]
-            query = f"get({metric_field}(fa_period_reference=range('{start_year}', '{end_year}'))) for('{ticker}')"
-            url = f"{self.BASE_URL}?query={query}&apikey={self.API_KEY}"
-
-            response = requests.get(url)
-            response.raise_for_status()
-            
-            df = pd.DataFrame(response.json())
-            if not df.empty:
-                df.columns = df.iloc[0]
-                df = df.drop(0).reset_index(drop=True)
-                all_metrics_data.append(df)
-
-        if not all_metrics_data:
-            print(f"No financial data found for {ticker}")
-            return False
-
-        # Combine all metrics data
-        combined_df = pd.concat(all_metrics_data, axis=1)
-        combined_df = combined_df.loc[:,~combined_df.columns.duplicated()]
-        
-        # Store in database
+    def get_financial_data(self, ticker: str, metric_description: str, 
+                        start_year: str, end_year: str) -> pd.Series:
+        """
+        Get financial data from MySQL database or ROIC API if not exists.
+        """
         cleaned_ticker = self.clean_ticker_for_table_name(ticker)
         table_name = f"roic_{cleaned_ticker}"
-        return self.store_dataframe(combined_df, table_name)
-            
-    except Exception as e:
-        print(f"Error storing financial data for {ticker}: {e}")
-        return False
-    
-    def get_analysis_dates(self, end_date: str, lookback_type: str, 
-                         lookback_value: int) -> str:
-        """
-        Calculate start date based on lookback period
-
-        Parameters:
-        -----------
-        end_date : str
-            End date in YYYY-MM-DD format
-        lookback_type : str
-            Type of lookback period ('quarters' or 'days')
-        lookback_value : int
-            Number of quarters or days to look back
-
-        Returns:
-        --------
-        str
-            Start date in YYYY-MM-DD format
-        """
+        
         try:
-            # Handle None or empty end_date
-            if not end_date:
-                end_date = datetime.now().strftime("%Y-%m-%d")
+            # First try to get data from database
+            if self.table_exists(table_name):
+                print(f"Getting financial data for {ticker} from database")
+                df = pd.read_sql_table(table_name, self.engine)
                 
-            # Validate date format
-            try:
-                end_dt = datetime.strptime(end_date, "%Y-%m-%d")
-            except ValueError:
-                print(f"Invalid date format: {end_date}, using current date")
-                end_dt = datetime.now()
+                metric_field = self.METRICS.get(metric_description.lower())
+                if metric_field in df.columns:
+                    # Filter for requested years
+                    df['fiscal_year'] = df['fiscal_year'].astype(int)
+                    mask = (df['fiscal_year'] >= int(start_year)) & (df['fiscal_year'] <= int(end_year))
+                    filtered_df = df[mask]
+                    
+                    if not filtered_df.empty:
+                        return pd.Series(
+                            filtered_df[metric_field].values,
+                            index=filtered_df['fiscal_year'],
+                            name=metric_description
+                        )
+
+            # If not in database, store it first
+            print(f"Data not found in database for {ticker}, fetching from API")
+            success = self.store_financial_data(ticker, start_year, end_year)
+            if success:
+                # Get data from database after storing
+                df = pd.read_sql_table(table_name, self.engine)
+                metric_field = self.METRICS.get(metric_description.lower())
+                df['fiscal_year'] = df['fiscal_year'].astype(int)
                 
-            if lookback_type == 'quarters':
-                start_dt = end_dt - relativedelta(months=3*lookback_value)
-            else:  # days
-                start_dt = end_dt - relativedelta(days=lookback_value)
+                return pd.Series(
+                    df[metric_field].values,
+                    index=df['fiscal_year'],
+                    name=metric_description
+                )
+            else:
+                return None
                 
-            return start_dt.strftime("%Y-%m-%d")
-            
         except Exception as e:
-            print(f"Error calculating analysis dates: {str(e)}")
-            raise
+            print(f"Error in get_financial_data for {ticker}: {str(e)}")
+            return None
+
+    def store_historical_data(self, ticker: str, start_date: str = None, end_date: str = None) -> bool:
+        """Fetch and store historical price data from yfinance"""
+        try:
+            print(f"Fetching historical data for {ticker} from yfinance")
+            ticker_obj = yf.Ticker(ticker)
+            
+            # If no dates specified, get all available data
+            if start_date and end_date:
+                df = ticker_obj.history(start=start_date, end=end_date)
+            else:
+                df = ticker_obj.history(period="max")
+            
+            if df.empty:
+                print(f"No historical data found for {ticker}")
+                return False
+            
+            # Process the data
+            df.index = df.index.tz_localize(None)
+            cleaned_ticker = self.clean_ticker_for_table_name(ticker)
+            table_name = f"his_{cleaned_ticker}"
+            
+            # Store in database
+            return self.store_dataframe(df, table_name)
+                
+        except Exception as e:
+            print(f"Error storing historical data for {ticker}: {e}")
+            return False
+
+    def store_financial_data(self, ticker: str, start_year: str = None, end_year: str = None) -> bool:
+        """Fetch and store financial data from ROIC API"""
+        try:
+            print(f"Fetching financial data for {ticker} from ROIC API")
+            
+            # If no years specified, use last 5 years
+            if not start_year or not end_year:
+                current_year = datetime.now().year
+                end_year = str(current_year)
+                start_year = str(current_year - 5)
+
+            all_metrics_data = []
+            
+            # Fetch data for each metric
+            for metric_description in self.METRICS:
+                metric_field = self.METRICS[metric_description]
+                query = f"get({metric_field}(fa_period_reference=range('{start_year}', '{end_year}'))) for('{ticker}')"
+                url = f"{self.BASE_URL}?query={query}&apikey={self.API_KEY}"
+
+                response = requests.get(url)
+                response.raise_for_status()
+                
+                df = pd.DataFrame(response.json())
+                if not df.empty:
+                    df.columns = df.iloc[0]
+                    df = df.drop(0).reset_index(drop=True)
+                    all_metrics_data.append(df)
+
+            if not all_metrics_data:
+                print(f"No financial data found for {ticker}")
+                return False
+
+            # Combine all metrics data
+            combined_df = pd.concat(all_metrics_data, axis=1)
+            combined_df = combined_df.loc[:,~combined_df.columns.duplicated()]
+            
+            # Store in database
+            cleaned_ticker = self.clean_ticker_for_table_name(ticker)
+            table_name = f"roic_{cleaned_ticker}"
+            return self.store_dataframe(combined_df, table_name)
+                
+        except Exception as e:
+            print(f"Error storing financial data for {ticker}: {e}")
+            return False
+        
+    def get_analysis_dates(self, end_date: str, lookback_type: str, 
+                            lookback_value: int) -> str:
+            """
+            Calculate start date based on lookback period
+
+            Parameters:
+            -----------
+            end_date : str
+                End date in YYYY-MM-DD format
+            lookback_type : str
+                Type of lookback period ('quarters' or 'days')
+            lookback_value : int
+                Number of quarters or days to look back
+
+            Returns:
+            --------
+            str
+                Start date in YYYY-MM-DD format
+            """
+            try:
+                # Handle None or empty end_date
+                if not end_date:
+                    end_date = datetime.now().strftime("%Y-%m-%d")
+                    
+                # Validate date format
+                try:
+                    end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+                except ValueError:
+                    print(f"Invalid date format: {end_date}, using current date")
+                    end_dt = datetime.now()
+                    
+                if lookback_type == 'quarters':
+                    start_dt = end_dt - relativedelta(months=3*lookback_value)
+                else:  # days
+                    start_dt = end_dt - relativedelta(days=lookback_value)
+                    
+                return start_dt.strftime("%Y-%m-%d")
+                
+            except Exception as e:
+                print(f"Error calculating analysis dates: {str(e)}")
+                raise
 
     def create_metrics_table(self, ticker: str, metrics: list, 
                            start_year: str, end_year: str) -> pd.DataFrame:
