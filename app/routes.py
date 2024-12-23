@@ -205,7 +205,7 @@ def analyze():
 
 # Add this new route with bp instead of main
 @bp.route('/tables')
-def tables():  # Changed function name to avoid potential conflicts
+def tables():
     """Show database tables in document tree structure"""
     try:
         logger.info('Accessing database tables view')
