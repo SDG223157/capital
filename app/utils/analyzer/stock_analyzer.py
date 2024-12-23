@@ -9,6 +9,7 @@ from app.utils.data.data_service import DataService
 from app.utils.analysis.analysis_service import AnalysisService
 from app.utils.visualization.visualization_service import VisualizationService
 from app.utils.config.metrics_config import METRICS_TO_FETCH, ANALYSIS_DEFAULTS
+from app.utils.config.layout_config import LAYOUT_CONFIG
 
 class StockAnalyzer:
     """Class to handle stock analysis operations"""
@@ -65,7 +66,7 @@ def create_stock_visualization(
         analysis_df = AnalysisService.analyze_stock_data(historical_data, crossover_days)
         
         # Perform regression analysis
-        regression_results = AnalysisService.perform_polynomial_regression(historical_data, future_days=int(lookback_days*0.6))
+        regression_results = AnalysisService.perform_polynomial_regression(historical_data, future_days=int(lookback_days*LAYOUT_CONFIG['lookback_days_ratio']))
         
         # Find crossover points
         crossover_data = AnalysisService.find_crossover_points(
