@@ -116,6 +116,14 @@
             border: none;
             cursor: pointer;
         }
+        .ticker {
+            color: #1a73e8;
+            font-weight: bold;
+        }
+        .table-name {
+            color: #666;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
@@ -151,6 +159,30 @@
                 </div>
             </div>
         </div>
+
+        {% if historical_tables %}
+        <div class="tree-section">
+            <div class="tree-title">
+                Historical Data Tables
+                <span style="font-size: 14px; color: #666;">
+                    (Daily stock price data)
+                </span>
+            </div>
+            {% for table in historical_tables %}
+            <div class="tree-item" data-table="{{ table.name }}">
+                <div class="tree-item-info">
+                    <span class="ticker">{{ table.ticker }}</span>
+                    <span class="table-name">{{ table.name }}</span>
+                    <span>Rows: {{ table.row_count }}</span>
+                </div>
+                <div>
+                    <span class="table-type">{{ table.type }}</span>
+                    <button class="delete-btn" onclick="showDeleteConfirm('{{ table.name }}')">Delete</button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
 
         {% if financial_tables %}
         <div class="tree-section">
