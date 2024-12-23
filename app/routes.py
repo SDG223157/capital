@@ -9,6 +9,7 @@ import traceback
 from app.utils.analyzer.stock_analyzer import create_stock_visualization
 from sqlalchemy import inspect
 from app import db 
+from sqlalchemy import text 
 # Make sure this line is present
 # Configure logging
 logging.basicConfig(
@@ -204,6 +205,8 @@ def analyze():
 # Keep your existing imports and code at the top
 
 # Add this new route with bp instead of main
+# Add this import at the top
+
 @bp.route('/tables')
 def tables():
     """Show database tables in document tree structure"""
@@ -222,11 +225,11 @@ def tables():
         
         for table in tables:
             try:
+                # Use text() for SQL queries
+                count_query = text(f'SELECT COUNT(*) FROM {table}')
                 table_info = {
                     'name': table,
-                    'row_count': db.session.execute(
-                        f'SELECT COUNT(*) FROM {table}'
-                    ).scalar()
+                    'row_count': db.session.execute(count_query).scalar()
                 }
                 
                 if table.startswith('his_'):
@@ -260,6 +263,9 @@ def tables():
                 logger.error(f"Error processing table {table}: {str(table_error)}")
                 continue
 
+        logger.info(f'Categorized tables - Historical: {len(historical_tables)}, ' +
+                   f'Financial: {len(financial_tables)}, Other: {len(other_tables)}')
+                
         return render_template(
             'tables.html',
             historical_tables=historical_tables,
