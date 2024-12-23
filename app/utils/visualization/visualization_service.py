@@ -48,71 +48,82 @@ class VisualizationService:
         return formatted_values
 
     @staticmethod
-    def create_financial_metrics_table(df):
-        """Create financial metrics tables"""
-        if df is None or df.empty:
-            return None, None
+def create_financial_metrics_table(df):
+    """Create financial metrics tables"""
+    if df is None or df.empty:
+        return None, None
 
-        formatted_df = df.copy()
-        for col in df.columns:
-            if col != 'CAGR %':
-                formatted_df[col] = formatted_df[col].apply(VisualizationService.format_number)
-            else:
-                formatted_df[col] = formatted_df[col].apply(
-                    lambda x: f"{x:+.2f}" if pd.notna(x) and x is not None else "N/A"
-                )
-
-        metrics_table = go.Table(
-            domain=dict(
-                x=LAYOUT_CONFIG['tables']['metrics']['x'],
-                y=LAYOUT_CONFIG['tables']['metrics']['y']
-            ),
-            header=dict(
-                values=['<b>Metric</b>'] + [f'<b>{col}</b>' for col in df.columns],
-                **TABLE_STYLE['header']
-            ),
-            cells=dict(
-                values=[
-                    formatted_df.index.tolist(),
-                    *[formatted_df[col].tolist() for col in formatted_df.columns]
-                ],
-                **TABLE_STYLE['cells']
+    formatted_df = df.copy()
+    for col in df.columns:
+        if col != 'CAGR %':
+            formatted_df[col] = formatted_df[col].apply(VisualizationService.format_number)
+        else:
+            formatted_df[col] = formatted_df[col].apply(
+                lambda x: f"{x:+.2f}" if pd.notna(x) and x is not None else "N/A"
             )
+
+    metrics_table = go.Table(
+        domain=dict(
+            x=LAYOUT_CONFIG['tables']['metrics']['x'],
+            y=LAYOUT_CONFIG['tables']['metrics']['y']
+        ),
+        header=dict(
+            values=['<b>Metric</b>'] + [f'<b>{col}</b>' for col in df.columns],
+            **TABLE_STYLE['header']
+        ),
+        cells=dict(
+            values=[
+                formatted_df.index.tolist(),
+                *[formatted_df[col].tolist() for col in formatted_df.columns]
+            ],
+            **TABLE_STYLE['cells']
         )
+    )
+    
+    growth_table = None
+    if not df.empty:
+        df_columns = list(df.columns)
+        year_columns = df_columns[1:-1]  # Exclude CAGR column if present
         
-        growth_table = None
-        if not df.empty:
-            df_columns = list(df.columns)
-            year_columns = df_columns[1:-1]
-            growth_rates = {
-                metric: [
-                    ((df.loc[metric, col] / df.loc[metric, prev_col] - 1) * 100)
-                    if df.loc[metric, prev_col] != 0 else None
-                    for prev_col, col in zip(year_columns[:-1], year_columns[1:])
-                ]
-                for metric in df.index
-            }
+        # Calculate growth rates with null checking
+        growth_rates = {}
+        for metric in df.index:
+            rates = []
+            for prev_col, col in zip(year_columns[:-1], year_columns[1:]):
+                try:
+                    curr_val = df.loc[metric, col]
+                    prev_val = df.loc[metric, prev_col]
+                    
+                    if pd.isna(curr_val) or pd.isna(prev_val) or prev_val == 0:
+                        rates.append(None)
+                    else:
+                        growth_rate = ((curr_val / prev_val) - 1) * 100
+                        rates.append(growth_rate)
+                except (TypeError, ZeroDivisionError):
+                    rates.append(None)
             
-            if growth_rates:
-                formatted_values = VisualizationService.format_growth_values(growth_rates)
-                if formatted_values:
-                    growth_table = go.Table(
-                        domain=dict(
-                            x=LAYOUT_CONFIG['tables']['growth']['x'],
-                            y=LAYOUT_CONFIG['tables']['growth']['y']
-                        ),
-                        header=dict(
-                            values=['<b>Metric</b>'] + [f'<b>{year_columns[i]}</b>' 
-                                   for i in range(1, len(year_columns))],
-                            **TABLE_STYLE['header']
-                        ),
-                        cells=dict(
-                            values=formatted_values,
-                            **TABLE_STYLE['cells']
-                        )
-                    )
+            growth_rates[metric] = rates
         
-        return metrics_table, growth_table
+        if growth_rates:
+            formatted_values = VisualizationService.format_growth_values(growth_rates)
+            if formatted_values:
+                growth_table = go.Table(
+                    domain=dict(
+                        x=LAYOUT_CONFIG['tables']['growth']['x'],
+                        y=LAYOUT_CONFIG['tables']['growth']['y']
+                    ),
+                    header=dict(
+                        values=['<b>Metric</b>'] + [f'<b>{year_columns[i]}</b>' 
+                               for i in range(1, len(year_columns))],
+                        **TABLE_STYLE['header']
+                    ),
+                    cells=dict(
+                        values=formatted_values,
+                        **TABLE_STYLE['cells']
+                    )
+                )
+    
+    return metrics_table, growth_table
 
     @staticmethod
     def _create_analysis_summary_table(days, end_price, annual_return, 
