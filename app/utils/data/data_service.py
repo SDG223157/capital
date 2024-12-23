@@ -183,10 +183,10 @@ class DataService:
             ticker_obj = yf.Ticker(ticker)
             
             # If no dates specified, get all available data
-            if start_date and end_date:
-                df = ticker_obj.history(start=start_date, end=end_date)
-            else:
-                df = ticker_obj.history(period="max")
+            # if start_date and end_date:
+            #     df = ticker_obj.history(start=start_date, end=end_date)
+            # else:
+            df = ticker_obj.history(period="max")
             
             if df.empty:
                 print(f"No historical data found for {ticker}")
