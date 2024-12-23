@@ -8,7 +8,8 @@ import os
 import traceback
 from app.utils.analyzer.stock_analyzer import create_stock_visualization
 from sqlalchemy import inspect
-from app import db  # Make sure this line is present
+from app import db 
+# Make sure this line is present
 # Configure logging
 logging.basicConfig(
     level=logging.DEBUG,
