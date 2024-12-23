@@ -308,7 +308,7 @@ def show_table_content(table_name):
         total_rows = db.session.execute(count_query).scalar()
         total_pages = (total_rows + per_page - 1) // per_page
 
-        # Get available columns
+        # Get all column names
         inspector = inspect(db.engine)
         columns = [col['name'] for col in inspector.get_columns(table_name)]
         
@@ -323,11 +323,16 @@ def show_table_content(table_name):
             LIMIT :limit OFFSET :offset
         ''')
         
+        # Execute query and fetch results
         result = db.session.execute(query, {'limit': per_page, 'offset': offset})
         
-        # Get column names and data
-        columns = result.keys()
-        data = [dict(row) for row in result]
+        # Convert results to list of dictionaries
+        data = []
+        for row in result:
+            row_dict = {}
+            for idx, col in enumerate(columns):
+                row_dict[col] = row[idx]
+            data.append(row_dict)
         
         return render_template(
             'table_content.html',
