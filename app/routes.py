@@ -278,8 +278,8 @@ def delete_table(table_name):
             logger.error(f'Table {table_name} not found')
             return jsonify({'success': False, 'error': 'Table not found'}), 404
 
-        # Delete table using text query
-        query = text(f'DROP TABLE {table_name}')
+        # Use backticks to properly escape table name
+        query = text(f'DROP TABLE `{table_name}`')
         db.session.execute(query)
         db.session.commit()
         
