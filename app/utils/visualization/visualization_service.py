@@ -502,7 +502,7 @@ class VisualizationService:
             yaxis=dict(
                 title="Ratio and Position (%)",
                 ticksuffix="%",
-                range=[0, 100],
+                range=[0 , 100],
                 showgrid=True,
                 gridwidth=1,
                 gridcolor='rgba(128, 128, 128, 0.2)',
