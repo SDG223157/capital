@@ -7,7 +7,7 @@ import numpy as np
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from app.utils.config.metrics_config import METRICS_MAP, CAGR_METRICS
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, inspect, text
 import os
 
 class DataService:
@@ -60,7 +60,9 @@ class DataService:
 
     def get_historical_data(self, ticker: str, start_date: str, end_date: str) -> pd.DataFrame:
         """
-        Get historical data from MySQL database or yfinance if not exists/incomplete.
+        Get historical data from MySQL database or yfinance if not exists.
+        Check if request date range is within database table's date range.
+        If not, fetch from yfinance and store.
         """
         cleaned_ticker = self.clean_ticker_for_table_name(ticker)
         table_name = f"his_{cleaned_ticker}"
@@ -69,23 +71,29 @@ class DataService:
             # First try to get data from database
             if self.table_exists(table_name):
                 print(f"Getting historical data for {ticker} from database")
-                df = pd.read_sql_table(table_name, self.engine)
-                df.set_index('Date', inplace=True)
                 
-                # Filter for requested date range
-                mask = (df.index >= start_date) & (df.index <= end_date)
-                filtered_df = df[mask]
+                # Get table's date range
+                date_range_query = text("""
+                    SELECT MIN(Date) as min_date, MAX(Date) as max_date 
+                    FROM {}
+                """.format(table_name))
+                date_range = pd.read_sql_query(date_range_query, self.engine)
+                db_start = date_range['min_date'][0]
+                db_end = date_range['max_date'][0]
                 
-                # Check if we have all the data we need
-                requested_dates = pd.date_range(start=start_date, end=end_date, freq='B')
-                actual_dates = filtered_df.index
-                missing_dates = requested_dates.difference(actual_dates)
-                
-                if len(missing_dates) == 0:
-                    return filtered_df
+                # Check if request date range is within database range
+                if pd.to_datetime(start_date) >= pd.to_datetime(db_start) and \
+                    pd.to_datetime(end_date) <= pd.to_datetime(db_end):
+                    
+                    print(f"Request date range is within database range for {ticker}")
+                    df = pd.read_sql_table(table_name, self.engine)
+                    df.set_index('Date', inplace=True)
+                    
+                    # Filter for requested date range
+                    mask = (df.index >= start_date) & (df.index <= end_date)
+                    return df[mask]
                 else:
-                    print(f"Incomplete data for {ticker}, fetching from yfinance")
-                    # If data is incomplete, fetch all data and update database
+                    print(f"Request date range is outside database range for {ticker}, fetching from yfinance")
                     success = self.store_historical_data(ticker, start_date, end_date)
                     if success:
                         df = pd.read_sql_table(table_name, self.engine)
@@ -103,7 +111,7 @@ class DataService:
                 return df[mask]
             else:
                 raise ValueError(f"Failed to store data for {ticker}")
-                
+                    
         except Exception as e:
             print(f"Error in get_historical_data for {ticker}: {str(e)}")
             raise
