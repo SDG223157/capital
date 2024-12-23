@@ -204,9 +204,12 @@ def analyze():
 def show_database_tables():
     """Show database tables in document tree structure"""
     try:
+        logger.info('Accessing database tables view')
+        
         # Get all tables from database
         inspector = inspect(db.engine)
         tables = inspector.get_table_names()
+        logger.info(f'Found {len(tables)} tables in database')
         
         # Organize tables by type
         historical_tables = []
@@ -214,25 +217,49 @@ def show_database_tables():
         other_tables = []
         
         for table in tables:
-            if table.startswith('his_'):
-                ticker = table.replace('his_', '').upper()
-                historical_tables.append({
+            try:
+                table_info = {
                     'name': table,
-                    'ticker': ticker,
-                    'type': 'Historical Data'
-                })
-            elif table.startswith('roic_'):
-                ticker = table.replace('roic_', '').upper()
-                financial_tables.append({
-                    'name': table,
-                    'ticker': ticker,
-                    'type': 'Financial Data'
-                })
-            else:
-                other_tables.append({
-                    'name': table,
-                    'type': 'Other'
-                })
+                    'schema': {col['name']: col['type'].__str__() 
+                              for col in inspector.get_columns(table)},
+                    'row_count': db.session.execute(
+                        f'SELECT COUNT(*) FROM {table}'
+                    ).scalar()
+                }
+                
+                if table.startswith('his_'):
+                    ticker = table.replace('his_', '').upper()
+                    historical_tables.append({
+                        **table_info,
+                        'ticker': ticker,
+                        'type': 'Historical Data',
+                        'source': TICKER_DICT.get(ticker, 'Custom Ticker')
+                    })
+                    logger.debug(f'Added historical table: {table} for ticker {ticker}')
+                    
+                elif table.startswith('roic_'):
+                    ticker = table.replace('roic_', '').upper()
+                    financial_tables.append({
+                        **table_info,
+                        'ticker': ticker,
+                        'type': 'Financial Data',
+                        'source': TICKER_DICT.get(ticker, 'Custom Ticker')
+                    })
+                    logger.debug(f'Added financial table: {table} for ticker {ticker}')
+                    
+                else:
+                    other_tables.append({
+                        **table_info,
+                        'type': 'Other'
+                    })
+                    logger.debug(f'Added other table: {table}')
+                    
+            except Exception as table_error:
+                logger.error(f"Error processing table {table}: {str(table_error)}")
+                continue
+
+        logger.info(f'Categorized tables - Historical: {len(historical_tables)}, ' +
+                   f'Financial: {len(financial_tables)}, Other: {len(other_tables)}')
                 
         return render_template(
             'tables.html',
@@ -242,5 +269,6 @@ def show_database_tables():
         )
         
     except Exception as e:
-        print(f"Error fetching database tables: {e}")
-        return render_template('tables.html', error=str(e))
+        error_msg = f"Error fetching database tables: {str(e)}"
+        logger.error(f"{error_msg}\n{traceback.format_exc()}")
+        return render_template('tables.html', error=error_msg)
