@@ -528,7 +528,7 @@ class VisualizationService:
             paper_bgcolor='white',
             margin=dict(
                 l=50, 
-                r=150, 
+                r=50, 
                 t=LAYOUT_CONFIG['spacing']['margin']['top'] * total_height,
                 b=LAYOUT_CONFIG['spacing']['margin']['bottom'] * total_height
             ),
@@ -536,7 +536,7 @@ class VisualizationService:
                 yanchor="top",
                 y=0.95,
                 xanchor="right",
-                x=1.0,
+                x=1.10,
                 bgcolor='rgba(255, 255, 255, 0.8)',
                 bordercolor='rgba(0, 0, 0, 0.2)',
                 borderwidth=1,
