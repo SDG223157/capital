@@ -534,9 +534,9 @@ class VisualizationService:
             ),
             legend=dict(
                 yanchor="top",
-                y=0.99,
+                y=0.95,
                 xanchor="right",
-                x=1.10,
+                x=1.05,
                 bgcolor='rgba(255, 255, 255, 0.8)',
                 bordercolor='rgba(0, 0, 0, 0.2)',
                 borderwidth=1,
