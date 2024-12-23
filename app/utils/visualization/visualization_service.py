@@ -414,7 +414,7 @@ class VisualizationService:
                 color = CHART_STYLE['colors']['bullish_marker'] if direction == 'up' else CHART_STYLE['colors']['bearish_marker']
                 formatted_date = date.strftime('%Y-%m-%d')
                 base_name = 'Bullish Crossover' if direction == 'up' else 'Bearish Crossover'
-                detailed_name = f"{base_name} ({formatted_date}, ${price:.2f})"
+                detailed_name = f"({formatted_date}, ${price:.2f})"
                 
                 fig.add_trace(
                     go.Scatter(
@@ -536,7 +536,7 @@ class VisualizationService:
                 yanchor="top",
                 y=0.99,
                 xanchor="right",
-                x=1.15,
+                x=1.10,
                 bgcolor='rgba(255, 255, 255, 0.8)',
                 bordercolor='rgba(0, 0, 0, 0.2)',
                 borderwidth=1,
