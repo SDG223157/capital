@@ -66,11 +66,16 @@ class DataService:
         table_name = f"his_{cleaned_ticker}"
         
         try:
-            # Ensure end_date is not in the future
-            current_date = pd.Timestamp.now().strftime('%Y-%m-%d')
-            if pd.to_datetime(end_date) > pd.to_datetime(current_date):
-                end_date = current_date
-                print(f"Adjusted end date to current date: {current_date}")
+            # Get the latest trading day (last Friday if weekend)
+            latest_trading_day = pd.Timestamp.now()
+            while latest_trading_day.weekday() > 4:  # 5 = Saturday, 6 = Sunday
+                latest_trading_day = latest_trading_day - pd.Timedelta(days=1)
+            latest_trading_day = latest_trading_day.strftime('%Y-%m-%d')
+            
+            # Adjust end_date if it's beyond latest trading day
+            if pd.to_datetime(end_date) > pd.to_datetime(latest_trading_day):
+                end_date = latest_trading_day
+                print(f"Adjusted end date to latest trading day: {latest_trading_day}")
             
             # First try to get data from database
             if self.table_exists(table_name):
@@ -88,43 +93,28 @@ class DataService:
                 print(f"Database date range: {db_start} to {db_end}")
                 print(f"Requested date range: {start_date} to {end_date}")
                 
-                # Check if request date range is within database range
-                if pd.to_datetime(start_date) >= pd.to_datetime(db_start) and \
-                pd.to_datetime(end_date) <= pd.to_datetime(db_end):
-                    
-                    print(f"Request date range is within database range for {ticker}")
-                    df = pd.read_sql_table(table_name, self.engine)
-                    df.set_index('Date', inplace=True)
-                    
-                    # Filter for requested date range
-                    mask = (df.index >= start_date) & (df.index <= end_date)
-                    filtered_df = df[mask]
-                    print(f"Returning {len(filtered_df)} rows of data")
+                # Get data from database regardless of date range
+                df = pd.read_sql_table(table_name, self.engine)
+                df.set_index('Date', inplace=True)
+                
+                # Filter for requested date range
+                mask = (df.index >= start_date) & (df.index <= end_date)
+                filtered_df = df[mask]
+                
+                if not filtered_df.empty:
+                    print(f"Found {len(filtered_df)} rows of data in existing table")
                     return filtered_df
-                else:
-                    print(f"Request date range is outside database range")
-                    print(f"Start date check: {pd.to_datetime(start_date) >= pd.to_datetime(db_start)}")
-                    print(f"End date check: {pd.to_datetime(end_date) <= pd.to_datetime(db_end)}")
-                    
+                
+                print("No data found in date range, refreshing data")
+                success = self.store_historical_data(ticker)
+                if success:
                     df = pd.read_sql_table(table_name, self.engine)
                     df.set_index('Date', inplace=True)
                     mask = (df.index >= start_date) & (df.index <= end_date)
-                    filtered_df = df[mask]
-                    
-                    if not filtered_df.empty:
-                        print(f"Found {len(filtered_df)} rows of data in existing table")
-                        return filtered_df
-                    else:
-                        print("No data found in date range, fetching new data")
-                        success = self.store_historical_data(ticker)
-                        if success:
-                            df = pd.read_sql_table(table_name, self.engine)
-                            df.set_index('Date', inplace=True)
-                            mask = (df.index >= start_date) & (df.index <= end_date)
-                            return df[mask]
+                    return df[mask]
 
             # If not in database, store it first
-            print(f"Data not found in database for {ticker}, fetching 30 years data")
+            print(f"Data not found in database for {ticker}, fetching data")
             success = self.store_historical_data(ticker)
             if success:
                 df = pd.read_sql_table(table_name, self.engine)
