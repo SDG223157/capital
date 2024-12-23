@@ -61,8 +61,6 @@ class DataService:
     def get_historical_data(self, ticker: str, start_date: str, end_date: str) -> pd.DataFrame:
         """
         Get historical data from MySQL database or yfinance if not exists.
-        Check if request date range is within database table's date range.
-        If not, fetch 30 years data from yfinance and store.
         """
         cleaned_ticker = self.clean_ticker_for_table_name(ticker)
         table_name = f"his_{cleaned_ticker}"
@@ -84,8 +82,11 @@ class DataService:
                     FROM {}
                 """.format(table_name))
                 date_range = pd.read_sql_query(date_range_query, self.engine)
-                db_start = date_range['min_date'][0]
-                db_end = date_range['max_date'][0]
+                db_start = pd.to_datetime(date_range['min_date'][0]).strftime('%Y-%m-%d')
+                db_end = pd.to_datetime(date_range['max_date'][0]).strftime('%Y-%m-%d')
+                
+                print(f"Database date range: {db_start} to {db_end}")
+                print(f"Requested date range: {start_date} to {end_date}")
                 
                 # Check if request date range is within database range
                 if pd.to_datetime(start_date) >= pd.to_datetime(db_start) and \
@@ -97,19 +98,34 @@ class DataService:
                     
                     # Filter for requested date range
                     mask = (df.index >= start_date) & (df.index <= end_date)
-                    return df[mask]
+                    filtered_df = df[mask]
+                    print(f"Returning {len(filtered_df)} rows of data")
+                    return filtered_df
                 else:
-                    print(f"Request date range is outside database range for {ticker}, fetching 30 years data")
-                    success = self.store_historical_data(ticker)  # Fetch 30 years of data
-                    if success:
-                        df = pd.read_sql_table(table_name, self.engine)
-                        df.set_index('Date', inplace=True)
-                        mask = (df.index >= start_date) & (df.index <= end_date)
-                        return df[mask]
+                    print(f"Request date range is outside database range")
+                    print(f"Start date check: {pd.to_datetime(start_date) >= pd.to_datetime(db_start)}")
+                    print(f"End date check: {pd.to_datetime(end_date) <= pd.to_datetime(db_end)}")
+                    
+                    df = pd.read_sql_table(table_name, self.engine)
+                    df.set_index('Date', inplace=True)
+                    mask = (df.index >= start_date) & (df.index <= end_date)
+                    filtered_df = df[mask]
+                    
+                    if not filtered_df.empty:
+                        print(f"Found {len(filtered_df)} rows of data in existing table")
+                        return filtered_df
+                    else:
+                        print("No data found in date range, fetching new data")
+                        success = self.store_historical_data(ticker)
+                        if success:
+                            df = pd.read_sql_table(table_name, self.engine)
+                            df.set_index('Date', inplace=True)
+                            mask = (df.index >= start_date) & (df.index <= end_date)
+                            return df[mask]
 
             # If not in database, store it first
             print(f"Data not found in database for {ticker}, fetching 30 years data")
-            success = self.store_historical_data(ticker)  # Fetch 30 years of data
+            success = self.store_historical_data(ticker)
             if success:
                 df = pd.read_sql_table(table_name, self.engine)
                 df.set_index('Date', inplace=True)
@@ -121,7 +137,6 @@ class DataService:
         except Exception as e:
             print(f"Error in get_historical_data for {ticker}: {str(e)}")
             raise
-
     def get_financial_data(self, ticker: str, metric_description: str, 
                         start_year: str, end_year: str) -> pd.Series:
         """
