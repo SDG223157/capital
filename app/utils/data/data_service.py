@@ -62,12 +62,18 @@ class DataService:
         """
         Get historical data from MySQL database or yfinance if not exists.
         Check if request date range is within database table's date range.
-        If not or table doesn't exist, fetch 30 years of data from yfinance.
+        If not, fetch 30 years data from yfinance and store.
         """
         cleaned_ticker = self.clean_ticker_for_table_name(ticker)
         table_name = f"his_{cleaned_ticker}"
         
         try:
+            # Ensure end_date is not in the future
+            current_date = pd.Timestamp.now().strftime('%Y-%m-%d')
+            if pd.to_datetime(end_date) > pd.to_datetime(current_date):
+                end_date = current_date
+                print(f"Adjusted end date to current date: {current_date}")
+            
             # First try to get data from database
             if self.table_exists(table_name):
                 print(f"Getting historical data for {ticker} from database")
