@@ -290,3 +290,59 @@ def delete_table(table_name):
         error_msg = f"Error deleting table {table_name}: {str(e)}"
         logger.error(f"{error_msg}\n{traceback.format_exc()}")
         return jsonify({'success': False, 'error': error_msg}), 500
+@bp.route('/table-content/<table_name>')
+def show_table_content(table_name):
+    """Show the content of a specific table with sorting and pagination"""
+    try:
+        # Get sort parameters from URL
+        sort_column = request.args.get('sort', 'Date')  # Default sort by Date
+        sort_direction = request.args.get('direction', 'desc')  # Default descending
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 50, type=int)  # 50 items per page
+
+        # Calculate offset
+        offset = (page - 1) * per_page
+
+        # Count total rows
+        count_query = text(f'SELECT COUNT(*) FROM `{table_name}`')
+        total_rows = db.session.execute(count_query).scalar()
+        total_pages = (total_rows + per_page - 1) // per_page
+
+        # Get available columns
+        inspector = inspect(db.engine)
+        columns = [col['name'] for col in inspector.get_columns(table_name)]
+        
+        # If sort column not in columns, use first column
+        if sort_column not in columns and columns:
+            sort_column = columns[0]
+
+        # Build query with sorting and pagination
+        query = text(f'''
+            SELECT * FROM `{table_name}`
+            ORDER BY `{sort_column}` {sort_direction}
+            LIMIT :limit OFFSET :offset
+        ''')
+        
+        result = db.session.execute(query, {'limit': per_page, 'offset': offset})
+        
+        # Get column names and data
+        columns = result.keys()
+        data = [dict(row) for row in result]
+        
+        return render_template(
+            'table_content.html',
+            table_name=table_name,
+            columns=columns,
+            data=data,
+            current_page=page,
+            total_pages=total_pages,
+            per_page=per_page,
+            sort_column=sort_column,
+            sort_direction=sort_direction,
+            total_rows=total_rows
+        )
+        
+    except Exception as e:
+        error_msg = f"Error fetching content for table {table_name}: {str(e)}"
+        logger.error(f"{error_msg}\n{traceback.format_exc()}")
+        return render_template('table_content.html', error=error_msg)
