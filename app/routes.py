@@ -200,8 +200,11 @@ def analyze():
         """
         return error_html, 500
 
+# Keep your existing imports and code at the top
+
+# Add this new route with bp instead of main
 @bp.route('/tables')
-def show_database_tables():
+def tables():  # Changed function name to avoid potential conflicts
     """Show database tables in document tree structure"""
     try:
         logger.info('Accessing database tables view')
@@ -220,8 +223,6 @@ def show_database_tables():
             try:
                 table_info = {
                     'name': table,
-                    'schema': {col['name']: col['type'].__str__() 
-                              for col in inspector.get_columns(table)},
                     'row_count': db.session.execute(
                         f'SELECT COUNT(*) FROM {table}'
                     ).scalar()
@@ -258,9 +259,6 @@ def show_database_tables():
                 logger.error(f"Error processing table {table}: {str(table_error)}")
                 continue
 
-        logger.info(f'Categorized tables - Historical: {len(historical_tables)}, ' +
-                   f'Financial: {len(financial_tables)}, Other: {len(other_tables)}')
-                
         return render_template(
             'tables.html',
             historical_tables=historical_tables,
@@ -271,4 +269,24 @@ def show_database_tables():
     except Exception as e:
         error_msg = f"Error fetching database tables: {str(e)}"
         logger.error(f"{error_msg}\n{traceback.format_exc()}")
-        return render_template('tables.html', error=error_msg)
+        error_html = f"""
+        <html>
+            <head>
+                <title>Error</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; padding: 2rem; }}
+                    .error {{ color: #dc3545; padding: 1rem; background-color: #f8d7da; 
+                             border: 1px solid #f5c6cb; border-radius: 3px; }}
+                    .back-link {{ margin-top: 1rem; display: block; }}
+                </style>
+            </head>
+            <body>
+                <div class="error">
+                    <h2>Database Tables Error</h2>
+                    <p>{error_msg}</p>
+                </div>
+                <a href="javascript:window.close();" class="back-link">Close Window</a>
+            </body>
+        </html>
+        """
+        return error_html, 500
