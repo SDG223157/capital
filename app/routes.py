@@ -297,3 +297,28 @@ def tables():
         </html>
         """
         return error_html, 500
+    
+@bp.route('/delete_table/<table_name>', methods=['POST'])
+def delete_table(table_name):
+    """Delete a table from database"""
+    try:
+        logger.info(f'Attempting to delete table: {table_name}')
+        
+        # Check if table exists
+        inspector = inspect(db.engine)
+        if table_name not in inspector.get_table_names():
+            logger.error(f'Table {table_name} not found')
+            return jsonify({'success': False, 'error': 'Table not found'}), 404
+
+        # Delete table using text query
+        query = text(f'DROP TABLE {table_name}')
+        db.session.execute(query)
+        db.session.commit()
+        
+        logger.info(f'Successfully deleted table: {table_name}')
+        return jsonify({'success': True, 'message': f'Table {table_name} deleted successfully'})
+        
+    except Exception as e:
+        error_msg = f"Error deleting table {table_name}: {str(e)}"
+        logger.error(f"{error_msg}\n{traceback.format_exc()}")
+        return jsonify({'success': False, 'error': error_msg}), 500
