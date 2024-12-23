@@ -536,7 +536,7 @@ class VisualizationService:
                 yanchor="top",
                 y=0.95,
                 xanchor="right",
-                x=1.08,
+                x=1.10,
                 bgcolor='rgba(255, 255, 255, 0.8)',
                 bordercolor='rgba(0, 0, 0, 0.2)',
                 borderwidth=1,
