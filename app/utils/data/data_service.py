@@ -107,7 +107,7 @@ class DataService:
             if self.table_exists(table_name):
                 print(f"Getting financial data for {ticker} from database")
                 df = pd.read_sql_table(table_name, self.engine)
-                print(df)
+                # print(df)
                 metric_field = self.METRICS.get(metric_description.lower())
                 if metric_field in df.columns:
                     # Filter for requested years
@@ -180,7 +180,7 @@ class DataService:
             if not start_year or not end_year:
                 current_year = datetime.now().year
                 end_year = str(current_year)
-                start_year = str(current_year - 5)
+                start_year = str(current_year - 20)
 
             all_metrics_data = []
             
