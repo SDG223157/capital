@@ -107,7 +107,7 @@ class DataService:
             if self.table_exists(table_name):
                 print(f"Getting financial data for {ticker} from database")
                 df = pd.read_sql_table(table_name, self.engine)
-                
+                print(df)
                 metric_field = self.METRICS.get(metric_description.lower())
                 if metric_field in df.columns:
                     # Filter for requested years
@@ -206,7 +206,7 @@ class DataService:
             # Combine all metrics data
             combined_df = pd.concat(all_metrics_data, axis=1)
             combined_df = combined_df.loc[:,~combined_df.columns.duplicated()]
-            print(combined_df)
+            # print(combined_df)
             
             # Store in database
             cleaned_ticker = self.clean_ticker_for_table_name(ticker)
