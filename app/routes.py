@@ -7,8 +7,9 @@ import re
 import os
 import traceback
 from app.utils.analyzer.stock_analyzer import create_stock_visualization
-from sqlalchemy import inspect, text
+from sqlalchemy import inspect
 from app import db 
+from sqlalchemy import text 
 # Make sure this line is present
 # Configure logging
 logging.basicConfig(
@@ -204,8 +205,7 @@ def analyze():
 # Keep your existing imports and code at the top
 
 # Add this new route with bp instead of main
-# Add this import at the top
-
+# Add this import at the top@bp.route('/tables')
 @bp.route('/tables')
 def tables():
     """Show database tables in document tree structure"""
@@ -224,11 +224,13 @@ def tables():
         
         for table in tables:
             try:
-                # Use text() for SQL queries
+                # Get row count using text query
                 count_query = text(f'SELECT COUNT(*) FROM {table}')
+                row_count = db.session.execute(count_query).scalar()
+                
                 table_info = {
                     'name': table,
-                    'row_count': db.session.execute(count_query).scalar()
+                    'row_count': row_count
                 }
                 
                 if table.startswith('his_'):
@@ -275,28 +277,8 @@ def tables():
     except Exception as e:
         error_msg = f"Error fetching database tables: {str(e)}"
         logger.error(f"{error_msg}\n{traceback.format_exc()}")
-        error_html = f"""
-        <html>
-            <head>
-                <title>Error</title>
-                <style>
-                    body {{ font-family: Arial, sans-serif; padding: 2rem; }}
-                    .error {{ color: #dc3545; padding: 1rem; background-color: #f8d7da; 
-                             border: 1px solid #f5c6cb; border-radius: 3px; }}
-                    .back-link {{ margin-top: 1rem; display: block; }}
-                </style>
-            </head>
-            <body>
-                <div class="error">
-                    <h2>Database Tables Error</h2>
-                    <p>{error_msg}</p>
-                </div>
-                <a href="javascript:window.close();" class="back-link">Close Window</a>
-            </body>
-        </html>
-        """
-        return error_html, 500
-    
+        return render_template('tables.html', error=error_msg)
+
 @bp.route('/delete_table/<table_name>', methods=['POST'])
 def delete_table(table_name):
     """Delete a table from database"""
