@@ -224,13 +224,8 @@ def tables():
         
         for table in tables:
             try:
-                # Get row count using text query with proper escaping
-                count_query = text(f'SELECT COUNT(*) FROM `{table}`')
-                row_count = db.session.execute(count_query).scalar()
-                
                 table_info = {
-                    'name': table,
-                    'row_count': row_count
+                    'name': table
                 }
                 
                 if table.startswith('his_'):
@@ -238,35 +233,27 @@ def tables():
                     historical_tables.append({
                         **table_info,
                         'ticker': ticker,
-                        'type': 'Historical Data',
-                        'source': TICKER_DICT.get(ticker, 'Custom Ticker')
+                        'type': 'Historical Data'
                     })
-                    logger.debug(f'Added historical table: {table} for ticker {ticker}')
                     
                 elif table.startswith('roic_'):
                     ticker = table.replace('roic_', '').upper()
                     financial_tables.append({
                         **table_info,
                         'ticker': ticker,
-                        'type': 'Financial Data',
-                        'source': TICKER_DICT.get(ticker, 'Custom Ticker')
+                        'type': 'Financial Data'
                     })
-                    logger.debug(f'Added financial table: {table} for ticker {ticker}')
                     
                 else:
                     other_tables.append({
                         **table_info,
                         'type': 'Other'
                     })
-                    logger.debug(f'Added other table: {table}')
                     
             except Exception as table_error:
                 logger.error(f"Error processing table {table}: {str(table_error)}")
                 continue
 
-        logger.info(f'Categorized tables - Historical: {len(historical_tables)}, ' +
-                   f'Financial: {len(financial_tables)}, Other: {len(other_tables)}')
-                
         return render_template(
             'tables.html',
             historical_tables=historical_tables,
@@ -276,7 +263,7 @@ def tables():
         
     except Exception as e:
         error_msg = f"Error fetching database tables: {str(e)}"
-        logger.error(f"{error_msg}\n{traceback.format_exc()}")
+        logger.error(f"{error_msg}")
         return render_template('tables.html', error=error_msg)
 
 @bp.route('/delete_table/<table_name>', methods=['POST'])
