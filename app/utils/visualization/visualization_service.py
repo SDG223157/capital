@@ -528,7 +528,7 @@ class VisualizationService:
             paper_bgcolor='white',
             margin=dict(
                 l=50, 
-                r=50, 
+                r=10, 
                 t=LAYOUT_CONFIG['spacing']['margin']['top'] * total_height,
                 b=LAYOUT_CONFIG['spacing']['margin']['bottom'] * total_height
             ),
