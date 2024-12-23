@@ -224,8 +224,8 @@ def tables():
         
         for table in tables:
             try:
-                # Get row count using text query
-                count_query = text(f'SELECT COUNT(*) FROM {table}')
+                # Get row count using text query with proper escaping
+                count_query = text(f'SELECT COUNT(*) FROM `{table}`')
                 row_count = db.session.execute(count_query).scalar()
                 
                 table_info = {
