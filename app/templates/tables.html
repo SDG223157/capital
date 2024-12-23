@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Tables</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .tree-section {
+            margin-bottom: 30px;
+        }
+        .tree-title {
+            font-size: 1.5em;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #4CAF50;
+        }
+        .tree-item {
+            padding: 10px;
+            margin: 5px 0;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .tree-item:hover {
+            background-color: #e9ecef;
+        }
+        .tree-item-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .ticker {
+            color: #1a73e8;
+            font-weight: bold;
+        }
+        .table-name {
+            color: #666;
+            font-family: monospace;
+        }
+        .table-type {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            background-color: #e7f3ff;
+            color: #1a73e8;
+        }
+        .error-message {
+            color: #dc3545;
+            padding: 15px;
+            background-color: #f8d7da;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .no-tables {
+            color: #666;
+            font-style: italic;
+            padding: 10px;
+        }
+        .stats {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .stats-item {
+            margin: 5px 0;
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Database Tables</h1>
+
+        {% if error %}
+        <div class="error-message">
+            Error: {{ error }}
+        </div>
+        {% else %}
+            <div class="stats">
+                <div class="stats-item">Total Tables: {{ historical_tables|length + financial_tables|length + other_tables|length }}</div>
+                <div class="stats-item">Historical Data Tables: {{ historical_tables|length }}</div>
+                <div class="stats-item">Financial Data Tables: {{ financial_tables|length }}</div>
+                <div class="stats-item">Other Tables: {{ other_tables|length }}</div>
+            </div>
+
+            {% if historical_tables %}
+            <div class="tree-section">
+                <div class="tree-title">Historical Data Tables</div>
+                {% for table in historical_tables %}
+                <div class="tree-item">
+                    <div class="tree-item-info">
+                        <span class="ticker">{{ table.ticker }}</span>
+                        <span class="table-name">{{ table.name }}</span>
+                    </div>
+                    <span class="table-type">{{ table.type }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if financial_tables %}
+            <div class="tree-section">
+                <div class="tree-title">Financial Data Tables</div>
+                {% for table in financial_tables %}
+                <div class="tree-item">
+                    <div class="tree-item-info">
+                        <span class="ticker">{{ table.ticker }}</span>
+                        <span class="table-name">{{ table.name }}</span>
+                    </div>
+                    <span class="table-type">{{ table.type }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if other_tables %}
+            <div class="tree-section">
+                <div class="tree-title">Other Tables</div>
+                {% for table in other_tables %}
+                <div class="tree-item">
+                    <div class="tree-item-info">
+                        <span class="table-name">{{ table.name }}</span>
+                    </div>
+                    <span class="table-type">{{ table.type }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if not historical_tables and not financial_tables and not other_tables %}
+            <div class="no-tables">
+                No tables found in the database.
+            </div>
+            {% endif %}
+        {% endif %}
+    </div>
+</body>
+</html>

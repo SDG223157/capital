@@ -7,6 +7,8 @@ import re
 import os
 import traceback
 from app.utils.analyzer.stock_analyzer import create_stock_visualization
+from sqlalchemy import inspect
+from app import db  # Assuming db is initialized in app/__init__.py
 # Configure logging
 logging.basicConfig(
     level=logging.DEBUG,
@@ -197,3 +199,48 @@ def analyze():
         </html>
         """
         return error_html, 500
+
+@bp.route('/tables')
+def show_database_tables():
+    """Show database tables in document tree structure"""
+    try:
+        # Get all tables from database
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        
+        # Organize tables by type
+        historical_tables = []
+        financial_tables = []
+        other_tables = []
+        
+        for table in tables:
+            if table.startswith('his_'):
+                ticker = table.replace('his_', '').upper()
+                historical_tables.append({
+                    'name': table,
+                    'ticker': ticker,
+                    'type': 'Historical Data'
+                })
+            elif table.startswith('roic_'):
+                ticker = table.replace('roic_', '').upper()
+                financial_tables.append({
+                    'name': table,
+                    'ticker': ticker,
+                    'type': 'Financial Data'
+                })
+            else:
+                other_tables.append({
+                    'name': table,
+                    'type': 'Other'
+                })
+                
+        return render_template(
+            'tables.html',
+            historical_tables=historical_tables,
+            financial_tables=financial_tables,
+            other_tables=other_tables
+        )
+        
+    except Exception as e:
+        print(f"Error fetching database tables: {e}")
+        return render_template('tables.html', error=str(e))
