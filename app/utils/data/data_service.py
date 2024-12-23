@@ -60,7 +60,7 @@ class DataService:
 
     def get_historical_data(self, ticker: str, start_date: str, end_date: str) -> pd.DataFrame:
         """
-        Get historical data from MySQL database or yfinance if not exists.
+        Get historical data from MySQL database or yfinance if not exists/incomplete.
         """
         cleaned_ticker = self.clean_ticker_for_table_name(ticker)
         table_name = f"his_{cleaned_ticker}"
@@ -76,17 +76,31 @@ class DataService:
                 mask = (df.index >= start_date) & (df.index <= end_date)
                 filtered_df = df[mask]
                 
-                if not filtered_df.empty:
+                # Check if we have all the data we need
+                requested_dates = pd.date_range(start=start_date, end=end_date, freq='B')
+                actual_dates = filtered_df.index
+                missing_dates = requested_dates.difference(actual_dates)
+                
+                if len(missing_dates) == 0:
                     return filtered_df
+                else:
+                    print(f"Incomplete data for {ticker}, fetching from yfinance")
+                    # If data is incomplete, fetch all data and update database
+                    success = self.store_historical_data(ticker, start_date, end_date)
+                    if success:
+                        df = pd.read_sql_table(table_name, self.engine)
+                        df.set_index('Date', inplace=True)
+                        mask = (df.index >= start_date) & (df.index <= end_date)
+                        return df[mask]
 
             # If not in database, store it first
             print(f"Data not found in database for {ticker}, fetching from yfinance")
             success = self.store_historical_data(ticker, start_date, end_date)
             if success:
-                # Get data from database after storing
                 df = pd.read_sql_table(table_name, self.engine)
                 df.set_index('Date', inplace=True)
-                return df
+                mask = (df.index >= start_date) & (df.index <= end_date)
+                return df[mask]
             else:
                 raise ValueError(f"Failed to store data for {ticker}")
                 
@@ -97,7 +111,7 @@ class DataService:
     def get_financial_data(self, ticker: str, metric_description: str, 
                         start_year: str, end_year: str) -> pd.Series:
         """
-        Get financial data from MySQL database or ROIC API if not exists.
+        Get financial data from MySQL database or ROIC API if not exists/incomplete.
         """
         cleaned_ticker = self.clean_ticker_for_table_name(ticker)
         table_name = f"roic_{cleaned_ticker}"
@@ -107,33 +121,53 @@ class DataService:
             if self.table_exists(table_name):
                 print(f"Getting financial data for {ticker} from database")
                 df = pd.read_sql_table(table_name, self.engine)
-                print(df)
+                
                 metric_field = self.METRICS.get(metric_description.lower())
                 if metric_field in df.columns:
-                    # Filter for requested years
                     df['fiscal_year'] = df['fiscal_year'].astype(int)
+                    
+                    # Filter for requested years
                     mask = (df['fiscal_year'] >= int(start_year)) & (df['fiscal_year'] <= int(end_year))
                     filtered_df = df[mask]
                     
-                    if not filtered_df.empty:
+                    # Check if we have all the years we need
+                    requested_years = set(range(int(start_year), int(end_year) + 1))
+                    actual_years = set(filtered_df['fiscal_year'].values)
+                    missing_years = requested_years - actual_years
+                    
+                    if len(missing_years) == 0:
                         return pd.Series(
                             filtered_df[metric_field].values,
                             index=filtered_df['fiscal_year'],
                             name=metric_description
                         )
+                    else:
+                        print(f"Incomplete data for {ticker}, fetching from API")
+                        # If data is incomplete, fetch all data and update database
+                        success = self.store_financial_data(ticker, start_year, end_year)
+                        if success:
+                            df = pd.read_sql_table(table_name, self.engine)
+                            df['fiscal_year'] = df['fiscal_year'].astype(int)
+                            mask = (df['fiscal_year'] >= int(start_year)) & (df['fiscal_year'] <= int(end_year))
+                            filtered_df = df[mask]
+                            return pd.Series(
+                                filtered_df[metric_field].values,
+                                index=filtered_df['fiscal_year'],
+                                name=metric_description
+                            )
 
             # If not in database, store it first
             print(f"Data not found in database for {ticker}, fetching from API")
             success = self.store_financial_data(ticker, start_year, end_year)
             if success:
-                # Get data from database after storing
                 df = pd.read_sql_table(table_name, self.engine)
                 metric_field = self.METRICS.get(metric_description.lower())
                 df['fiscal_year'] = df['fiscal_year'].astype(int)
-                
+                mask = (df['fiscal_year'] >= int(start_year)) & (df['fiscal_year'] <= int(end_year))
+                filtered_df = df[mask]
                 return pd.Series(
-                    df[metric_field].values,
-                    index=df['fiscal_year'],
+                    filtered_df[metric_field].values,
+                    index=filtered_df['fiscal_year'],
                     name=metric_description
                 )
             else:
@@ -142,7 +176,6 @@ class DataService:
         except Exception as e:
             print(f"Error in get_financial_data for {ticker}: {str(e)}")
             return None
-
     def store_historical_data(self, ticker: str, start_date: str = None, end_date: str = None) -> bool:
         """Fetch and store historical price data from yfinance"""
         try:
