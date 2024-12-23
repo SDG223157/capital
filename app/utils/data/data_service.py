@@ -206,6 +206,7 @@ class DataService:
             # Combine all metrics data
             combined_df = pd.concat(all_metrics_data, axis=1)
             combined_df = combined_df.loc[:,~combined_df.columns.duplicated()]
+            print(combined_df)
             
             # Store in database
             cleaned_ticker = self.clean_ticker_for_table_name(ticker)
