@@ -62,7 +62,7 @@ class DataService:
         """
         Get historical data from MySQL database or yfinance if not exists.
         Check if request date range is within database table's date range.
-        If not, fetch from yfinance and store.
+        If not or table doesn't exist, fetch 30 years of data from yfinance.
         """
         cleaned_ticker = self.clean_ticker_for_table_name(ticker)
         table_name = f"his_{cleaned_ticker}"
@@ -83,7 +83,7 @@ class DataService:
                 
                 # Check if request date range is within database range
                 if pd.to_datetime(start_date) >= pd.to_datetime(db_start) and \
-                    pd.to_datetime(end_date) <= pd.to_datetime(db_end):
+                pd.to_datetime(end_date) <= pd.to_datetime(db_end):
                     
                     print(f"Request date range is within database range for {ticker}")
                     df = pd.read_sql_table(table_name, self.engine)
@@ -93,8 +93,8 @@ class DataService:
                     mask = (df.index >= start_date) & (df.index <= end_date)
                     return df[mask]
                 else:
-                    print(f"Request date range is outside database range for {ticker}, fetching from yfinance")
-                    success = self.store_historical_data(ticker, start_date, end_date)
+                    print(f"Request date range is outside database range for {ticker}, fetching 30 years data")
+                    success = self.store_historical_data(ticker)  # Fetch 30 years of data
                     if success:
                         df = pd.read_sql_table(table_name, self.engine)
                         df.set_index('Date', inplace=True)
@@ -102,8 +102,8 @@ class DataService:
                         return df[mask]
 
             # If not in database, store it first
-            print(f"Data not found in database for {ticker}, fetching from yfinance")
-            success = self.store_historical_data(ticker, start_date, end_date)
+            print(f"Data not found in database for {ticker}, fetching 30 years data")
+            success = self.store_historical_data(ticker)  # Fetch 30 years of data
             if success:
                 df = pd.read_sql_table(table_name, self.engine)
                 df.set_index('Date', inplace=True)
@@ -185,16 +185,19 @@ class DataService:
             print(f"Error in get_financial_data for {ticker}: {str(e)}")
             return None
     def store_historical_data(self, ticker: str, start_date: str = None, end_date: str = None) -> bool:
-        """Fetch and store historical price data from yfinance"""
+        """
+        Fetch and store historical price data from yfinance (max 30 years)
+        """
         try:
             print(f"Fetching historical data for {ticker} from yfinance")
             ticker_obj = yf.Ticker(ticker)
             
-            # If no dates specified, get all available data
-            # if start_date and end_date:
-            #     df = ticker_obj.history(start=start_date, end=end_date)
-            # else:
-            df = ticker_obj.history(period="max")
+            # Calculate 30 years ago from now
+            end_dt = pd.Timestamp.now()
+            start_dt = end_dt - pd.DateOffset(years=30)
+            
+            # Fetch data for max period
+            df = ticker_obj.history(start=start_dt.strftime('%Y-%m-%d'))
             
             if df.empty:
                 print(f"No historical data found for {ticker}")
