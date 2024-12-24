@@ -112,7 +112,7 @@
             align-items: center;
             margin: 20px 0;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 15px;
         }
         .per-page-select {
             padding: 8px;
@@ -122,6 +122,23 @@
         .pagination-info {
             color: #666;
         }
+        .export-buttons {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .export-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .export-btn:hover {
+            background-color: #218838;
+        }
         @media (max-width: 600px) {
             .controls {
                 flex-direction: column;
@@ -129,6 +146,9 @@
             }
             .pagination button {
                 padding: 6px 10px;
+            }
+            .export-buttons {
+                justify-content: flex-start;
             }
         }
     </style>
@@ -154,6 +174,15 @@
                         <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
                         <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
                     </select>
+                </div>
+                <div class="export-buttons">
+                    Export as:
+                    <button class="export-btn" onclick="exportTable('csv')" title="Export as CSV">
+                        CSV
+                    </button>
+                    <button class="export-btn" onclick="exportTable('excel')" title="Export as Excel">
+                        Excel
+                    </button>
                 </div>
                 <div class="pagination-info">
                     Showing {{ (current_page - 1) * per_page + 1 }} to 
@@ -235,6 +264,11 @@
                     url.searchParams.set(key, params[key]);
                 });
                 return url.toString();
+            }
+
+            function exportTable(format) {
+                const url = `/export/{{ table_name }}/${format}`;
+                window.location.href = url;
             }
         </script>
     </div>

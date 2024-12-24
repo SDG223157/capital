@@ -10,6 +10,9 @@ from app.utils.analyzer.stock_analyzer import create_stock_visualization
 from sqlalchemy import inspect
 from app import db 
 from sqlalchemy import text 
+from flask import send_file
+import pandas as pd
+import io
 # Make sure this line is present
 # Configure logging
 logging.basicConfig(
@@ -351,3 +354,51 @@ def show_table_content(table_name):
         error_msg = f"Error fetching content for table {table_name}: {str(e)}"
         logger.error(f"{error_msg}\n{traceback.format_exc()}")
         return render_template('table_content.html', error=error_msg)
+
+
+@bp.route('/export/<table_name>/<format>')
+def export_table(table_name, format):
+    """Export table data in CSV or Excel format"""
+    try:
+        # Get all data from table
+        query = text(f'SELECT * FROM `{table_name}`')
+        result = db.session.execute(query)
+        
+        # Get column names
+        columns = result.keys()
+        
+        # Convert to DataFrame
+        df = pd.DataFrame([dict(row) for row in result], columns=columns)
+        
+        # Create buffer for file
+        buffer = io.BytesIO()
+        
+        if format == 'csv':
+            # Export as CSV
+            df.to_csv(buffer, index=False)
+            buffer.seek(0)
+            return send_file(
+                buffer,
+                mimetype='text/csv',
+                as_attachment=True,
+                download_name=f'{table_name}.csv'
+            )
+            
+        elif format == 'excel':
+            # Export as Excel
+            df.to_excel(buffer, index=False)
+            buffer.seek(0)
+            return send_file(
+                buffer,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                as_attachment=True,
+                download_name=f'{table_name}.xlsx'
+            )
+        
+        else:
+            return jsonify({'error': 'Unsupported format'}), 400
+            
+    except Exception as e:
+        error_msg = f"Error exporting table {table_name}: {str(e)}"
+        logger.error(f"{error_msg}\n{traceback.format_exc()}")
+        return jsonify({'error': error_msg}), 500
