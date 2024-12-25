@@ -59,7 +59,6 @@ class DataService:
         Removes '.', '^', and '-' characters.
         """
         return ticker.replace('.', '').replace('^', '').replace('-', '').lower()
-
     def get_historical_data(self, ticker: str, start_date: str, end_date: str) -> pd.DataFrame:
         """
         Get historical data from MySQL database or yfinance if not exists.
@@ -131,10 +130,45 @@ class DataService:
                         existing_data = pd.read_sql_table(table_name, self.engine)
                         existing_data.set_index('Date', inplace=True)
                         
-                        # Combine existing and new data
+                        # Delete the last day's data (which might be real-time)
+                        logging.info(f"Removing last day's data (max_date: {db_end}) to avoid real-time data issues")
+                        existing_data = existing_data[existing_data.index < db_end]
+                        
+                        # Log data shapes before combining
+                        logging.info(f"Existing data shape (before merge): {existing_data.shape}")
+                        logging.info(f"New data shape (before merge): {new_data.shape}")
+                        
+                        # Check for and log any duplicate dates in each dataset
+                        existing_duplicates = existing_data.index.duplicated(keep=False)
+                        new_duplicates = new_data.index.duplicated(keep=False)
+                        
+                        if existing_duplicates.any():
+                            logging.warning(f"Found {existing_duplicates.sum()} duplicate dates in existing data")
+                        if new_duplicates.any():
+                            logging.warning(f"Found {new_duplicates.sum()} duplicate dates in new data")
+                        
+                        # Combine the datasets
                         combined_data = pd.concat([existing_data, new_data])
-                        combined_data = combined_data[~combined_data.index.duplicated(keep='last')]
+                        
+                        # Handle duplicates with explicit rules
+                        duplicate_dates = combined_data.index.duplicated(keep=False)
+                        if duplicate_dates.any():
+                            logging.info(f"Found {duplicate_dates.sum()} duplicate dates after combining")
+                            # Keep the latest data point (from new_data) for each date
+                            combined_data = combined_data[~combined_data.index.duplicated(keep='last')]
+                        
+                        # Sort index and verify sort order
                         combined_data.sort_index(inplace=True)
+                        if not combined_data.index.is_monotonic_increasing:
+                            logging.error("Data is not properly sorted after sort_index operation")
+                            raise ValueError("Failed to properly sort the combined data")
+                        
+                        # Verify data continuity
+                        date_gaps = pd.date_range(start=combined_data.index.min(), 
+                                                end=combined_data.index.max(), 
+                                                freq='B').difference(combined_data.index)
+                        if not date_gaps.empty:
+                            logging.warning(f"Found {len(date_gaps)} gaps in the data")
                         
                         # Update database with combined data
                         success = self.store_dataframe(combined_data, table_name)
