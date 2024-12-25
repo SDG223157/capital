@@ -63,6 +63,7 @@ class DataService:
     def get_historical_data(self, ticker: str, start_date: str, end_date: str) -> pd.DataFrame:
         """
         Get historical data from MySQL database or yfinance if not exists.
+        Updates database with new data if requested end date is beyond max date.
         """
         cleaned_ticker = self.clean_ticker_for_table_name(ticker)
         table_name = f"his_{cleaned_ticker}"
@@ -89,61 +90,73 @@ class DataService:
                     FROM {}
                 """.format(table_name))
                 date_range = pd.read_sql_query(date_range_query, self.engine)
-
+                
                 # Check for None in date_range values
                 min_date = date_range['min_date'][0]
                 max_date = date_range['max_date'][0]
-
-                # If min_date or max_date is None, refresh the data
+                
+                # If min_date or max_date is None, refresh all data
                 if min_date is None or max_date is None:
                     logging.info(f"Database date range is invalid for {ticker}: min_date={min_date}, max_date={max_date}")
                     logging.info("Refreshing data from external source...")
                     success = self.store_historical_data(ticker)
-                    if success:
-                        # Reload data after refreshing
-                        df = pd.read_sql_table(table_name, self.engine)
-                        df.set_index('Date', inplace=True)
-                        # Return the filtered data for the requested range after refresh
-                        return df[(df.index >= start_date) & (df.index <= end_date)]
-                    else:
+                    if not success:
                         raise ValueError(f"Failed to store data for {ticker}")
+                    df = pd.read_sql_table(table_name, self.engine)
+                    df.set_index('Date', inplace=True)
+                    return df[(df.index >= start_date) & (df.index <= end_date)]
                 
-                # Proceed with date conversion if valid
+                # Convert dates for comparison
                 db_start = pd.to_datetime(min_date).strftime('%Y-%m-%d')
                 db_end = pd.to_datetime(max_date).strftime('%Y-%m-%d')
+                requested_end = pd.to_datetime(end_date).strftime('%Y-%m-%d')
                 
                 logging.info(f"Database date range: {db_start} to {db_end}")
-                logging.info(f"Requested date range: {start_date} to {end_date}")
+                logging.info(f"Requested date range: {start_date} to {requested_end}")
                 
-                # Get data from database
-                df = pd.read_sql_table(table_name, self.engine)
-                df.set_index('Date', inplace=True)
+                # If requested end date is beyond database end date, fetch new data
+                if requested_end > db_end:
+                    logging.info(f"Requested end date {requested_end} is beyond database end date {db_end}")
+                    logging.info("Fetching new data from yfinance...")
+                    
+                    # Fetch new data from yfinance
+                    ticker_obj = yf.Ticker(ticker)
+                    new_data = ticker_obj.history(start=db_end, end=requested_end)
+                    
+                    if not new_data.empty:
+                        # Process the new data
+                        new_data.index = new_data.index.tz_localize(None)
+                        
+                        # Read existing data
+                        existing_data = pd.read_sql_table(table_name, self.engine)
+                        existing_data.set_index('Date', inplace=True)
+                        
+                        # Combine existing and new data
+                        combined_data = pd.concat([existing_data, new_data])
+                        combined_data = combined_data[~combined_data.index.duplicated(keep='last')]
+                        combined_data.sort_index(inplace=True)
+                        
+                        # Update database with combined data
+                        success = self.store_dataframe(combined_data, table_name)
+                        if not success:
+                            raise ValueError(f"Failed to update data for {ticker}")
+                        
+                        # Return the filtered data for the requested range
+                        return combined_data[(combined_data.index >= start_date) & (combined_data.index <= requested_end)]
                 
-                # Check if the requested date range is within the database's date range
-                if start_date >= db_start and end_date <= db_end:
-                    # If the requested date range is within the database date range
-                    filtered_df = df[(df.index >= start_date) & (df.index <= end_date)]
-                    logging.info(f"Found {len(filtered_df)} rows of data in the requested date range")
-                    return filtered_df
-                else:
-                    # If not within the range, refresh the data
-                    logging.info("No data found in requested date range, refreshing data")
-                    success = self.store_historical_data(ticker)
-                    if success:
-                        df = pd.read_sql_table(table_name, self.engine)
-                        df.set_index('Date', inplace=True)
-                        # Return the filtered data for the requested range after refresh
-                        return df[(df.index >= start_date) & (df.index <= end_date)]
-            
-            # If not in database, store it first
-            logging.info(f"Data not found in database for {ticker}, fetching data")
-            success = self.store_historical_data(ticker)
-            if success:
+                # If data is within database range, return filtered data
                 df = pd.read_sql_table(table_name, self.engine)
                 df.set_index('Date', inplace=True)
                 return df[(df.index >= start_date) & (df.index <= end_date)]
-            else:
+            
+            # If table doesn't exist, store all historical data first
+            logging.info(f"Data not found in database for {ticker}, fetching data")
+            success = self.store_historical_data(ticker)
+            if not success:
                 raise ValueError(f"Failed to store data for {ticker}")
+            df = pd.read_sql_table(table_name, self.engine)
+            df.set_index('Date', inplace=True)
+            return df[(df.index >= start_date) & (df.index <= end_date)]
                     
         except Exception as e:
             logging.error(f"Error in get_historical_data for {ticker}: {str(e)}")
