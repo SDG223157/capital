@@ -63,6 +63,21 @@ class DataService:
         """
         Get historical data from MySQL database or yfinance if not exists.
         Updates database with new data if requested end date is beyond max date.
+        Removes last 10 days of data and refetches it to ensure data completeness.
+        
+        Parameters:
+        -----------
+        ticker : str
+            Stock ticker symbol
+        start_date : str
+            Start date in YYYY-MM-DD format
+        end_date : str
+            End date in YYYY-MM-DD format
+        
+        Returns:
+        --------
+        pd.DataFrame
+            DataFrame containing historical price data for the requested date range
         """
         cleaned_ticker = self.clean_ticker_for_table_name(ticker)
         table_name = f"his_{cleaned_ticker}"
@@ -120,63 +135,63 @@ class DataService:
                     
                     # Fetch new data from yfinance
                     ticker_obj = yf.Ticker(ticker)
-                    new_data = ticker_obj.history(start=db_end, end=requested_end)
                     
-                    if not new_data.empty:
-                        # Process the new data
-                        new_data.index = new_data.index.tz_localize(None)
-                        
-                        # Read existing data
-                        existing_data = pd.read_sql_table(table_name, self.engine)
-                        existing_data.set_index('Date', inplace=True)
-                        
-                        # Delete the last day's data (which might be real-time)
-                        logging.info(f"Removing last day's data (max_date: {db_end}) to avoid real-time data issues")
-                        existing_data = existing_data[existing_data.index < db_end]
-                        
-                        # Log data shapes before combining
-                        logging.info(f"Existing data shape (before merge): {existing_data.shape}")
-                        logging.info(f"New data shape (before merge): {new_data.shape}")
-                        
-                        # Check for and log any duplicate dates in each dataset
-                        existing_duplicates = existing_data.index.duplicated(keep=False)
-                        new_duplicates = new_data.index.duplicated(keep=False)
-                        
-                        if existing_duplicates.any():
-                            logging.warning(f"Found {existing_duplicates.sum()} duplicate dates in existing data")
-                        if new_duplicates.any():
-                            logging.warning(f"Found {new_duplicates.sum()} duplicate dates in new data")
-                        
-                        # Combine the datasets
-                        combined_data = pd.concat([existing_data, new_data])
-                        
-                        # Handle duplicates with explicit rules
-                        duplicate_dates = combined_data.index.duplicated(keep=False)
-                        if duplicate_dates.any():
-                            logging.info(f"Found {duplicate_dates.sum()} duplicate dates after combining")
-                            # Keep the latest data point (from new_data) for each date
-                            combined_data = combined_data[~combined_data.index.duplicated(keep='last')]
-                        
-                        # Sort index and verify sort order
-                        combined_data.sort_index(inplace=True)
-                        if not combined_data.index.is_monotonic_increasing:
-                            logging.error("Data is not properly sorted after sort_index operation")
-                            raise ValueError("Failed to properly sort the combined data")
-                        
-                        # Verify data continuity
-                        date_gaps = pd.date_range(start=combined_data.index.min(), 
-                                                end=combined_data.index.max(), 
-                                                freq='B').difference(combined_data.index)
-                        if not date_gaps.empty:
-                            logging.warning(f"Found {len(date_gaps)} gaps in the data")
-                        
-                        # Update database with combined data
-                        success = self.store_dataframe(combined_data, table_name)
-                        if not success:
-                            raise ValueError(f"Failed to update data for {ticker}")
-                        
-                        # Return the filtered data for the requested range
-                        return combined_data[(combined_data.index >= start_date) & (combined_data.index <= requested_end)]
+                    # Read existing data
+                    existing_data = pd.read_sql_table(table_name, self.engine)
+                    existing_data.set_index('Date', inplace=True)
+                    
+                    # Delete the last 10 days of data
+                    cutoff_date = pd.to_datetime(db_end) - pd.Timedelta(days=10)
+                    logging.info(f"Removing last 10 days of data (from {cutoff_date} to {db_end})")
+                    existing_data = existing_data[existing_data.index < cutoff_date]
+                    
+                    # Fetch new data starting from the cutoff date
+                    new_data = ticker_obj.history(start=cutoff_date.strftime('%Y-%m-%d'), end=requested_end)
+                    new_data.index = new_data.index.tz_localize(None)
+                    
+                    # Log data shapes before combining
+                    logging.info(f"Existing data shape (before merge): {existing_data.shape}")
+                    logging.info(f"New data shape (before merge): {new_data.shape}")
+                    
+                    # Check for and log any duplicate dates in each dataset
+                    existing_duplicates = existing_data.index.duplicated(keep=False)
+                    new_duplicates = new_data.index.duplicated(keep=False)
+                    
+                    if existing_duplicates.any():
+                        logging.warning(f"Found {existing_duplicates.sum()} duplicate dates in existing data")
+                    if new_duplicates.any():
+                        logging.warning(f"Found {new_duplicates.sum()} duplicate dates in new data")
+                    
+                    # Combine the datasets
+                    combined_data = pd.concat([existing_data, new_data])
+                    
+                    # Handle duplicates with explicit rules
+                    duplicate_dates = combined_data.index.duplicated(keep=False)
+                    if duplicate_dates.any():
+                        logging.info(f"Found {duplicate_dates.sum()} duplicate dates after combining")
+                        # Keep the latest data point (from new_data) for each date
+                        combined_data = combined_data[~combined_data.index.duplicated(keep='last')]
+                    
+                    # Sort index and verify sort order
+                    combined_data.sort_index(inplace=True)
+                    if not combined_data.index.is_monotonic_increasing:
+                        logging.error("Data is not properly sorted after sort_index operation")
+                        raise ValueError("Failed to properly sort the combined data")
+                    
+                    # Verify data continuity
+                    date_gaps = pd.date_range(start=combined_data.index.min(), 
+                                            end=combined_data.index.max(), 
+                                            freq='B').difference(combined_data.index)
+                    if not date_gaps.empty:
+                        logging.warning(f"Found {len(date_gaps)} gaps in the data")
+                    
+                    # Update database with combined data
+                    success = self.store_dataframe(combined_data, table_name)
+                    if not success:
+                        raise ValueError(f"Failed to update data for {ticker}")
+                    
+                    # Return the filtered data for the requested range
+                    return combined_data[(combined_data.index >= start_date) & (combined_data.index <= requested_end)]
                 
                 # If data is within database range, return filtered data
                 df = pd.read_sql_table(table_name, self.engine)
