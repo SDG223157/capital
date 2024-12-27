@@ -25,7 +25,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Create Blueprint
-bp = Blueprint('main', __name__)
+main_bp = Blueprint('main', __name__)
 def update_tickers_file(symbol, name):
     """Update tickers.ts with new ticker information"""
     try:
@@ -76,7 +76,7 @@ def verify_ticker(symbol):
         logger.error(traceback.format_exc())
     return False, None
 
-@bp.route('/verify_and_add_ticker/<symbol>')
+@main_bp.route('/verify_and_add_ticker/<symbol>')
 def verify_and_add_ticker(symbol):
     try:
         # Normalize symbol
@@ -182,12 +182,12 @@ def load_tickers():
 # Load tickers at module level
 TICKERS, TICKER_DICT = load_tickers()
 
-@bp.route('/')
+@main_bp.route('/')
 def index():
     today = datetime.now().strftime('%Y-%m-%d')
     return render_template('index.html', now=datetime.now(), max_date=today)
 
-@bp.route('/search_ticker', methods=['GET'])
+@main_bp.route('/search_ticker', methods=['GET'])
 def search_ticker():
     query = request.args.get('query', '').upper()
     if not query or len(query) < 1:
@@ -231,7 +231,7 @@ def search_ticker():
         logger.error(f"Search error: {str(e)}")
         return jsonify([])
 
-@bp.route('/analyze', methods=['POST'])
+@main_bp.route('/analyze', methods=['POST'])
 def analyze():
     try:
         ticker_input = request.form.get('ticker', '').split()[0].upper()
@@ -315,7 +315,7 @@ def analyze():
 
 # Add this new route with bp instead of main
 # Add this import at the top@bp.route('/tables')
-@bp.route('/tables')
+@main_bp.route('/tables')
 def tables():
     """Show database tables in document tree structure"""
     try:
@@ -375,7 +375,7 @@ def tables():
         logger.error(f"{error_msg}")
         return render_template('tables.html', error=error_msg)
 
-@bp.route('/delete_table/<table_name>', methods=['POST'])
+@main_bp.route('/delete_table/<table_name>', methods=['POST'])
 def delete_table(table_name):
     """Delete a table from database"""
     try:
@@ -399,7 +399,7 @@ def delete_table(table_name):
         error_msg = f"Error deleting table {table_name}: {str(e)}"
         logger.error(f"{error_msg}\n{traceback.format_exc()}")
         return jsonify({'success': False, 'error': error_msg}), 500
-@bp.route('/table-content/<table_name>')
+@main_bp.route('/table-content/<table_name>')
 def show_table_content(table_name):
     """Show the content of a specific table with sorting and pagination"""
     try:
@@ -462,7 +462,7 @@ def show_table_content(table_name):
         return render_template('table_content.html', error=error_msg)
 
 
-@bp.route('/export/<table_name>/<format>')
+@main_bp.route('/export/<table_name>/<format>')
 def export_table(table_name, format):
     """Export table data in CSV or Excel format"""
     try:
