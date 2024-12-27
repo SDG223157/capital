@@ -20,6 +20,11 @@ import io
 
 
 import json
+# from flask import Blueprint, jsonify
+# import yfinance as yf
+# import os
+
+main_bp = Blueprint('main', __name__)
 
 def update_tickers_file(symbol, name):
     """Update tickers.ts with new ticker information"""
