@@ -318,7 +318,7 @@ class DataService:
             if not start_year or not end_year:
                 current_year = datetime.now().year
                 end_year = str(current_year)
-                start_year = str(current_year - 20)
+                start_year = str(current_year - 10)
 
             all_metrics_data = []
             
