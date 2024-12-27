@@ -226,7 +226,7 @@ class VisualizationService:
     @staticmethod
     def _create_chart_annotations(start_price, end_price, annual_return, daily_volatility,
                                 annualized_volatility, regression_results, total_return, 
-                                signal_returns):
+                                signal_returns, metrics_df):
         """Create chart annotations"""
         annotations = []
         config = LAYOUT_CONFIG['annotations']
@@ -276,25 +276,27 @@ class VisualizationService:
         #     ))
 
         # Add table headers
+        # Add table headers conditionally
         table_headers = {
-            'analysis_summary': 'Analysis Summary',
-            'trading_signals': 'Trading Signal Analysis',
-            'metrics': 'Financial Metrics',
-            'growth': 'Growth Analysis'
+            'analysis_summary': ('Analysis Summary', True),  # Analysis summary always shows
+            'trading_signals': ('Trading Signal Analysis', bool(signal_returns)),
+            'metrics': ('Financial Metrics', metrics_df is not None and not metrics_df.empty),
+            'growth': ('Growth Analysis', metrics_df is not None and not metrics_df.empty)
         }
 
-        for section, title in table_headers.items():
-            header_pos = config['headers'][section]
-            annotations.append(dict(
-                x=header_pos['x'],
-                y=header_pos['y'],
-                xref='paper',
-                yref='paper',
-                text=f'<b>{title}</b>',
-                showarrow=False,
-                font=dict(size=14),
-                align='left'
-            ))
+        for section, (title, should_show) in table_headers.items():
+            if should_show:  # Only add header if content exists
+                header_pos = config['headers'][section]
+                annotations.append(dict(
+                    x=header_pos['x'],
+                    y=header_pos['y'],
+                    xref='paper',
+                    yref='paper',
+                    text=f'<b>{title}</b>',
+                    showarrow=False,
+                    font=dict(size=14),
+                    align='left'
+                ))
 
         return annotations
 
