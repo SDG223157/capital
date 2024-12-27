@@ -288,7 +288,7 @@ class DataService:
             
             # Calculate 30 years ago from now
             end_dt = pd.Timestamp.now()
-            start_dt = end_dt - pd.DateOffset(years=30)
+            start_dt = end_dt - pd.DateOffset(years=10)
             
             # Fetch data for max period
             df = ticker_obj.history(start=start_dt.strftime('%Y-%m-%d'))
