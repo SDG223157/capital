@@ -445,12 +445,20 @@ class VisualizationService:
         total_return = sum(s.get('Trade Return', 0) for s in signal_returns if 'Trade Return' in s)
 
         # Add metrics tables
-        if metrics_df is not None:
+        metrics_table = None
+        growth_table = None
+        if metrics_df is not None and not metrics_df.empty:
             metrics_table, growth_table = VisualizationService.create_financial_metrics_table(metrics_df)
             if metrics_table:
                 fig.add_trace(metrics_table)
             if growth_table:
                 fig.add_trace(growth_table)
+        # if metrics_df is not None:
+        #     metrics_table, growth_table = VisualizationService.create_financial_metrics_table(metrics_df)
+        #     if metrics_table:
+        #         fig.add_trace(metrics_table)
+        #     if growth_table:
+        #         fig.add_trace(growth_table)
 
         # Add analysis summary table
         analysis_table = VisualizationService._create_analysis_summary_table(
