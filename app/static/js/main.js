@@ -7,10 +7,17 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let debounceTimeout;
 
-    // Helper function to format company name
     function formatCompanyName(name) {
         return name.replace(/\\'/g, "'");
     }
+    
+    // Clear input immediately when clicked/focused
+    tickerInput.addEventListener('focus', function() {
+        if (this.value) {  // Only clear if there's text
+            this.value = '';
+            suggestionsDiv.style.display = 'none';
+        }
+    });
     
     tickerInput.addEventListener('input', function() {
         clearTimeout(debounceTimeout);
@@ -31,15 +38,16 @@ document.addEventListener('DOMContentLoaded', function() {
                         data.forEach(item => {
                             const div = document.createElement('div');
                             div.className = 'suggestion-item';
-                            // Format the company name in the suggestion display
                             const formattedName = formatCompanyName(item.name);
+                            
                             div.innerHTML = `
                                 <span class="symbol">${item.symbol}</span>
                                 <span class="name">${formattedName}</span>
                             `;
+                            
                             div.addEventListener('click', function() {
-                                // Format the company name when setting input value
-                                tickerInput.value = `${item.symbol} ${formattedName}`;
+                                // Increased spacing between symbol and name (20 spaces)
+                                tickerInput.value = `${item.symbol}                    ${formattedName}`;
                                 suggestionsDiv.style.display = 'none';
                             });
                             suggestionsDiv.appendChild(div);
@@ -53,10 +61,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error('Search error:', error);
                     suggestionsDiv.style.display = 'none';
                 });
-        }, 300);  // 300ms debounce delay
+        }, 300);
     });
     
-    // Hide suggestions when clicking outside
     document.addEventListener('click', function(e) {
         if (!tickerInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
             suggestionsDiv.style.display = 'none';
@@ -69,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function() {
     form.appendChild(loadingDiv);
     
     form.addEventListener('submit', function(e) {
-        const ticker = tickerInput.value.trim().split(' ')[0];
+        const ticker = tickerInput.value.trim().split(/\s+/)[0];
         if (!ticker) {
             e.preventDefault();
             alert('Please enter a stock ticker symbol');
