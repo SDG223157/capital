@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', function() {
     tickerInput.parentNode.appendChild(suggestionsDiv);
     
     let debounceTimeout;
+
+    // Helper function to format company name
     function formatCompanyName(name) {
         return name.replace(/\\'/g, "'");
     }
@@ -29,12 +31,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         data.forEach(item => {
                             const div = document.createElement('div');
                             div.className = 'suggestion-item';
+                            // Format the company name in the suggestion display
+                            const formattedName = formatCompanyName(item.name);
                             div.innerHTML = `
                                 <span class="symbol">${item.symbol}</span>
-                                <span class="name">${item.name}</span>
+                                <span class="name">${formattedName}</span>
                             `;
                             div.addEventListener('click', function() {
-                                tickerInput.value = `${item.symbol} ${item.name}`;
+                                // Format the company name when setting input value
+                                tickerInput.value = `${item.symbol} ${formattedName}`;
                                 suggestionsDiv.style.display = 'none';
                             });
                             suggestionsDiv.appendChild(div);
