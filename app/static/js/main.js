@@ -75,6 +75,7 @@ document.addEventListener('DOMContentLoaded', function() {
     form.appendChild(loadingDiv);
     
     // Updated form submit handler with ticker verification
+    // Form submission handling
     form.addEventListener('submit', async function(e) {
         e.preventDefault(); // Prevent default submission initially
         
@@ -87,13 +88,15 @@ document.addEventListener('DOMContentLoaded', function() {
         loadingDiv.style.display = 'block';
         
         try {
-            // First verify if it's a valid ticker and needs to be added
+            // Verify and potentially add ticker
             const response = await fetch(`/verify_and_add_ticker/${ticker}`);
             const result = await response.json();
             
+            // Hide loading before showing alert
+            loadingDiv.style.display = 'none';
+            
             if (!result.success) {
                 alert(result.message);
-                loadingDiv.style.display = 'none';
                 return;
             }
             
@@ -102,13 +105,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert(result.message);
             }
             
-            // If everything is good, submit the form
+            // Now submit the form
             form.submit();
             
         } catch (error) {
+            // Hide loading on error
+            loadingDiv.style.display = 'none';
             console.error('Error:', error);
             alert('Error processing ticker. Please try again.');
-            loadingDiv.style.display = 'none';
         }
     });
 });
