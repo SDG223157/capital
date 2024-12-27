@@ -93,55 +93,46 @@ def verify_and_add_ticker(symbol):
         logger.info(f"Processing verify and add request for ticker: {symbol}")
         
         # First check if ticker already exists in our file
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(current_dir, '..', 'tickers.ts')
-        
-        with open(file_path, 'r', encoding='utf-8') as file:
-            content = file.read()
-            if f'symbol: "{symbol}"' in content:
-                logger.info(f"Ticker {symbol} already exists in database")
-                return jsonify({
-                    'success': True,
-                    'message': 'Ticker already exists in database',
-                    'exists': True
-                })
+        if symbol in TICKER_DICT:
+            return jsonify({
+                'success': True,
+                'symbol': symbol,
+                'name': TICKER_DICT[symbol],
+                'exists': True
+            })
         
         # Verify with yfinance
         is_valid, company_name = verify_ticker(symbol)
         if is_valid and company_name:
             # Add to tickers.ts
             if update_tickers_file(symbol, company_name):
-                logger.info(f"Successfully added new ticker {symbol} ({company_name})")
                 # Reload tickers after update
                 global TICKERS, TICKER_DICT
                 TICKERS, TICKER_DICT = load_tickers()
                 return jsonify({
                     'success': True,
-                    'message': f'Added {symbol} ({company_name}) to tickers database',
+                    'symbol': symbol,
+                    'name': company_name,
                     'exists': False
                 })
             else:
-                logger.error(f"Failed to update tickers.ts for {symbol}")
                 return jsonify({
                     'success': False,
-                    'message': 'Error updating tickers database'
+                    'message': 'Invalid ticker'
                 })
         else:
-            logger.warning(f"Invalid ticker symbol: {symbol}")
             return jsonify({
                 'success': False,
-                'message': 'Invalid ticker symbol'
+                'message': 'Invalid ticker'
             })
             
     except Exception as e:
-        error_msg = f"Error processing request for {symbol}: {str(e)}"
+        error_msg = f"Error processing request: {str(e)}"
         logger.error(f"{error_msg}")
-        logger.error(traceback.format_exc())
         return jsonify({
             'success': False,
-            'message': error_msg
+            'message': 'Invalid ticker'
         })
-
 def load_tickers():
     """Load tickers from TypeScript file"""
     try:
