@@ -46,7 +46,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             `;
                             
                             div.addEventListener('click', function() {
-                                // Increased spacing between symbol and name (20 spaces)
                                 tickerInput.value = `${item.symbol}                    ${formattedName}`;
                                 suggestionsDiv.style.display = 'none';
                             });
@@ -75,17 +74,41 @@ document.addEventListener('DOMContentLoaded', function() {
     loadingDiv.innerHTML = 'Analyzing data, please wait...';
     form.appendChild(loadingDiv);
     
-    form.addEventListener('submit', function(e) {
+    // Updated form submit handler with ticker verification
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault(); // Prevent default submission initially
+        
         const ticker = tickerInput.value.trim().split(/\s+/)[0];
         if (!ticker) {
-            e.preventDefault();
             alert('Please enter a stock ticker symbol');
             return;
         }
         
         loadingDiv.style.display = 'block';
-        setTimeout(() => {
+        
+        try {
+            // First verify if it's a valid ticker and needs to be added
+            const response = await fetch(`/verify_and_add_ticker/${ticker}`);
+            const result = await response.json();
+            
+            if (!result.success) {
+                alert(result.message);
+                loadingDiv.style.display = 'none';
+                return;
+            }
+            
+            // If it's a new ticker that was added, show a notification
+            if (!result.exists) {
+                alert(result.message);
+            }
+            
+            // If everything is good, submit the form
+            form.submit();
+            
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error processing ticker. Please try again.');
             loadingDiv.style.display = 'none';
-        }, 1000);
+        }
     });
 });
