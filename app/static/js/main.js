@@ -6,6 +6,9 @@ document.addEventListener('DOMContentLoaded', function() {
     tickerInput.parentNode.appendChild(suggestionsDiv);
     
     let debounceTimeout;
+    function formatCompanyName(name) {
+        return name.replace(/\\'/g, "'");
+    }
     
     tickerInput.addEventListener('input', function() {
         clearTimeout(debounceTimeout);
