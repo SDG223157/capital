@@ -400,7 +400,8 @@ class DataService:
     def create_metrics_table(self, ticker: str, metrics: list, 
                            start_year: str, end_year: str) -> pd.DataFrame:
         """
-        Creates a combined table of all metrics with selective growth rates
+        Creates a combined table of all metrics with selective growth rates.
+        If no data is available, returns None without showing table header.
 
         Parameters:
         -----------
@@ -421,11 +422,14 @@ class DataService:
         data = {}
         growth_rates = {}
 
+        # Check if any metrics have data before creating table
+        has_data = False
         for metric in metrics:
             metric = metric.lower()
             series = self.get_financial_data(ticker.upper(), metric, start_year, end_year)
             
             if series is not None:
+                has_data = True
                 data[metric] = series
 
                 # Calculate CAGR only for specified metrics
@@ -441,23 +445,24 @@ class DataService:
                         print(f"Error calculating CAGR for {metric}: {str(e)}")
                         growth_rates[metric] = None
 
-        if data:
-            try:
-                # Create main DataFrame with metrics
-                df = pd.DataFrame(data).T
+        # If no data was found for any metrics, return None without creating table
+        if not has_data:
+            return None
 
-                # Add growth rates column only for specified metrics
-                df['CAGR %'] = None  # Initialize with None
-                for metric in self.CAGR_METRICS:
-                    if metric in growth_rates and metric in df.index:
-                        df.at[metric, 'CAGR %'] = growth_rates[metric]
+        try:
+            # Create main DataFrame with metrics
+            df = pd.DataFrame(data).T
 
-                return df
-            except Exception as e:
-                print(f"Error creating metrics table: {str(e)}")
-                return None
-        
-        return None
+            # Add growth rates column only for specified metrics
+            df['CAGR %'] = None  # Initialize with None
+            for metric in self.CAGR_METRICS:
+                if metric in growth_rates and metric in df.index:
+                    df.at[metric, 'CAGR %'] = growth_rates[metric]
+
+            return df
+        except Exception as e:
+            print(f"Error creating metrics table: {str(e)}")
+            return None
 
     def calculate_returns(self, df: pd.DataFrame) -> pd.Series:
         """
