@@ -34,23 +34,22 @@ def update_tickers_file(symbol, name):
         
         logger.debug(f"Updating tickers file at: {file_path}")
         
-        # Read current content
+        # Handle special characters in symbol
+        escaped_symbol = symbol.replace("=", "\\=")
+        
         with open(file_path, 'r', encoding='utf-8') as file:
             content = file.read()
             
-        # Find the array closing bracket
         last_bracket_index = content.rfind(']')
         if last_bracket_index == -1:
             logger.error("Could not find closing bracket in tickers.ts")
             return False
-            
-        # Prepare new ticker entry
-        new_ticker = f'\n  {{ symbol: "{symbol}", name: "{name}" }},'
         
-        # Insert new ticker before the closing bracket
+        # Prepare new ticker entry with escaped symbol
+        new_ticker = f'\n  {{ symbol: "{escaped_symbol}", name: "{name}" }},'
+        
         new_content = content[:last_bracket_index] + new_ticker + content[last_bracket_index:]
         
-        # Write updated content back to file
         with open(file_path, 'w', encoding='utf-8') as file:
             file.write(new_content)
             
@@ -68,13 +67,23 @@ def verify_ticker(symbol):
         logger.info(f"Verifying ticker: {symbol}")
         ticker = yf.Ticker(symbol)
         info = ticker.info
-        if info and 'longName' in info:
-            logger.info(f"Successfully verified ticker {symbol}: {info['longName']}")
-            return True, info['longName']
+        
+        # For futures and special symbols, use a custom name if longName is not available
+        if info:
+            if 'longName' in info:
+                return True, info['longName']
+            elif 'shortName' in info:
+                return True, info['shortName']
+            elif symbol.endswith('=F'):  # Handle futures contracts
+                return True, f"Futures Contract: {symbol}"
+            else:
+                return True, symbol  # Use symbol as name if no better name is available
+                
+        return False, None
     except Exception as e:
         logger.error(f"Error verifying ticker {symbol}: {str(e)}")
         logger.error(traceback.format_exc())
-    return False, None
+        return False, None
 
 @main_bp.route('/verify_and_add_ticker/<symbol>')
 def verify_and_add_ticker(symbol):
