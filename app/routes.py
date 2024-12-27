@@ -26,6 +26,112 @@ logger = logging.getLogger(__name__)
 
 # Create Blueprint
 bp = Blueprint('main', __name__)
+def update_tickers_file(symbol, name):
+    """Update tickers.ts with new ticker information"""
+    try:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(current_dir, '..', 'tickers.ts')
+        
+        logger.debug(f"Updating tickers file at: {file_path}")
+        
+        # Read current content
+        with open(file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+            
+        # Find the array closing bracket
+        last_bracket_index = content.rfind(']')
+        if last_bracket_index == -1:
+            logger.error("Could not find closing bracket in tickers.ts")
+            return False
+            
+        # Prepare new ticker entry
+        new_ticker = f'\n  {{ symbol: "{symbol}", name: "{name}" }},'
+        
+        # Insert new ticker before the closing bracket
+        new_content = content[:last_bracket_index] + new_ticker + content[last_bracket_index:]
+        
+        # Write updated content back to file
+        with open(file_path, 'w', encoding='utf-8') as file:
+            file.write(new_content)
+            
+        logger.info(f"Successfully added {symbol} ({name}) to tickers.ts")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error updating tickers.ts: {str(e)}")
+        logger.error(traceback.format_exc())
+        return False
+
+def verify_ticker(symbol):
+    """Verify ticker with yfinance and get company name"""
+    try:
+        logger.info(f"Verifying ticker: {symbol}")
+        ticker = yf.Ticker(symbol)
+        info = ticker.info
+        if info and 'longName' in info:
+            logger.info(f"Successfully verified ticker {symbol}: {info['longName']}")
+            return True, info['longName']
+    except Exception as e:
+        logger.error(f"Error verifying ticker {symbol}: {str(e)}")
+        logger.error(traceback.format_exc())
+    return False, None
+
+@bp.route('/verify_and_add_ticker/<symbol>')
+def verify_and_add_ticker(symbol):
+    try:
+        # Normalize symbol
+        symbol = symbol.upper()
+        logger.info(f"Processing verify and add request for ticker: {symbol}")
+        
+        # First check if ticker already exists in our file
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(current_dir, '..', 'tickers.ts')
+        
+        with open(file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+            if f'symbol: "{symbol}"' in content:
+                logger.info(f"Ticker {symbol} already exists in database")
+                return jsonify({
+                    'success': True,
+                    'message': 'Ticker already exists in database',
+                    'exists': True
+                })
+        
+        # Verify with yfinance
+        is_valid, company_name = verify_ticker(symbol)
+        if is_valid and company_name:
+            # Add to tickers.ts
+            if update_tickers_file(symbol, company_name):
+                logger.info(f"Successfully added new ticker {symbol} ({company_name})")
+                # Reload tickers after update
+                global TICKERS, TICKER_DICT
+                TICKERS, TICKER_DICT = load_tickers()
+                return jsonify({
+                    'success': True,
+                    'message': f'Added {symbol} ({company_name}) to tickers database',
+                    'exists': False
+                })
+            else:
+                logger.error(f"Failed to update tickers.ts for {symbol}")
+                return jsonify({
+                    'success': False,
+                    'message': 'Error updating tickers database'
+                })
+        else:
+            logger.warning(f"Invalid ticker symbol: {symbol}")
+            return jsonify({
+                'success': False,
+                'message': 'Invalid ticker symbol'
+            })
+            
+    except Exception as e:
+        error_msg = f"Error processing request for {symbol}: {str(e)}"
+        logger.error(f"{error_msg}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            'success': False,
+            'message': error_msg
+        })
 
 def load_tickers():
     """Load tickers from TypeScript file"""
