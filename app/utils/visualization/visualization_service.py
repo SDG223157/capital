@@ -481,7 +481,7 @@ class VisualizationService:
         # Create and add annotations
         annotations = VisualizationService._create_chart_annotations(
             start_price, end_price, annual_return, daily_volatility,
-            annualized_volatility, regression_results, total_return, signal_returns
+            annualized_volatility, regression_results, total_return, signal_returns,metrics_df
         )
 
         # Update layout
