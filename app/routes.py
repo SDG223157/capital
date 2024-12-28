@@ -109,76 +109,65 @@ def search_ticker():
         search_results = []
         logger.info(f"Searching for ticker: {query}")
         
-        # Try different market suffixes based on ticker pattern
-        check_symbols = [query]  # Default to no suffix
+        # Check for market-specific patterns first
+        exchange_suffix = None
         
-        # Chinese mainland markets
-        if query.startswith('60') or query.startswith('68'):
-            check_symbols.append(f"{query}.SS")  # Shanghai
-        elif (query.startswith('5') and len(query) == 6):  # Only 6-digit codes starting with 5
-            check_symbols.append(f"{query}.SS")  # Shanghai
-        elif query.startswith('00') or query.startswith('30'):
-            check_symbols.append(f"{query}.SZ")  # Shenzhen
+        # Shanghai Stock Exchange (.SS)
+        if (query.startswith('60') or query.startswith('68') or 
+            (query.startswith('5') and len(query) == 6)):
+            exchange_suffix = '.SS'
             
-        # Hong Kong market
-        if query.startswith('00') or (query.startswith('0') and len(query) == 4):
-            check_symbols.append(f"{query}.HK")  # Hong Kong
-        
-        # Try each possible symbol format
-        for check_symbol in check_symbols:
-            is_valid, company_name = verify_ticker(check_symbol)
+        # Shenzhen Stock Exchange (.SZ)
+        elif query.startswith('00') or query.startswith('30'):
+            exchange_suffix = '.SZ'
+            
+        # Hong Kong Exchange (.HK)
+        elif (query.startswith('00') or 
+              (query.startswith('0') and len(query) == 4)):
+            exchange_suffix = '.HK'
+
+        # Check with exchange suffix if applicable
+        if exchange_suffix:
+            symbol_to_check = f"{query}{exchange_suffix}"
+            is_valid, company_name = verify_ticker(symbol_to_check)
+            
             if is_valid:
-                # Don't add market suffix to the name anymore since we're showing the exchange symbol
                 search_results.append({
-                    'symbol': query,  # Original symbol
-                    'exchange_symbol': check_symbol,  # Symbol with exchange suffix
-                    'name': company_name,  # Just the company name
+                    'symbol': symbol_to_check,  # Include exchange suffix
+                    'name': company_name,
                     'source': 'verified'
                 })
-                logger.info(f"Found verified match: {check_symbol}")
-                break  # Use first successful verification
+                logger.info(f"Found verified stock: {symbol_to_check}")
         
-        # Then check local tickers
-        if query in TICKER_DICT and not any(r['symbol'] == query for r in search_results):
-            search_results.append({
-                'symbol': query,
-                'exchange_symbol': query,
-                'name': TICKER_DICT[query],
-                'source': 'local'
-            })
-            logger.info(f"Found local match: {query}")
-        
-        # Add partial matches from local data
-        if len(search_results) < 5:
-            partial_matches = [
-                {
-                    'symbol': ticker['symbol'],
-                    'exchange_symbol': ticker['symbol'],
-                    'name': ticker['name'],
+        # Only proceed with local search if no verified stock was found
+        if not search_results:
+            if query in TICKER_DICT:
+                search_results.append({
+                    'symbol': query,
+                    'name': TICKER_DICT[query],
                     'source': 'local'
-                }
-                for ticker in TICKERS
-                if (query in ticker['symbol'].upper() or 
-                    query in ticker['name'].upper()) and 
-                    ticker['symbol'] != query and
-                    not any(r['symbol'] == ticker['symbol'] for r in search_results)
-            ]
-            search_results.extend(partial_matches[:5 - len(search_results)])
-            logger.info(f"Found {len(partial_matches)} partial matches")
-        
-        # Sort results: verified first, then exact matches, then by length
-        search_results.sort(key=lambda x: (
-            x['source'] != 'verified',  # verified first
-            x['symbol'] != query,       # exact matches second
-            len(x['symbol']),          # shorter symbols third
-            x['symbol']                # alphabetically last
-        ))
-        
+                })
+                logger.info(f"Found local match: {query}")
+            
+            # Add partial matches from local data
+            if len(search_results) < 5:
+                partial_matches = [
+                    {'symbol': ticker['symbol'], 'name': ticker['name'], 'source': 'local'}
+                    for ticker in TICKERS
+                    if (query in ticker['symbol'].upper() or 
+                        query in ticker['name'].upper()) and 
+                        ticker['symbol'] != query and
+                        not any(r['symbol'] == ticker['symbol'] for r in search_results)
+                ]
+                search_results.extend(partial_matches[:5 - len(search_results)])
+                logger.info(f"Found {len(partial_matches)} partial matches")
+            
         return jsonify(search_results[:5])
         
     except Exception as e:
         logger.error(f"Search error: {str(e)}")
         return jsonify([])
+    
 @bp.route('/analyze', methods=['POST'])
 def analyze():
     try:

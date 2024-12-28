@@ -6,7 +6,6 @@ document.addEventListener('DOMContentLoaded', function() {
     tickerInput.parentNode.appendChild(suggestionsDiv);
     
     let debounceTimeout;
-    let selectedSymbol = '';  // Store the selected symbol
 
     function formatCompanyName(name) {
         return name.replace(/\\'/g, "'");
@@ -16,14 +15,13 @@ document.addEventListener('DOMContentLoaded', function() {
     tickerInput.addEventListener('dblclick', function() {
         if (this.value) {
             this.value = '';
-            selectedSymbol = '';
             suggestionsDiv.style.display = 'none';
         }
     });
+    
     tickerInput.addEventListener('input', function() {
         clearTimeout(debounceTimeout);
         const query = this.value.trim();
-        selectedSymbol = '';  // Clear selected symbol on new input
         
         if (query.length < 1) {
             suggestionsDiv.style.display = 'none';
@@ -42,15 +40,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             div.className = 'suggestion-item';
                             const formattedName = formatCompanyName(item.name);
                             
-                            // Show the exchange symbol instead of just the base symbol
                             div.innerHTML = `
-                                <span class="symbol">${item.exchange_symbol}</span>
+                                <span class="symbol">${item.symbol}</span>
                                 <span class="name">${formattedName}</span>
                             `;
                             
                             div.addEventListener('click', function() {
-                                selectedSymbol = item.exchange_symbol;  // Store the exchange symbol
-                                tickerInput.value = `${item.exchange_symbol}    ${formattedName}`;
+                                tickerInput.value = `${item.symbol}    ${formattedName}`;
                                 suggestionsDiv.style.display = 'none';
                             });
                             suggestionsDiv.appendChild(div);
@@ -66,6 +62,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
         }, 300);
     });
+    
     document.addEventListener('click', function(e) {
         if (!tickerInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
             suggestionsDiv.style.display = 'none';
@@ -78,7 +75,7 @@ document.addEventListener('DOMContentLoaded', function() {
     form.appendChild(loadingDiv);
     
     form.addEventListener('submit', function(e) {
-        const ticker = selectedSymbol || tickerInput.value.trim().split(/\s+/)[0];
+        const ticker = tickerInput.value.trim().split(/\s+/)[0];
         if (!ticker) {
             e.preventDefault();
             alert('Please enter a stock ticker symbol');
