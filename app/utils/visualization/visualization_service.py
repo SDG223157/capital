@@ -140,16 +140,16 @@ class VisualizationService:
             ),
             cells=dict(
                 values=[
-                    ['Total Days', 'Current Price', 'Annualized Return', 
-                     'Daily Volatility', 'Annual Volatility', 'Regression R²', 'Regression Formula'],
+                    [ 'Regression Formula','Regression R²', 'Current Price', 'Annualized Return', 
+                     'Daily Volatility', 'Annual Volatility' ],
                     [
-                        f"{days:,d}",
+                        f"{regression_formula}",
+                        f"{r2:.4f}",
                         f"${end_price:.2f}",
                         f"{annual_return:.2f}%",
                         f"{daily_volatility:.3f}",
-                        f"{annualized_volatility:.3f}",
-                        f"{r2:.4f}",
-                        f"{regression_formula}"
+                        f"{annualized_volatility:.3f}"
+                        
                     ]
                 ],
                 **TABLE_STYLE['cells']
