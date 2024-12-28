@@ -99,6 +99,7 @@ TICKERS, TICKER_DICT = load_tickers()
 def index():
     today = datetime.now().strftime('%Y-%m-%d')
     return render_template('index.html', now=datetime.now(), max_date=today)
+
 @bp.route('/search_ticker', methods=['GET'])
 def search_ticker():
     query = request.args.get('query', '').upper()
@@ -109,7 +110,18 @@ def search_ticker():
         search_results = []
         logger.info(f"Searching for ticker: {query}")
         
-        # Check for market-specific patterns first
+        # First try verifying the US ticker directly
+        is_valid, company_name = verify_ticker(query)
+        if is_valid:
+            search_results.append({
+                'symbol': query,
+                'name': company_name,
+                'source': 'verified'
+            })
+            logger.info(f"Found verified US stock: {query}")
+            return jsonify(search_results)
+            
+        # Check for market-specific patterns
         exchange_suffix = None
         
         # Shanghai Stock Exchange (.SS)
@@ -133,7 +145,7 @@ def search_ticker():
             
             if is_valid:
                 search_results.append({
-                    'symbol': symbol_to_check,  # Include exchange suffix
+                    'symbol': symbol_to_check,
                     'name': company_name,
                     'source': 'verified'
                 })
