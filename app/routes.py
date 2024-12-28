@@ -128,19 +128,11 @@ def search_ticker():
         for check_symbol in check_symbols:
             is_valid, company_name = verify_ticker(check_symbol)
             if is_valid:
-                # Determine the source suffix based on the symbol
-                source_suffix = ""
-                if check_symbol.endswith('.SS'):
-                    source_suffix = " (Shanghai)"
-                elif check_symbol.endswith('.SZ'):
-                    source_suffix = " (Shenzhen)"
-                elif check_symbol.endswith('.HK'):
-                    source_suffix = " (Hong Kong)"
-                
+                # Don't add market suffix to the name anymore since we're showing the exchange symbol
                 search_results.append({
-                    'symbol': query,  # Original symbol without suffix
-                    'name': f"{company_name}{source_suffix}",
-                    'exchange_symbol': check_symbol,  # Full symbol with exchange suffix
+                    'symbol': query,  # Original symbol
+                    'exchange_symbol': check_symbol,  # Symbol with exchange suffix
+                    'name': company_name,  # Just the company name
                     'source': 'verified'
                 })
                 logger.info(f"Found verified match: {check_symbol}")
@@ -150,8 +142,8 @@ def search_ticker():
         if query in TICKER_DICT and not any(r['symbol'] == query for r in search_results):
             search_results.append({
                 'symbol': query,
-                'name': TICKER_DICT[query],
                 'exchange_symbol': query,
+                'name': TICKER_DICT[query],
                 'source': 'local'
             })
             logger.info(f"Found local match: {query}")
@@ -161,8 +153,8 @@ def search_ticker():
             partial_matches = [
                 {
                     'symbol': ticker['symbol'],
-                    'name': ticker['name'],
                     'exchange_symbol': ticker['symbol'],
+                    'name': ticker['name'],
                     'source': 'local'
                 }
                 for ticker in TICKERS
@@ -187,7 +179,6 @@ def search_ticker():
     except Exception as e:
         logger.error(f"Search error: {str(e)}")
         return jsonify([])
-
 @bp.route('/analyze', methods=['POST'])
 def analyze():
     try:

@@ -20,7 +20,6 @@ document.addEventListener('DOMContentLoaded', function() {
             suggestionsDiv.style.display = 'none';
         }
     });
-    
     tickerInput.addEventListener('input', function() {
         clearTimeout(debounceTimeout);
         const query = this.value.trim();
@@ -42,16 +41,16 @@ document.addEventListener('DOMContentLoaded', function() {
                             const div = document.createElement('div');
                             div.className = 'suggestion-item';
                             const formattedName = formatCompanyName(item.name);
-                            const sourceLabel = item.source === 'verified' ? ' (Verified)' : '';
                             
+                            // Show the exchange symbol instead of just the base symbol
                             div.innerHTML = `
-                                <span class="symbol">${item.symbol}</span>
-                                <span class="name">${formattedName}${sourceLabel}</span>
+                                <span class="symbol">${item.exchange_symbol}</span>
+                                <span class="name">${formattedName}</span>
                             `;
                             
                             div.addEventListener('click', function() {
-                                selectedSymbol = item.symbol;  // Store the clean symbol
-                                tickerInput.value = `${item.symbol}    ${formattedName}`;
+                                selectedSymbol = item.exchange_symbol;  // Store the exchange symbol
+                                tickerInput.value = `${item.exchange_symbol}    ${formattedName}`;
                                 suggestionsDiv.style.display = 'none';
                             });
                             suggestionsDiv.appendChild(div);
@@ -67,7 +66,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
         }, 300);
     });
-    
     document.addEventListener('click', function(e) {
         if (!tickerInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
             suggestionsDiv.style.display = 'none';
