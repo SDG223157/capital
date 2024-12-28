@@ -139,16 +139,15 @@ def search_ticker():
                 })
                 logger.info(f"Found verified stock: {symbol_to_check}")
         else:
-             is_valid, company_name = verify_ticker(query)
-        if is_valid:
-            search_results.append({
-                'symbol': query,
-                'name': company_name,
-                'source': 'verified'
-            })
-            logger.info(f"Found verified US stock: {query}")
-            return jsonify(search_results)
-        
+            is_valid, company_name = verify_ticker(query)
+            if is_valid:
+                search_results.append({
+                    'symbol': query,
+                    'name': company_name,
+                    'source': 'verified'
+                })
+                logger.info(f"Found verified US stock: {query}")
+                
         # Only proceed with local search if no verified stock was found
         if not search_results:
             if query in TICKER_DICT:
