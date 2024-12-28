@@ -141,14 +141,14 @@ class VisualizationService:
             cells=dict(
                 values=[
                     [ 'Regression Formula','Regression R²', 'Current Price', 'Annualized Return', 
-                     'Daily Volatility', 'Annual Volatility' ],
+                      'Annual Volatility' ],
                     [
                         f"{regression_formula}",
                         f"{r2:.4f}",
                         f"${end_price:.2f}",
                         f"{annual_return:.2f}%",
-                        f"{daily_volatility:.3f}",
                         f"{annualized_volatility:.3f}"
+                       
                         
                     ]
                 ],
