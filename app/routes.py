@@ -99,7 +99,6 @@ TICKERS, TICKER_DICT = load_tickers()
 def index():
     today = datetime.now().strftime('%Y-%m-%d')
     return render_template('index.html', now=datetime.now(), max_date=today)
-
 @bp.route('/search_ticker', methods=['GET'])
 def search_ticker():
     query = request.args.get('query', '').upper()
@@ -110,32 +109,21 @@ def search_ticker():
         search_results = []
         logger.info(f"Searching for ticker: {query}")
         
-        # First try verifying the US ticker directly
-        is_valid, company_name = verify_ticker(query)
-        if is_valid:
-            search_results.append({
-                'symbol': query,
-                'name': company_name,
-                'source': 'verified'
-            })
-            logger.info(f"Found verified US stock: {query}")
-            return jsonify(search_results)
-            
-        # Check for market-specific patterns
+        # Check for market-specific patterns first
         exchange_suffix = None
         
         # Shanghai Stock Exchange (.SS)
         if (query.startswith('60') or query.startswith('68') or 
-            (query.startswith('5')) and len(query) == 6):
+            (query.startswith('5') and len(query) == 6)):
             exchange_suffix = '.SS'
             
         # Shenzhen Stock Exchange (.SZ)
-        elif (query.startswith('00') or query.startswith('30')) and len(query) == 6:
+        elif query.startswith('00') or query.startswith('30'):
             exchange_suffix = '.SZ'
             
         # Hong Kong Exchange (.HK)
         elif (query.startswith('00') or 
-              (query.startswith('0')) and len(query) == 4):
+              (query.startswith('0') and len(query) == 4)):
             exchange_suffix = '.HK'
 
         # Check with exchange suffix if applicable
@@ -145,7 +133,7 @@ def search_ticker():
             
             if is_valid:
                 search_results.append({
-                    'symbol': symbol_to_check,
+                    'symbol': symbol_to_check,  # Include exchange suffix
                     'name': company_name,
                     'source': 'verified'
                 })
