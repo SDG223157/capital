@@ -25,114 +25,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Create Blueprint
-main_bp = Blueprint('main', __name__)
-def update_tickers_file(symbol, name):
-    """Update tickers.ts with new ticker information"""
-    try:
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(current_dir, '..', 'tickers.ts')
-        
-        logger.debug(f"Updating tickers file at: {file_path}")
-        
-        # Handle special characters in symbol
-        escaped_symbol = symbol.replace("=", "\\=")
-        
-        with open(file_path, 'r', encoding='utf-8') as file:
-            content = file.read()
-            
-        last_bracket_index = content.rfind(']')
-        if last_bracket_index == -1:
-            logger.error("Could not find closing bracket in tickers.ts")
-            return False
-        
-        # Prepare new ticker entry with escaped symbol
-        new_ticker = f'\n  {{ symbol: "{escaped_symbol}", name: "{name}" }},'
-        
-        new_content = content[:last_bracket_index] + new_ticker + content[last_bracket_index:]
-        
-        with open(file_path, 'w', encoding='utf-8') as file:
-            file.write(new_content)
-            
-        logger.info(f"Successfully added {symbol} ({name}) to tickers.ts")
-        return True
-        
-    except Exception as e:
-        logger.error(f"Error updating tickers.ts: {str(e)}")
-        logger.error(traceback.format_exc())
-        return False
+bp = Blueprint('main', __name__)
 
-def verify_ticker(symbol):
-    """Verify ticker with yfinance and get company name"""
-    try:
-        logger.info(f"Verifying ticker: {symbol}")
-        ticker = yf.Ticker(symbol)
-        info = ticker.info
-        
-        # For futures and special symbols, use a custom name if longName is not available
-        if info:
-            if 'longName' in info:
-                return True, info['longName']
-            elif 'shortName' in info:
-                return True, info['shortName']
-            elif symbol.endswith('=F'):  # Handle futures contracts
-                return True, f"Futures Contract: {symbol}"
-            else:
-                return True, symbol  # Use symbol as name if no better name is available
-                
-        return False, None
-    except Exception as e:
-        logger.error(f"Error verifying ticker {symbol}: {str(e)}")
-        logger.error(traceback.format_exc())
-        return False, None
-
-@main_bp.route('/verify_and_add_ticker/<symbol>')
-def verify_and_add_ticker(symbol):
-    try:
-        # Normalize symbol
-        symbol = symbol.upper()
-        logger.info(f"Processing verify and add request for ticker: {symbol}")
-        
-        # First check if ticker already exists in our file
-        if symbol in TICKER_DICT:
-            return jsonify({
-                'success': True,
-                'symbol': symbol,
-                'name': TICKER_DICT[symbol],
-                'exists': True
-            })
-        
-        # Verify with yfinance
-        is_valid, company_name = verify_ticker(symbol)
-        if is_valid and company_name:
-            # Add to tickers.ts
-            if update_tickers_file(symbol, company_name):
-                # Reload tickers after update
-                global TICKERS, TICKER_DICT
-                TICKERS, TICKER_DICT = load_tickers()
-                return jsonify({
-                    'success': True,
-                    'symbol': symbol,
-                    'name': company_name,
-                    'exists': False
-                })
-            else:
-                return jsonify({
-                    'success': False,
-                    'message': 'Invalid ticker'
-                })
-        else:
-            return jsonify({
-                'success': False,
-                'message': 'Invalid ticker'
-            })
-            
-    except Exception as e:
-        error_msg = f"Error processing request: {str(e)}"
-        logger.error(f"{error_msg}")
-        return jsonify({
-            'success': False,
-            'message': 'Invalid ticker'
-        })
 def load_tickers():
     """Load tickers from TypeScript file"""
     try:
@@ -182,12 +76,12 @@ def load_tickers():
 # Load tickers at module level
 TICKERS, TICKER_DICT = load_tickers()
 
-@main_bp.route('/')
+@bp.route('/')
 def index():
     today = datetime.now().strftime('%Y-%m-%d')
     return render_template('index.html', now=datetime.now(), max_date=today)
 
-@main_bp.route('/search_ticker', methods=['GET'])
+@bp.route('/search_ticker', methods=['GET'])
 def search_ticker():
     query = request.args.get('query', '').upper()
     if not query or len(query) < 1:
@@ -231,7 +125,7 @@ def search_ticker():
         logger.error(f"Search error: {str(e)}")
         return jsonify([])
 
-@main_bp.route('/analyze', methods=['POST'])
+@bp.route('/analyze', methods=['POST'])
 def analyze():
     try:
         ticker_input = request.form.get('ticker', '').split()[0].upper()
@@ -315,7 +209,7 @@ def analyze():
 
 # Add this new route with bp instead of main
 # Add this import at the top@bp.route('/tables')
-@main_bp.route('/tables')
+@bp.route('/tables')
 def tables():
     """Show database tables in document tree structure"""
     try:
@@ -375,7 +269,7 @@ def tables():
         logger.error(f"{error_msg}")
         return render_template('tables.html', error=error_msg)
 
-@main_bp.route('/delete_table/<table_name>', methods=['POST'])
+@bp.route('/delete_table/<table_name>', methods=['POST'])
 def delete_table(table_name):
     """Delete a table from database"""
     try:
@@ -399,7 +293,7 @@ def delete_table(table_name):
         error_msg = f"Error deleting table {table_name}: {str(e)}"
         logger.error(f"{error_msg}\n{traceback.format_exc()}")
         return jsonify({'success': False, 'error': error_msg}), 500
-@main_bp.route('/table-content/<table_name>')
+@bp.route('/table-content/<table_name>')
 def show_table_content(table_name):
     """Show the content of a specific table with sorting and pagination"""
     try:
@@ -462,7 +356,7 @@ def show_table_content(table_name):
         return render_template('table_content.html', error=error_msg)
 
 
-@main_bp.route('/export/<table_name>/<format>')
+@bp.route('/export/<table_name>/<format>')
 def export_table(table_name, format):
     """Export table data in CSV or Excel format"""
     try:
