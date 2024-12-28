@@ -6,15 +6,17 @@ document.addEventListener('DOMContentLoaded', function() {
     tickerInput.parentNode.appendChild(suggestionsDiv);
     
     let debounceTimeout;
+    let selectedSymbol = '';  // Store the selected symbol
 
     function formatCompanyName(name) {
         return name.replace(/\\'/g, "'");
     }
     
-    // Clear input immediately when clicked/focused
-    tickerInput.addEventListener('focus', function() {
-        if (this.value) {  // Only clear if there's text
+    // Clear input on double click
+    tickerInput.addEventListener('dblclick', function() {
+        if (this.value) {
             this.value = '';
+            selectedSymbol = '';
             suggestionsDiv.style.display = 'none';
         }
     });
@@ -22,6 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
     tickerInput.addEventListener('input', function() {
         clearTimeout(debounceTimeout);
         const query = this.value.trim();
+        selectedSymbol = '';  // Clear selected symbol on new input
         
         if (query.length < 1) {
             suggestionsDiv.style.display = 'none';
@@ -39,15 +42,16 @@ document.addEventListener('DOMContentLoaded', function() {
                             const div = document.createElement('div');
                             div.className = 'suggestion-item';
                             const formattedName = formatCompanyName(item.name);
+                            const sourceLabel = item.source === 'verified' ? ' (Verified)' : '';
                             
                             div.innerHTML = `
                                 <span class="symbol">${item.symbol}</span>
-                                <span class="name">${formattedName}</span>
+                                <span class="name">${formattedName}${sourceLabel}</span>
                             `;
                             
                             div.addEventListener('click', function() {
-                                // Increased spacing between symbol and name (20 spaces)
-                                tickerInput.value = `${item.symbol}                    ${formattedName}`;
+                                selectedSymbol = item.symbol;  // Store the clean symbol
+                                tickerInput.value = `${item.symbol}    ${formattedName}`;
                                 suggestionsDiv.style.display = 'none';
                             });
                             suggestionsDiv.appendChild(div);
@@ -76,7 +80,7 @@ document.addEventListener('DOMContentLoaded', function() {
     form.appendChild(loadingDiv);
     
     form.addEventListener('submit', function(e) {
-        const ticker = tickerInput.value.trim().split(/\s+/)[0];
+        const ticker = selectedSymbol || tickerInput.value.trim().split(/\s+/)[0];
         if (!ticker) {
             e.preventDefault();
             alert('Please enter a stock ticker symbol');

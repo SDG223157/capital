@@ -27,6 +27,25 @@ logger = logging.getLogger(__name__)
 # Create Blueprint
 bp = Blueprint('main', __name__)
 
+def verify_ticker(symbol):
+    """Verify ticker with yfinance and get company name"""
+    try:
+        logger.info(f"Verifying ticker: {symbol}")
+        ticker = yf.Ticker(symbol)
+        info = ticker.info
+        
+        if info:
+            if 'longName' in info:
+                return True, info['longName']
+            elif 'shortName' in info:
+                return True, info['shortName']
+            return True, symbol
+                
+        return False, None
+    except Exception as e:
+        logger.error(f"Error verifying ticker {symbol}: {str(e)}")
+        return False, None
+
 def load_tickers():
     """Load tickers from TypeScript file"""
     try:
@@ -91,32 +110,51 @@ def search_ticker():
         search_results = []
         logger.info(f"Searching for ticker: {query}")
         
-        # Exact match
-        if query in TICKER_DICT:
+        # Check for Chinese stock symbols
+        check_symbol = query
+        if query.startswith('60') or query.startswith('68'):
+            check_symbol = f"{query}.SS"  # Shanghai
+        elif query.startswith('00') or query.startswith('30'):
+            check_symbol = f"{query}.SZ"  # Shenzhen
+
+        # First try yfinance verification
+        is_valid, company_name = verify_ticker(check_symbol)
+        if is_valid:
+            search_results.append({
+                'symbol': query,
+                'name': company_name,
+                'source': 'verified'
+            })
+            logger.info(f"Found verified match: {query}")
+        
+        # Then check local tickers
+        if query in TICKER_DICT and not any(r['symbol'] == query for r in search_results):
             search_results.append({
                 'symbol': query,
                 'name': TICKER_DICT[query],
-                'source': 'predefined'
+                'source': 'local'
             })
-            logger.info(f"Found exact match: {query}")
+            logger.info(f"Found local match: {query}")
         
-        # Partial matches
+        # Add partial matches from local data
         if len(search_results) < 5:
             partial_matches = [
-                {'symbol': ticker['symbol'], 'name': ticker['name'], 'source': 'predefined'}
+                {'symbol': ticker['symbol'], 'name': ticker['name'], 'source': 'local'}
                 for ticker in TICKERS
                 if (query in ticker['symbol'].upper() or 
                     query in ticker['name'].upper()) and 
-                    ticker['symbol'] != query
+                    ticker['symbol'] != query and
+                    not any(r['symbol'] == ticker['symbol'] for r in search_results)
             ]
             search_results.extend(partial_matches[:5 - len(search_results)])
             logger.info(f"Found {len(partial_matches)} partial matches")
         
-        # Sort results
+        # Sort results: verified first, then exact matches, then by length
         search_results.sort(key=lambda x: (
-            x['symbol'] != query,
-            len(x['symbol']),
-            x['symbol']
+            x['source'] != 'verified',  # verified first
+            x['symbol'] != query,       # exact matches second
+            len(x['symbol']),          # shorter symbols third
+            x['symbol']                # alphabetically last
         ))
         
         return jsonify(search_results[:5])
