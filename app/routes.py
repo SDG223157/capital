@@ -111,7 +111,7 @@ def search_ticker():
         
         # Check for market-specific patterns first
         exchange_suffix = None
-        
+              
         # Shanghai Stock Exchange (.SS)
         if (query.startswith('60') or query.startswith('68') or 
             query.startswith('5')) and len(query) == 6:
