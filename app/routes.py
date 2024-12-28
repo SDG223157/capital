@@ -118,7 +118,7 @@ def search_ticker():
             exchange_suffix = '.SS'
             
         # Shenzhen Stock Exchange (.SZ)
-        elif (query.startswith('00') or query.startswith('30')) and len(query) == 6:
+        elif (query.startswith('00') or query.startswith('3')) and len(query) == 6:
             exchange_suffix = '.SZ'
             
         # Hong Kong Exchange (.HK)
