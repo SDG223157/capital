@@ -114,16 +114,16 @@ def search_ticker():
         
         # Shanghai Stock Exchange (.SS)
         if (query.startswith('60') or query.startswith('68') or 
-            (query.startswith('5') and len(query) == 6)):
+            query.startswith('5')) and len(query) == 6:
             exchange_suffix = '.SS'
             
         # Shenzhen Stock Exchange (.SZ)
-        elif query.startswith('00') or query.startswith('30'):
+        elif (query.startswith('00') or query.startswith('30')) and len(query) == 6:
             exchange_suffix = '.SZ'
             
         # Hong Kong Exchange (.HK)
         elif (query.startswith('00') or 
-              (query.startswith('0') and len(query) == 4)):
+              query.startswith('0')) and len(query) == 4:
             exchange_suffix = '.HK'
 
         # Check with exchange suffix if applicable
