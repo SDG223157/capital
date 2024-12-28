@@ -437,9 +437,9 @@ class VisualizationService:
                     )
                 )
          # Add horizontal lines at key levels
-        fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.5)
-        fig.add_hline(y=50, line_dash="dash", line_color="gray", opacity=0.5)
-        fig.add_hline(y=100, line_dash="dash", line_color="gray", opacity=0.5)
+        fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.2)
+        fig.add_hline(y=50, line_dash="dash", line_color="gray", opacity=0.2)
+        fig.add_hline(y=100, line_dash="dash", line_color="gray", opacity=0.2)
         #calculate metrics for annotations
         start_price = data['Close'].iloc[0]
         end_price = data['Close'].iloc[-1]
