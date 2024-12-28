@@ -436,8 +436,11 @@ class VisualizationService:
                         customdata=[price]
                     )
                 )
-
-        # Calculate metrics for annotations
+         # Add horizontal lines at key levels
+        fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.5)
+        fig.add_hline(y=50, line_dash="dash", line_color="gray", opacity=0.5)
+        fig.add_hline(y=100, line_dash="dash", line_color="gray", opacity=0.5)
+        #calculate metrics for annotations
         start_price = data['Close'].iloc[0]
         end_price = data['Close'].iloc[-1]
         days = (data.index[-1] - data.index[0]).days
