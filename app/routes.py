@@ -110,28 +110,47 @@ def search_ticker():
         search_results = []
         logger.info(f"Searching for ticker: {query}")
         
-        # Check for Chinese stock symbols
-        check_symbol = query
-        if query.startswith('60') or query.startswith('68'):
-            check_symbol = f"{query}.SS"  # Shanghai
+        # Try different market suffixes based on ticker pattern
+        check_symbols = [query]  # Default to no suffix
+        
+        # Chinese mainland markets
+        if query.startswith('60') or query.startswith('68') or query.startswith('5'):
+            check_symbols.append(f"{query}.SS")  # Shanghai
         elif query.startswith('00') or query.startswith('30'):
-            check_symbol = f"{query}.SZ"  # Shenzhen
-
-        # First try yfinance verification
-        is_valid, company_name = verify_ticker(check_symbol)
-        if is_valid:
-            search_results.append({
-                'symbol': query,
-                'name': company_name,
-                'source': 'verified'
-            })
-            logger.info(f"Found verified match: {query}")
+            check_symbols.append(f"{query}.SZ")  # Shenzhen
+            
+        # Hong Kong market
+        if query.startswith('00') or query.startswith('0'):
+            check_symbols.append(f"{query}.HK")  # Hong Kong
+        
+        # Try each possible symbol format
+        for check_symbol in check_symbols:
+            is_valid, company_name = verify_ticker(check_symbol)
+            if is_valid:
+                # Determine the source suffix based on the symbol
+                source_suffix = ""
+                if check_symbol.endswith('.SS'):
+                    source_suffix = " (Shanghai)"
+                elif check_symbol.endswith('.SZ'):
+                    source_suffix = " (Shenzhen)"
+                elif check_symbol.endswith('.HK'):
+                    source_suffix = " (Hong Kong)"
+                
+                search_results.append({
+                    'symbol': query,  # Original symbol without suffix
+                    'name': f"{company_name}{source_suffix}",
+                    'exchange_symbol': check_symbol,  # Full symbol with exchange suffix
+                    'source': 'verified'
+                })
+                logger.info(f"Found verified match: {check_symbol}")
+                break  # Use first successful verification
         
         # Then check local tickers
         if query in TICKER_DICT and not any(r['symbol'] == query for r in search_results):
             search_results.append({
                 'symbol': query,
                 'name': TICKER_DICT[query],
+                'exchange_symbol': query,
                 'source': 'local'
             })
             logger.info(f"Found local match: {query}")
@@ -139,7 +158,12 @@ def search_ticker():
         # Add partial matches from local data
         if len(search_results) < 5:
             partial_matches = [
-                {'symbol': ticker['symbol'], 'name': ticker['name'], 'source': 'local'}
+                {
+                    'symbol': ticker['symbol'],
+                    'name': ticker['name'],
+                    'exchange_symbol': ticker['symbol'],
+                    'source': 'local'
+                }
                 for ticker in TICKERS
                 if (query in ticker['symbol'].upper() or 
                     query in ticker['name'].upper()) and 
