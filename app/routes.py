@@ -99,7 +99,6 @@ TICKERS, TICKER_DICT = load_tickers()
 def index():
     today = datetime.now().strftime('%Y-%m-%d')
     return render_template('index.html', now=datetime.now(), max_date=today)
-
 @bp.route('/search_ticker', methods=['GET'])
 def search_ticker():
     query = request.args.get('query', '').upper()
@@ -114,13 +113,15 @@ def search_ticker():
         check_symbols = [query]  # Default to no suffix
         
         # Chinese mainland markets
-        if query.startswith('60') or query.startswith('68') or query.startswith('5'):
+        if query.startswith('60') or query.startswith('68'):
+            check_symbols.append(f"{query}.SS")  # Shanghai
+        elif (query.startswith('5') and len(query) == 6):  # Only 6-digit codes starting with 5
             check_symbols.append(f"{query}.SS")  # Shanghai
         elif query.startswith('00') or query.startswith('30'):
             check_symbols.append(f"{query}.SZ")  # Shenzhen
             
         # Hong Kong market
-        if query.startswith('00') or query.startswith('0'):
+        if query.startswith('00') or (query.startswith('0') and len(query) == 4):
             check_symbols.append(f"{query}.HK")  # Hong Kong
         
         # Try each possible symbol format
