@@ -3,33 +3,56 @@
 {% block title %}Home{% endblock %}
 
 {% block content %}
-<div class="form-container">
-    <form id="analysis-form" method="post" action="{{ url_for('main.analyze') }}" target="_blank">
-        <div class="form-group">
-            <label for="ticker">Stock Ticker:</label>
-            <input type="text" id="ticker" name="ticker" placeholder="e.g., AAPL" required>
-        </div>
-        
-        <div class="form-group">
-            <label for="end_date">End Date (Optional):</label>
-            <input type="date" id="end_date" name="end_date" placeholder="mm/dd/yyyy">
-        </div>
-        
-        <div class="form-group">
-            <label for="lookback_days">Lookback Days:</label>
-            <input type="number" id="lookback_days" name="lookback_days" 
-                   value="1000" min="30" max="10000">
-        </div>
-        
-        <div class="form-group">
-            <label for="crossover_days">Crossover Days:</label>
-            <input type="number" id="crossover_days" name="crossover_days" 
-                   value="365" min="30" max="1000">
-        </div>
-        
-        <button type="submit" class="analyze-button">Analyze</button>
-    </form>
-</div>
+{% if current_user.is_authenticated %}
+    <!-- Show original analysis form for logged-in users -->
+    <div class="form-container">
+        <form id="analysis-form" method="post" action="{{ url_for('main.analyze') }}" target="_blank">
+            <div class="form-group">
+                <label for="ticker">Stock Ticker:</label>
+                <input type="text" id="ticker" name="ticker" placeholder="e.g., AAPL" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="end_date">End Date (Optional):</label>
+                <input type="date" id="end_date" name="end_date" placeholder="mm/dd/yyyy">
+            </div>
+            
+            <div class="form-group">
+                <label for="lookback_days">Lookback Days:</label>
+                <input type="number" id="lookback_days" name="lookback_days" 
+                       value="1000" min="30" max="10000">
+            </div>
+            
+            <div class="form-group">
+                <label for="crossover_days">Crossover Days:</label>
+                <input type="number" id="crossover_days" name="crossover_days" 
+                       value="365" min="30" max="1000">
+            </div>
+            
+            <button type="submit" class="analyze-button">Analyze</button>
+        </form>
+    </div>
+{% else %}
+    <!-- Show Google-style search for non-logged-in users -->
+    <div class="search-container">
+        <h1 class="main-title">Stock Analysis</h1>
+        <form id="search-form" method="post" action="{{ url_for('main.quick_analyze') }}" target="_blank">
+            <div class="search-box">
+                <input type="text" id="ticker" name="ticker" placeholder="Enter stock ticker (e.g., AAPL)" autocomplete="off">
+            </div>
+            <div class="suggestions"></div>
+            <div class="search-buttons">
+                <button type="submit" class="search-button">Analyze Stock</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="header-actions">
+        <a href="{{ url_for('auth.login') }}" class="auth-link">Login</a>
+        <a href="{{ url_for('auth.register') }}" class="auth-link">Register</a>
+    </div>
+{% endif %}
+
+<div class="loading">Analyzing data, please wait...</div>
 {% endblock %}
-<!-- Add this somewhere in your index.html -->
 

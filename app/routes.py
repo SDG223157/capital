@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, make_response, jsonify
+from flask import Blueprint, render_template, request, make_response, jsonify, redirect, url_for
 from datetime import datetime
 import yfinance as yf
 import logging
@@ -6,14 +6,15 @@ import sys
 import re
 import os
 import traceback
+from flask_login import login_required, current_user
 from app.utils.analyzer.stock_analyzer import create_stock_visualization
 from sqlalchemy import inspect
-from app import db 
-from sqlalchemy import text 
+from app import db
+from sqlalchemy import text
 from flask import send_file
 import pandas as pd
 import io
-# Make sure this line is present
+
 # Configure logging
 logging.basicConfig(
     level=logging.DEBUG,
@@ -26,74 +27,6 @@ logger = logging.getLogger(__name__)
 
 # Create Blueprint
 bp = Blueprint('main', __name__)
-
-def verify_ticker(symbol):
-    """Verify ticker with yfinance and get company name"""
-    try:
-        logger.info(f"Verifying ticker: {symbol}")
-        ticker = yf.Ticker(symbol)
-        info = ticker.info
-        
-        if info:
-            if 'longName' in info:
-                return True, info['longName']
-            elif 'shortName' in info:
-                return True, info['shortName']
-            return True, symbol
-                
-        return False, None
-    except Exception as e:
-        logger.error(f"Error verifying ticker {symbol}: {str(e)}")
-        return False, None
-
-def load_tickers():
-    """Load tickers from TypeScript file"""
-    try:
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(current_dir, '..', 'tickers.ts')
-        
-        logger.debug(f"Current directory: {current_dir}")
-        logger.debug(f"Looking for tickers.ts at: {file_path}")
-        
-        if not os.path.exists(file_path):
-            logger.error(f"Tickers file not found at: {file_path}")
-            file_path = os.path.join(os.getcwd(), 'tickers.ts')
-            logger.debug(f"Trying current directory: {file_path}")
-            
-            if not os.path.exists(file_path):
-                logger.error("Tickers file not found in current directory either")
-                return [], {}
-        
-        logger.info(f"Found tickers.ts at: {file_path}")
-        
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-            logger.debug(f"Read {len(content)} characters from tickers.ts")
-            
-        pattern = r'{[^}]*symbol:\s*"([^"]*)",[^}]*name:\s*"([^"]*)"[^}]*}'
-        matches = re.finditer(pattern, content)
-        
-        TICKERS = []
-        TICKER_DICT = {}
-        
-        for match in matches:
-            symbol, name = match.groups()
-            ticker_obj = {"symbol": symbol, "name": name}
-            TICKERS.append(ticker_obj)
-            TICKER_DICT[symbol] = name
-        
-        logger.info(f"Successfully loaded {len(TICKERS)} tickers")
-        logger.debug(f"First few tickers: {TICKERS[:3]}")
-        
-        return TICKERS, TICKER_DICT
-        
-    except Exception as e:
-        logger.error(f"Error loading tickers: {str(e)}")
-        logger.error(traceback.format_exc())
-        return [], {}
-
-# Load tickers at module level
-TICKERS, TICKER_DICT = load_tickers()
 
 @bp.route('/')
 def index():
@@ -112,112 +45,73 @@ def search_ticker():
         
         # List of variations to try
         variations = [query]
-        
-        # Add '^' prefix variation if not present
         if not query.startswith('^'):
             variations.append(f'^{query}')
-        # If query starts with '^', also try without it
         else:
             variations.append(query[1:])
             
-        logger.info(f"Trying ticker variations: {variations}")
-        
         # Try each variation
         for variant in variations:
-            # Check for market-specific patterns first
+            # Exchange suffix logic remains the same...
             exchange_suffix = None
-                  
-            # Shanghai Stock Exchange (.SS)
+            
             if (variant.startswith('60') or variant.startswith('68') or 
                 variant.startswith('5')) and len(variant) == 6:
                 exchange_suffix = '.SS'
-                
-            # Shenzhen Stock Exchange (.SZ)
             elif (variant.startswith('00') or variant.startswith('3')) and len(variant) == 6:
                 exchange_suffix = '.SZ'
-                
-            # Hong Kong Exchange (.HK)
-            elif (variant.startswith('00') or 
-                  variant.startswith('0')) and len(variant) == 4:
+            elif (variant.startswith('00') or variant.startswith('0')) and len(variant) == 4:
                 exchange_suffix = '.HK'
 
-            # Check with exchange suffix if applicable
-            if exchange_suffix:
-                symbol_to_check = f"{variant}{exchange_suffix}"
-                is_valid, company_name = verify_ticker(symbol_to_check)
-                
-                if is_valid and symbol_to_check.upper() != company_name.upper():  # Only add if symbol and name are different
-                    search_results.append({
-                        'symbol': symbol_to_check,
-                        'name': company_name,
-                        'source': 'verified'
-                    })
-                    logger.info(f"Found verified stock: {symbol_to_check}")
-            else:
-                is_valid, company_name = verify_ticker(variant)
-                if is_valid and variant.upper() != company_name.upper():  # Only add if symbol and name are different
-                    search_results.append({
-                        'symbol': variant,
-                        'name': company_name,
-                        'source': 'verified'
-                    })
-                    logger.info(f"Found verified stock: {variant}")
-        
-        # Remove duplicates while preserving order
-        seen = set()
-        unique_results = []
-        for result in search_results:
-            if result['symbol'] not in seen:
-                seen.add(result['symbol'])
-                unique_results.append(result)
-        search_results = unique_results
-                
-        # Only proceed with local search if no verified stock was found
-        if not search_results:
-            # Check local dictionary for both variations
-            for variant in variations:
-                if variant in TICKER_DICT:
-                    name = TICKER_DICT[variant]
-                    if variant.upper() != name.upper():  # Only add if symbol and name are different
-                        search_results.append({
-                            'symbol': variant,
-                            'name': name,
-                            'source': 'local'
-                        })
-                        logger.info(f"Found local match: {variant}")
+            symbol_to_check = f"{variant}{exchange_suffix}" if exchange_suffix else variant
+            is_valid, company_name = verify_ticker(symbol_to_check)
             
-            # Add partial matches from local data
-            if len(search_results) < 5:
-                partial_matches = []
-                for variant in variations:
-                    matches = [
-                        {'symbol': ticker['symbol'], 'name': ticker['name'], 'source': 'local'}
-                        for ticker in TICKERS
-                        if (variant in ticker['symbol'].upper() or 
-                            variant in ticker['name'].upper()) and 
-                            ticker['symbol'] not in seen and
-                            ticker['symbol'].upper() != ticker['name'].upper() and  # Only add if symbol and name are different
-                            not any(r['symbol'] == ticker['symbol'] for r in search_results)
-                    ]
-                    partial_matches.extend(matches)
+            if is_valid and symbol_to_check.upper() != company_name.upper():
+                search_results.append({
+                    'symbol': symbol_to_check,
+                    'name': company_name,
+                    'source': 'verified'
+                })
                 
-                # Remove duplicates and add to results
-                for match in partial_matches:
-                    if match['symbol'] not in seen:
-                        seen.add(match['symbol'])
-                        search_results.append(match)
-                        if len(search_results) >= 5:
-                            break
-                
-                logger.info(f"Found {len(partial_matches)} partial matches")
-            
         return jsonify(search_results[:5])
         
     except Exception as e:
         logger.error(f"Search error: {str(e)}")
         return jsonify([])
-    
+
+@bp.route('/quick_analyze', methods=['POST'])
+def quick_analyze():
+    """Quick analysis route for non-logged-in users"""
+    try:
+        ticker_input = request.form.get('ticker', '').split()[0].upper()
+        if not ticker_input:
+            raise ValueError("Ticker symbol is required")
+            
+        # Use default values for quick analysis
+        fig = create_stock_visualization(
+            ticker_input,
+            end_date=None,  # Use current date
+            lookback_days=1000,  # Default lookback
+            crossover_days=365  # Default crossover
+        )
+        
+        html_content = fig.to_html(
+            full_html=True,
+            include_plotlyjs=True,
+            config={'responsive': True}
+        )
+        
+        response = make_response(html_content)
+        response.headers['Content-Type'] = 'text/html'
+        return response
+        
+    except Exception as e:
+        error_msg = f"Error analyzing {ticker_input}: {str(e)}"
+        logger.error(f"{error_msg}\n{traceback.format_exc()}")
+        return render_template('error.html', error=error_msg), 500
+
 @bp.route('/analyze', methods=['POST'])
+@login_required  # Add login requirement for full analysis
 def analyze():
     try:
         ticker_input = request.form.get('ticker', '').split()[0].upper()
@@ -226,14 +120,6 @@ def analyze():
         if not ticker_input:
             raise ValueError("Ticker symbol is required")
         
-        if ticker_input in TICKER_DICT:
-            ticker = ticker_input
-            logger.info(f"Using predefined ticker: {ticker}")
-        else:
-            matching_tickers = [t['symbol'] for t in TICKERS if t['symbol'].startswith(ticker_input)]
-            ticker = matching_tickers[0] if matching_tickers else ticker_input
-            logger.info(f"Using matched ticker: {ticker}")
-        
         end_date = request.form.get('end_date')
         if end_date:
             try:
@@ -241,22 +127,17 @@ def analyze():
                 logger.info(f"Using end date: {end_date}")
             except ValueError:
                 raise ValueError("Invalid date format. Please use YYYY-MM-DD format")
-        else:
-            end_date = None
-            logger.info("Using current date")
         
         lookback_days = int(request.form.get('lookback_days', 365))
         if lookback_days < 30 or lookback_days > 10000:
             raise ValueError("Lookback days must be between 30 and 10000")
-        logger.info(f"Using lookback days: {lookback_days}")
-            
+        
         crossover_days = int(request.form.get('crossover_days', 365))
         if crossover_days < 30 or crossover_days > 1000:
             raise ValueError("Crossover days must be between 30 and 1000")
-        logger.info(f"Using crossover days: {crossover_days}")
         
         fig = create_stock_visualization(
-            ticker,
+            ticker_input,
             end_date=end_date,
             lookback_days=lookback_days,
             crossover_days=crossover_days
@@ -275,32 +156,8 @@ def analyze():
     except Exception as e:
         error_msg = f"Error analyzing {ticker_input}: {str(e)}"
         logger.error(f"{error_msg}\n{traceback.format_exc()}")
-        error_html = f"""
-        <html>
-            <head>
-                <title>Error</title>
-                <style>
-                    body {{ font-family: Arial, sans-serif; padding: 2rem; }}
-                    .error {{ color: #dc3545; padding: 1rem; background-color: #f8d7da; 
-                             border: 1px solid #f5c6cb; border-radius: 3px; }}
-                    .back-link {{ margin-top: 1rem; display: block; }}
-                </style>
-            </head>
-            <body>
-                <div class="error">
-                    <h2>Analysis Error</h2>
-                    <p>{error_msg}</p>
-                </div>
-                <a href="javascript:window.close();" class="back-link">Close Window</a>
-            </body>
-        </html>
-        """
-        return error_html, 500
+        return render_template('error.html', error=error_msg), 500
 
-# Keep your existing imports and code at the top
-
-# Add this new route with bp instead of main
-# Add this import at the top@bp.route('/tables')
 @bp.route('/tables')
 def tables():
     """Show database tables in document tree structure"""
