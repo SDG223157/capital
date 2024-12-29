@@ -99,6 +99,7 @@ TICKERS, TICKER_DICT = load_tickers()
 def index():
     today = datetime.now().strftime('%Y-%m-%d')
     return render_template('index.html', now=datetime.now(), max_date=today)
+
 @bp.route('/search_ticker', methods=['GET'])
 def search_ticker():
     query = request.args.get('query', '').upper()
@@ -109,66 +110,102 @@ def search_ticker():
         search_results = []
         logger.info(f"Searching for ticker: {query}")
         
-        # Check for market-specific patterns first
-        exchange_suffix = None
-              
-        # Shanghai Stock Exchange (.SS)
-        if (query.startswith('60') or query.startswith('68') or 
-            query.startswith('5')) and len(query) == 6:
-            exchange_suffix = '.SS'
-            
-        # Shenzhen Stock Exchange (.SZ)
-        elif (query.startswith('00') or query.startswith('3')) and len(query) == 6:
-            exchange_suffix = '.SZ'
-            
-        # Hong Kong Exchange (.HK)
-        elif (query.startswith('00') or 
-              query.startswith('0')) and len(query) == 4:
-            exchange_suffix = '.HK'
-
-        # Check with exchange suffix if applicable
-        if exchange_suffix:
-            symbol_to_check = f"{query}{exchange_suffix}"
-            is_valid, company_name = verify_ticker(symbol_to_check)
-            
-            if is_valid:
-                search_results.append({
-                    'symbol': symbol_to_check,  # Include exchange suffix
-                    'name': company_name,
-                    'source': 'verified'
-                })
-                logger.info(f"Found verified stock: {symbol_to_check}")
+        # List of variations to try
+        variations = [query]
+        
+        # Add '^' prefix variation if not already present
+        if not query.startswith('^'):
+            variations.append(f'^{query}')
+        # If query starts with '^', also try without it
         else:
-            is_valid, company_name = verify_ticker(query)
-            if is_valid:
-                search_results.append({
-                    'symbol': query,
-                    'name': company_name,
-                    'source': 'verified'
-                })
-                logger.info(f"Found verified US stock: {query}")
+            variations.append(query[1:])
+            
+        logger.info(f"Trying ticker variations: {variations}")
+        
+        # Try each variation
+        for variant in variations:
+            # Check for market-specific patterns first
+            exchange_suffix = None
+                  
+            # Shanghai Stock Exchange (.SS)
+            if (variant.startswith('60') or variant.startswith('68') or 
+                variant.startswith('5')) and len(variant) == 6:
+                exchange_suffix = '.SS'
+                
+            # Shenzhen Stock Exchange (.SZ)
+            elif (variant.startswith('00') or variant.startswith('3')) and len(variant) == 6:
+                exchange_suffix = '.SZ'
+                
+            # Hong Kong Exchange (.HK)
+            elif (variant.startswith('00') or 
+                  variant.startswith('0')) and len(variant) == 4:
+                exchange_suffix = '.HK'
+
+            # Check with exchange suffix if applicable
+            if exchange_suffix:
+                symbol_to_check = f"{variant}{exchange_suffix}"
+                is_valid, company_name = verify_ticker(symbol_to_check)
+                
+                if is_valid:
+                    search_results.append({
+                        'symbol': symbol_to_check,
+                        'name': company_name,
+                        'source': 'verified'
+                    })
+                    logger.info(f"Found verified stock: {symbol_to_check}")
+            else:
+                is_valid, company_name = verify_ticker(variant)
+                if is_valid:
+                    search_results.append({
+                        'symbol': variant,
+                        'name': company_name,
+                        'source': 'verified'
+                    })
+                    logger.info(f"Found verified stock: {variant}")
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_results = []
+        for result in search_results:
+            if result['symbol'] not in seen:
+                seen.add(result['symbol'])
+                unique_results.append(result)
+        search_results = unique_results
                 
         # Only proceed with local search if no verified stock was found
         if not search_results:
-            if query in TICKER_DICT:
-                search_results.append({
-                    'symbol': query,
-                    'name': TICKER_DICT[query],
-                    'source': 'local'
-                })
-                logger.info(f"Found local match: {query}")
+            # Check local dictionary for both variations
+            for variant in variations:
+                if variant in TICKER_DICT:
+                    search_results.append({
+                        'symbol': variant,
+                        'name': TICKER_DICT[variant],
+                        'source': 'local'
+                    })
+                    logger.info(f"Found local match: {variant}")
             
             # Add partial matches from local data
             if len(search_results) < 5:
-                partial_matches = [
-                    {'symbol': ticker['symbol'], 'name': ticker['name'], 'source': 'local'}
-                    for ticker in TICKERS
-                    if (query in ticker['symbol'].upper() or 
-                        query in ticker['name'].upper()) and 
-                        ticker['symbol'] != query and
-                        not any(r['symbol'] == ticker['symbol'] for r in search_results)
-                ]
-                search_results.extend(partial_matches[:5 - len(search_results)])
+                partial_matches = []
+                for variant in variations:
+                    matches = [
+                        {'symbol': ticker['symbol'], 'name': ticker['name'], 'source': 'local'}
+                        for ticker in TICKERS
+                        if (variant in ticker['symbol'].upper() or 
+                            variant in ticker['name'].upper()) and 
+                            ticker['symbol'] not in seen and
+                            not any(r['symbol'] == ticker['symbol'] for r in search_results)
+                    ]
+                    partial_matches.extend(matches)
+                
+                # Remove duplicates and add to results
+                for match in partial_matches:
+                    if match['symbol'] not in seen:
+                        seen.add(match['symbol'])
+                        search_results.append(match)
+                        if len(search_results) >= 5:
+                            break
+                
                 logger.info(f"Found {len(partial_matches)} partial matches")
             
         return jsonify(search_results[:5])
