@@ -5,7 +5,7 @@ from sqlalchemy import inspect
 from flask_login import LoginManager
 import os
 
-# Initialize extensions
+# Initialize SQLAlchemy
 db = SQLAlchemy()
 login_manager = LoginManager()
 
@@ -32,14 +32,17 @@ def create_app():
     db.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
+    login_manager.login_message_category = 'info'
     
-    # Register blueprints
+    # Register routes
     from app import routes
     app.register_blueprint(routes.bp)
     
+    # Register auth blueprint
     from app.auth import bp as auth_bp
     app.register_blueprint(auth_bp, url_prefix='/auth')
     
+    # Register user blueprint
     from app.user import bp as user_bp
     app.register_blueprint(user_bp, url_prefix='/user')
     
