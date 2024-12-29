@@ -113,7 +113,7 @@ def search_ticker():
         # List of variations to try
         variations = [query]
         
-        # Add '^' prefix variation if not already present
+        # Add '^' prefix variation if not present
         if not query.startswith('^'):
             variations.append(f'^{query}')
         # If query starts with '^', also try without it
@@ -146,7 +146,7 @@ def search_ticker():
                 symbol_to_check = f"{variant}{exchange_suffix}"
                 is_valid, company_name = verify_ticker(symbol_to_check)
                 
-                if is_valid:
+                if is_valid and symbol_to_check.upper() != company_name.upper():  # Only add if symbol and name are different
                     search_results.append({
                         'symbol': symbol_to_check,
                         'name': company_name,
@@ -155,7 +155,7 @@ def search_ticker():
                     logger.info(f"Found verified stock: {symbol_to_check}")
             else:
                 is_valid, company_name = verify_ticker(variant)
-                if is_valid:
+                if is_valid and variant.upper() != company_name.upper():  # Only add if symbol and name are different
                     search_results.append({
                         'symbol': variant,
                         'name': company_name,
@@ -177,12 +177,14 @@ def search_ticker():
             # Check local dictionary for both variations
             for variant in variations:
                 if variant in TICKER_DICT:
-                    search_results.append({
-                        'symbol': variant,
-                        'name': TICKER_DICT[variant],
-                        'source': 'local'
-                    })
-                    logger.info(f"Found local match: {variant}")
+                    name = TICKER_DICT[variant]
+                    if variant.upper() != name.upper():  # Only add if symbol and name are different
+                        search_results.append({
+                            'symbol': variant,
+                            'name': name,
+                            'source': 'local'
+                        })
+                        logger.info(f"Found local match: {variant}")
             
             # Add partial matches from local data
             if len(search_results) < 5:
@@ -194,6 +196,7 @@ def search_ticker():
                         if (variant in ticker['symbol'].upper() or 
                             variant in ticker['name'].upper()) and 
                             ticker['symbol'] not in seen and
+                            ticker['symbol'].upper() != ticker['name'].upper() and  # Only add if symbol and name are different
                             not any(r['symbol'] == ticker['symbol'] for r in search_results)
                     ]
                     partial_matches.extend(matches)
