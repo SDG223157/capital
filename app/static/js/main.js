@@ -115,3 +115,30 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 1000);
     });
 });
+
+// Password visibility toggle
+function togglePassword(button) {
+    const input = button.previousElementSibling;
+    const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+    input.setAttribute('type', type);
+    
+    // Update eye icon
+    const icon = button.querySelector('i');
+    icon.textContent = type === 'password' ? '👁️' : '👁️‍🗨️';
+}
+
+// Form validation
+document.addEventListener('DOMContentLoaded', function() {
+    const registerForm = document.querySelector('form');
+    if (registerForm) {
+        registerForm.addEventListener('submit', function(e) {
+            const password = document.querySelector('input[name="password"]');
+            const confirmPassword = document.querySelector('input[name="confirm_password"]');
+            
+            if (confirmPassword && password.value !== confirmPassword.value) {
+                e.preventDefault();
+                alert('Passwords do not match!');
+            }
+        });
+    }
+});
