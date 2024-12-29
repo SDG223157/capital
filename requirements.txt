@@ -1,4 +1,7 @@
+# requirements.txt
 flask==2.3.3
+flask-login==0.6.2
+werkzeug==2.3.7  # Update this to match Flask version
 yfinance==0.2.36
 pandas==2.0.3
 numpy==1.24.3
@@ -11,6 +14,4 @@ mysql-connector-python==8.2.0
 pymysql==1.1.0
 SQLAlchemy==2.0.23
 openpyxl==3.1.2
-flask-login==0.6.2
 email-validator==2.0.0
-werkzeug==2.0.3 
