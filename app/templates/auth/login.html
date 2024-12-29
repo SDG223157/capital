@@ -1,15 +1,17 @@
-{% extends 'base.html' %}
+{% extends 'auth/base_auth.html' %}
 
 {% block title %}Login{% endblock %}
 
-{% block content %}
+{% block auth_content %}
 <div class="auth-container">
-    <h1>Login</h1>
-    
+    <div class="auth-logo">
+        <h1>Login</h1>
+    </div>
+
     <form method="POST" class="auth-form">
         <div class="input-with-icon">
             <i class="email-icon">📧</i>
-            <input type="email" name="email" placeholder="Phone number / email address" required>
+            <input type="text" name="email" placeholder="Phone number / email address" required>
         </div>
         
         <div class="input-with-icon">
@@ -24,8 +26,8 @@
             <label>
                 <input type="checkbox" required>
                 <span>I confirm that I have read, consent and agree to
-                    <a href="#">Terms of Use</a> and 
-                    <a href="#">Privacy Policy</a>.
+                    <a href="#" class="auth-link">Terms of Use</a> and 
+                    <a href="#" class="auth-link">Privacy Policy</a>
                 </span>
             </label>
         </div>
@@ -33,8 +35,8 @@
         <button type="submit" class="auth-button">Log in</button>
         
         <div class="auth-links">
-            <a href="{{ url_for('auth.register') }}">Sign up</a>
-            <a href="#">Forgot password?</a>
+            <a href="{{ url_for('auth.register') }}" class="auth-link">Sign up</a>
+            <a href="#" class="auth-link">Forgot password?</a>
         </div>
         
         <div class="divider">
@@ -42,7 +44,7 @@
         </div>
         
         <button type="button" class="google-button">
-            <img src="{{ url_for('static', filename='images/google.png') }}" alt="Google">
+            <img src="{{ url_for('static', filename='images/google-icon.png') }}" alt="Google">
             Log in with Google
         </button>
     </form>

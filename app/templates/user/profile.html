@@ -7,12 +7,17 @@
     <div class="profile-header">
         <h1>Profile Settings</h1>
     </div>
-    
+
     <div class="profile-content">
         <form method="POST" class="profile-form">
-            <!-- Basic Information Section -->
             <div class="form-section">
                 <h2>Basic Information</h2>
+                
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" 
+                           value="{{ current_user.username }}" required>
+                </div>
                 
                 <div class="form-group">
                     <label for="email">Email</label>
@@ -34,43 +39,11 @@
                 </div>
             </div>
             
-            <!-- Preferences Section -->
-            <div class="form-section">
-                <h2>Preferences</h2>
-                
-                <div class="form-group">
-                    <label for="timezone">Timezone</label>
-                    <select id="timezone" name="timezone">
-                        <option value="UTC" {% if current_user.timezone == 'UTC' %}selected{% endif %}>UTC</option>
-                        <option value="America/New_York" {% if current_user.timezone == 'America/New_York' %}selected{% endif %}>Eastern Time</option>
-                        <option value="America/Chicago" {% if current_user.timezone == 'America/Chicago' %}selected{% endif %}>Central Time</option>
-                        <option value="America/Denver" {% if current_user.timezone == 'America/Denver' %}selected{% endif %}>Mountain Time</option>
-                        <option value="America/Los_Angeles" {% if current_user.timezone == 'America/Los_Angeles' %}selected{% endif %}>Pacific Time</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="preferred_currency">Preferred Currency</label>
-                    <select id="preferred_currency" name="preferred_currency">
-                        <option value="USD" {% if current_user.preferred_currency == 'USD' %}selected{% endif %}>USD</option>
-                        <option value="EUR" {% if current_user.preferred_currency == 'EUR' %}selected{% endif %}>EUR</option>
-                        <option value="GBP" {% if current_user.preferred_currency == 'GBP' %}selected{% endif %}>GBP</option>
-                    </select>
-                </div>
-                
-                <div class="form-check">
-                    <input type="checkbox" id="email_notifications" name="email_notifications"
-                           {% if current_user.email_notifications %}checked{% endif %}>
-                    <label for="email_notifications">Receive email notifications</label>
-                </div>
-            </div>
-            
             <div class="form-actions">
                 <button type="submit" class="save-button">Save Changes</button>
             </div>
         </form>
-        
-        <!-- Password Change Form -->
+
         <form method="POST" action="{{ url_for('user.change_password') }}" class="password-form">
             <div class="form-section">
                 <h2>Change Password</h2>

@@ -1,12 +1,19 @@
-{% extends 'base.html' %}
+{% extends 'auth/base_auth.html' %}
 
 {% block title %}Register{% endblock %}
 
-{% block content %}
+{% block auth_content %}
 <div class="auth-container">
-    <h1>Create Account</h1>
-    
+    <div class="auth-logo">
+        <h1>Create Account</h1>
+    </div>
+
     <form method="POST" class="auth-form">
+        <div class="input-with-icon">
+            <i class="user-icon">👤</i>
+            <input type="text" name="username" placeholder="Username" required>
+        </div>
+        
         <div class="input-with-icon">
             <i class="email-icon">📧</i>
             <input type="email" name="email" placeholder="Email address" required>
@@ -28,7 +35,7 @@
         <button type="submit" class="auth-button">Create Account</button>
         
         <div class="auth-links">
-            <span>Already have an account? <a href="{{ url_for('auth.login') }}">Log in</a></span>
+            <span>Already have an account? <a href="{{ url_for('auth.login') }}" class="auth-link">Log in</a></span>
         </div>
     </form>
 </div>
