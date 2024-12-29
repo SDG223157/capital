@@ -35,23 +35,41 @@ document.addEventListener('DOMContentLoaded', function() {
                     suggestionsDiv.innerHTML = '';
                     
                     if (data.length > 0) {
-                        data.forEach(item => {
-                            const div = document.createElement('div');
-                            div.className = 'suggestion-item';
-                            const formattedName = formatCompanyName(item.name);
-                            
-                            div.innerHTML = `
-                                <span class="symbol">${item.symbol}</span>
-                                <span class="name">${formattedName}</span>
-                            `;
-                            
-                            div.addEventListener('click', function() {
-                                tickerInput.value = `${item.symbol}    ${formattedName}`;
-                                suggestionsDiv.style.display = 'none';
+                        // Filter out results where symbol equals name
+                        const filteredData = data.filter(item => 
+                            item.symbol.toUpperCase() !== item.name.toUpperCase()
+                        );
+                        
+                        if (filteredData.length > 0) {
+                            filteredData.forEach(item => {
+                                const div = document.createElement('div');
+                                div.className = 'suggestion-item';
+                                const formattedName = formatCompanyName(item.name);
+                                
+                                // Create separate spans for symbol and name
+                                const symbolSpan = document.createElement('span');
+                                symbolSpan.className = 'symbol';
+                                symbolSpan.textContent = item.symbol;
+                                
+                                const nameSpan = document.createElement('span');
+                                nameSpan.className = 'name';
+                                nameSpan.textContent = formattedName;
+                                
+                                div.appendChild(symbolSpan);
+                                div.appendChild(nameSpan);
+                                
+                                div.addEventListener('click', function() {
+                                    // Set input value to both symbol and name
+                                    tickerInput.value = `${item.symbol}    ${formattedName}`;
+                                    suggestionsDiv.style.display = 'none';
+                                });
+                                
+                                suggestionsDiv.appendChild(div);
                             });
-                            suggestionsDiv.appendChild(div);
-                        });
-                        suggestionsDiv.style.display = 'block';
+                            suggestionsDiv.style.display = 'block';
+                        } else {
+                            suggestionsDiv.style.display = 'none';
+                        }
                     } else {
                         suggestionsDiv.style.display = 'none';
                     }
@@ -63,9 +81,18 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 300);
     });
     
+    // Close suggestions when clicking outside
     document.addEventListener('click', function(e) {
         if (!tickerInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
             suggestionsDiv.style.display = 'none';
+        }
+    });
+
+    // Prevent suggestions from closing when clicking inside the input
+    tickerInput.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (this.value.trim().length > 0) {
+            suggestionsDiv.style.display = 'block';
         }
     });
     
