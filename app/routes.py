@@ -149,22 +149,32 @@ def search_ticker():
                 symbol_to_check = f"{variant}{exchange_suffix}"
                 is_valid, company_name = verify_ticker(symbol_to_check)
                 
-                if is_valid and symbol_to_check.upper() != company_name.upper():  # Only add if symbol and name are different
-                    search_results.append({
-                        'symbol': symbol_to_check,
-                        'name': company_name,
-                        'source': 'verified'
-                    })
-                    logger.info(f"Found verified stock: {symbol_to_check}")
+                if is_valid:
+                    # If symbol exists in TICKER_DICT, use that name instead
+                    if symbol_to_check in TICKER_DICT:
+                        company_name = TICKER_DICT[symbol_to_check]
+                    
+                    if symbol_to_check.upper() != company_name.upper():  # Only add if symbol and name are different
+                        search_results.append({
+                            'symbol': symbol_to_check,
+                            'name': company_name,
+                            'source': 'verified'
+                        })
+                        logger.info(f"Found verified stock: {symbol_to_check}")
             else:
                 is_valid, company_name = verify_ticker(variant)
-                if is_valid and variant.upper() != company_name.upper():  # Only add if symbol and name are different
-                    search_results.append({
-                        'symbol': variant,
-                        'name': company_name,
-                        'source': 'verified'
-                    })
-                    logger.info(f"Found verified stock: {variant}")
+                if is_valid:
+                    # If symbol exists in TICKER_DICT, use that name instead
+                    if variant in TICKER_DICT:
+                        company_name = TICKER_DICT[variant]
+                        
+                    if variant.upper() != company_name.upper():  # Only add if symbol and name are different
+                        search_results.append({
+                            'symbol': variant,
+                            'name': company_name,
+                            'source': 'verified'
+                        })
+                        logger.info(f"Found verified stock: {variant}")
         
         # Remove duplicates while preserving order
         seen = set()
@@ -177,18 +187,6 @@ def search_ticker():
                 
         # Only proceed with local search if no verified stock was found
         if not search_results:
-            # Check local dictionary for both variations
-            for variant in variations:
-                if variant in TICKER_DICT:
-                    name = TICKER_DICT[variant]
-                    if variant.upper() != name.upper():  # Only add if symbol and name are different
-                        search_results.append({
-                            'symbol': variant,
-                            'name': name,
-                            'source': 'local'
-                        })
-                        logger.info(f"Found local match: {variant}")
-            
             # Add partial matches from local data
             if len(search_results) < 5:
                 partial_matches = []
@@ -219,8 +217,6 @@ def search_ticker():
     except Exception as e:
         logger.error(f"Search error: {str(e)}")
         return jsonify([])
-    
-
 
 @bp.route('/quick_analyze', methods=['POST'])
 def quick_analyze():
