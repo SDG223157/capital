@@ -6,6 +6,7 @@ import numpy as np
 from datetime import datetime, timedelta
 from app.utils.config.layout_config import LAYOUT_CONFIG, CHART_STYLE, TABLE_STYLE
 
+
 class VisualizationService:
     """Service class for creating and managing stock analysis visualizations."""
 
@@ -129,15 +130,25 @@ class VisualizationService:
     def _create_analysis_summary_table(days, end_price, annual_return, 
                                     daily_volatility, annualized_volatility, r2, regression_formula):
         """Create the analysis summary table with colored regression formula"""
-        # Check for negative coefficient after the equals sign
-        parts = regression_formula.split('=')
-        if len(parts) > 1:
-            # Look at the first number after the equals sign
-            second_part = parts[1].strip()
-            formula_color = 'red' if second_part.startswith(' -') else 'green'
-        else:
-            # Default to green if formula structure is unexpected
-            formula_color = 'green'
+        # Look for the first number after the equals sign
+        try:
+            # Split by equals and get the right side
+            equation_parts = regression_formula.split('=')
+            if len(equation_parts) > 1:
+                right_side = equation_parts[1].strip()
+                # Find the first number with its sign
+                import re
+                # This regex looks for a number that may have a negative sign
+                match = re.search(r'[-+]?\d*\.?\d+', right_side)
+                if match:
+                    first_number = match.group()
+                    formula_color = 'red' if first_number.startswith('-') else 'green'
+                else:
+                    formula_color = 'green'  # default if no number found
+            else:
+                formula_color = 'green'  # default if no equals sign
+        except:
+            formula_color = 'green'  # default if any error occurs
             
         colored_formula = f'<span style="color: {formula_color}">{regression_formula}</span>'
         
@@ -165,7 +176,6 @@ class VisualizationService:
                 **TABLE_STYLE['cells']
             )
         )
-    
     @staticmethod
     def _create_trading_signal_table(signal_returns):
         """Create the trading signal analysis table"""
