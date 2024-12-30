@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', function() {
             suggestionsDiv.style.display = 'none';
         }
     });
-});
+
     // Password visibility toggle
     function togglePassword(button) {
         const input = button.closest('.input-with-icon').querySelector('input');
