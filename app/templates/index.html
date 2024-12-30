@@ -44,7 +44,7 @@
             <form id="analyze-form" method="post" action="{{ url_for('main.analyze') if current_user.is_authenticated else url_for('main.quick_analyze') }}">
                 <div class="form-group">
                     <label for="ticker">Stock Ticker Symbol:</label>
-                    <div class="input-wrapper">
+                    <div class="ticker-input-container">
                         <input 
                             type="text" 
                             id="ticker" 

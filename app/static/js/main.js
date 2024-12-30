@@ -1,12 +1,12 @@
 document.addEventListener('DOMContentLoaded', function() {
     const tickerInput = document.getElementById('ticker');
-    const suggestionsDiv = document.querySelector('.suggestions');
-    const companyInfoDiv = document.querySelector('.company-info');
+    const suggestionsDiv = tickerInput.parentElement.querySelector('.suggestions');
+    const companyInfoDiv = tickerInput.parentElement.querySelector('.company-info');
     let debounceTimeout;
 
     tickerInput.addEventListener('input', function() {
         clearTimeout(debounceTimeout);
-        const query = this.value.trim().toUpperCase();
+        const query = this.value.trim();
         
         if (query.length < 1) {
             suggestionsDiv.style.display = 'none';
@@ -42,8 +42,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 
                                 // Update company info display
                                 companyInfoDiv.innerHTML = `
-                                    <div class="company-symbol">${item.symbol}</div>
-                                    <div class="company-name">${item.name}</div>
+                                    <div class="symbol">${item.symbol}</div>
+                                    <div class="name">${item.name}</div>
                                 `;
                                 companyInfoDiv.style.display = 'block';
                             });
