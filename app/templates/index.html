@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="form-container">
-    <h2>Stock Analysis</h2>
+    {% comment %} <h2>Stock Analysis</h2> {% endcomment %}
     
     <form id="analyze-form" method="post" action="{{ url_for('main.analyze') if current_user.is_authenticated else url_for('main.quick_analyze') }}">
         <div class="form-group">
