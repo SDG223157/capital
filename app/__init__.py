@@ -1,58 +1,41 @@
 from flask import Flask
-from flask.cli import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import inspect
 from flask_login import LoginManager
-import os
+from datetime import datetime
+from app.config import Config
 
-# Initialize SQLAlchemy
 db = SQLAlchemy()
 login_manager = LoginManager()
+login_manager.login_view = 'auth.login'
+login_manager.login_message_category = 'error'
 
-def create_app():
+def create_app(config_class=Config):
     app = Flask(__name__)
-    
-    # Load environment variables
-    load_dotenv()
-    
-    # Config
-    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev')
-    
-    # Database configuration
-    app.config['SQLALCHEMY_DATABASE_URI'] = (
-        f"mysql+pymysql://{os.getenv('MYSQL_USER')}:"
-        f"{os.getenv('MYSQL_PASSWORD')}@"
-        f"{os.getenv('MYSQL_HOST')}:"
-        f"{os.getenv('MYSQL_PORT', '3306')}/"
-        f"{os.getenv('MYSQL_DATABASE')}"
-    )
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    
+    app.config.from_object(config_class)
+
     # Initialize extensions
     db.init_app(app)
     login_manager.init_app(app)
-    login_manager.login_view = 'auth.login'
-    login_manager.login_message_category = 'info'
-    
-    # Register routes
-    from app import routes
-    app.register_blueprint(routes.bp)
-    
-    # Register auth blueprint
+
+    from app.models import User
+    @login_manager.user_loader
+    def load_user(id):
+        return User.query.get(int(id))
+
+    # Register blueprints
+    from app.main import bp as main_bp
+    app.register_blueprint(main_bp)
+
     from app.auth import bp as auth_bp
     app.register_blueprint(auth_bp, url_prefix='/auth')
-    
-    # Register user blueprint
+
     from app.user import bp as user_bp
     app.register_blueprint(user_bp, url_prefix='/user')
-    
-    # Create database tables
-    with app.app_context():
-        db.create_all()
-    
-    @login_manager.user_loader
-    def load_user(user_id):
-        from app.models import User
-        return User.query.get(int(user_id))
-    
+
+    @app.context_processor
+    def utility_processor():
+        return {
+            'now': datetime.now()
+        }
+
     return app
