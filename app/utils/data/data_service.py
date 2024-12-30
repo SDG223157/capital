@@ -219,6 +219,9 @@ class DataService:
         table_name = f"roic_{cleaned_ticker}"
         
         try:
+            if "^" in ticker or "-" in ticker:
+                return None
+            
             # First try to get data from database
             if self.table_exists(table_name):
                 print(f"Getting financial data for {ticker} from database")
@@ -274,7 +277,7 @@ class DataService:
                 )
             else:
                 return None
-                
+                    
         except Exception as e:
             print(f"Error in get_financial_data for {ticker}: {str(e)}")
             return None
