@@ -1,20 +1,12 @@
 document.addEventListener('DOMContentLoaded', function() {
     const tickerInput = document.getElementById('ticker');
     const suggestionsDiv = document.querySelector('.suggestions');
-    const formGroup = tickerInput.closest('.form-group');
+    const companyInfoDiv = document.querySelector('.company-info');
     let debounceTimeout;
-
-    // Create company info div
-    const companyInfoDiv = document.createElement('div');
-    companyInfoDiv.className = 'company-info';
-    companyInfoDiv.style.display = 'none';
-    
-    // Insert it after the suggestions div
-    formGroup.insertBefore(companyInfoDiv, suggestionsDiv.nextSibling);
 
     tickerInput.addEventListener('input', function() {
         clearTimeout(debounceTimeout);
-        const query = this.value.trim();
+        const query = this.value.trim().toUpperCase();
         
         if (query.length < 1) {
             suggestionsDiv.style.display = 'none';
@@ -50,8 +42,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 
                                 // Update company info display
                                 companyInfoDiv.innerHTML = `
-                                    <div class="symbol">${item.symbol}</div>
-                                    <div class="name">${item.name}</div>
+                                    <div class="company-symbol">${item.symbol}</div>
+                                    <div class="company-name">${item.name}</div>
                                 `;
                                 companyInfoDiv.style.display = 'block';
                             });

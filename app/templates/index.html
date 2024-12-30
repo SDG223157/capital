@@ -1,58 +1,120 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Technical Analysis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <h1>Stock Technical Analysis</h1>
+        <!-- Auth Links -->
+        <div class="auth-links">
+            {% if current_user.is_authenticated %}
+                <span>Welcome, {{ current_user.username }}</span>
+                <a href="{{ url_for('auth.logout') }}">Logout</a>
+            {% else %}
+                <a href="{{ url_for('auth.login') }}">Login</a>
+                <a href="{{ url_for('auth.register') }}">Register</a>
+            {% endif %}
+        </div>
+    </header>
 
-{% block title %}Home{% endblock %}
+    <main>
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash-message {{ category }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
 
-{% block content %}
-{% if current_user.is_authenticated %}
-    <!-- Show original analysis form for logged-in users -->
-    <div class="form-container">
-        <form id="analysis-form" method="post" action="{{ url_for('main.analyze') }}" target="_blank">
-            <div class="form-group">
-                <label for="ticker">Stock Ticker:</label>
-                <input type="text" id="ticker" name="ticker" placeholder="e.g., AAPL" required>
-            </div>
+        <!-- Main Form Container -->
+        <div class="form-container">
+            <h2>Stock Analysis</h2>
             
-            <div class="form-group">
-                <label for="end_date">End Date (Optional):</label>
-                <input type="date" id="end_date" name="end_date" placeholder="mm/dd/yyyy">
-            </div>
-            
-            <div class="form-group">
-                <label for="lookback_days">Lookback Days:</label>
-                <input type="number" id="lookback_days" name="lookback_days" 
-                       value="1000" min="30" max="10000">
-            </div>
-            
-            <div class="form-group">
-                <label for="crossover_days">Crossover Days:</label>
-                <input type="number" id="crossover_days" name="crossover_days" 
-                       value="365" min="30" max="1000">
-            </div>
-            
-            <button type="submit" class="analyze-button">Analyze</button>
-        </form>
-    </div>
-{% else %}
-    <!-- Show Google-style search for non-logged-in users -->
-    <div class="search-container">
-        <h1 class="main-title">Stock Analysis</h1>
-        <form id="search-form" method="post" action="{{ url_for('main.quick_analyze') }}" target="_blank">
-            <div class="search-input-wrapper">
-                <span class="search-icon">🔍</span>
-                <input type="text" id="ticker" name="ticker" placeholder="Enter stock ticker (e.g., AAPL)" autocomplete="off">
-                <div class="suggestions"></div>  <!-- Move suggestions div here -->
-            </div>
-                <button type="submit" class="search-button">Analyze Stock</button>
-            </div>
-        </form>
-    </div>
+            <!-- Analysis Form -->
+            <form id="analyze-form" method="post" action="{{ url_for('main.analyze') if current_user.is_authenticated else url_for('main.quick_analyze') }}">
+                <div class="form-group">
+                    <label for="ticker">Stock Ticker Symbol:</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="text" 
+                            id="ticker" 
+                            name="ticker" 
+                            placeholder="Enter stock symbol..."
+                            required
+                        >
+                        <div class="suggestions"></div>
+                        <div class="company-info"></div>
+                    </div>
+                </div>
 
-    <div class="header-actions">
-        <a href="{{ url_for('auth.login') }}" class="auth-link">Login</a>
-        <a href="{{ url_for('auth.register') }}" class="auth-link">Register</a>
-    </div>
-{% endif %}
+                {% if current_user.is_authenticated %}
+                    <!-- Additional options for logged-in users -->
+                    <div class="form-group">
+                        <label for="end_date">End Date:</label>
+                        <input 
+                            type="date" 
+                            id="end_date" 
+                            name="end_date"
+                            max="{{ max_date }}"
+                        >
+                    </div>
 
-<div class="loading">Analyzing data, please wait...</div>
-{% endblock %}
+                    <div class="form-group">
+                        <label for="lookback_days">Lookback Period (days):</label>
+                        <input 
+                            type="number" 
+                            id="lookback_days" 
+                            name="lookback_days"
+                            min="30"
+                            max="10000"
+                            value="365"
+                        >
+                    </div>
 
+                    <div class="form-group">
+                        <label for="crossover_days">Crossover Period (days):</label>
+                        <input 
+                            type="number" 
+                            id="crossover_days" 
+                            name="crossover_days"
+                            min="30"
+                            max="1000"
+                            value="365"
+                        >
+                    </div>
+                {% endif %}
+
+                <button type="submit" class="analyze-button">
+                    Analyze Stock
+                </button>
+            </form>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div class="loading">
+            Analyzing...
+        </div>
+
+        <!-- Results Container -->
+        <div id="results-container"></div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>© {{ now.year }} Stock Analysis Tool</p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
