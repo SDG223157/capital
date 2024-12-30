@@ -125,10 +125,15 @@ class VisualizationService:
         
         return metrics_table, growth_table
 
+    # Find and modify the _create_analysis_summary_table method
     @staticmethod
     def _create_analysis_summary_table(days, end_price, annual_return, 
-                                     daily_volatility, annualized_volatility, r2, regression_formula):
-        """Create the analysis summary table"""
+                                    daily_volatility, annualized_volatility, r2, regression_formula):
+        """Create the analysis summary table with colored regression formula"""
+        # Determine color for regression formula
+        formula_color = 'red' if regression_formula.startswith('-') else 'green'
+        colored_formula = f'<span style="color: {formula_color}">{regression_formula}</span>'
+        
         return go.Table(
             domain=dict(
                 x=LAYOUT_CONFIG['tables']['analysis_summary']['x'],
@@ -140,16 +145,14 @@ class VisualizationService:
             ),
             cells=dict(
                 values=[
-                    [ 'Regression Formula','Regression R²', 'Current Price', 'Annualized Return', 
-                      'Annual Volatility' ],
+                    ['Regression Formula', 'Regression R²', 'Current Price', 'Annualized Return', 
+                    'Annual Volatility'],
                     [
-                        f"{regression_formula}",
+                        colored_formula,
                         f"{r2:.4f}",
                         f"${end_price:.2f}",
                         f"{annual_return:.2f}%",
                         f"{annualized_volatility:.3f}"
-                       
-                        
                     ]
                 ],
                 **TABLE_STYLE['cells']
