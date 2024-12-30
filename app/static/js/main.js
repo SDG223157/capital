@@ -1,7 +1,16 @@
 document.addEventListener('DOMContentLoaded', function() {
     const tickerInput = document.getElementById('ticker');
-    const suggestionsDiv = document.querySelector('.suggestions');  // Updated selector
+    const suggestionsDiv = document.querySelector('.suggestions');
+    const formGroup = tickerInput.closest('.form-group');
     let debounceTimeout;
+
+    // Create company info div
+    const companyInfoDiv = document.createElement('div');
+    companyInfoDiv.className = 'company-info';
+    companyInfoDiv.style.display = 'none';
+    
+    // Insert it after the suggestions div
+    formGroup.insertBefore(companyInfoDiv, suggestionsDiv.nextSibling);
 
     tickerInput.addEventListener('input', function() {
         clearTimeout(debounceTimeout);
@@ -9,6 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (query.length < 1) {
             suggestionsDiv.style.display = 'none';
+            companyInfoDiv.style.display = 'none';
             return;
         }
         
@@ -37,6 +47,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             div.addEventListener('click', function() {
                                 tickerInput.value = item.symbol;
                                 suggestionsDiv.style.display = 'none';
+                                
+                                // Update company info display
+                                companyInfoDiv.innerHTML = `
+                                    <div class="symbol">${item.symbol}</div>
+                                    <div class="name">${item.name}</div>
+                                `;
+                                companyInfoDiv.style.display = 'block';
                             });
                             
                             suggestionsDiv.appendChild(div);
@@ -44,11 +61,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         suggestionsDiv.style.display = 'block';
                     } else {
                         suggestionsDiv.style.display = 'none';
+                        companyInfoDiv.style.display = 'none';
                     }
                 })
                 .catch(error => {
                     console.error('Search error:', error);
                     suggestionsDiv.style.display = 'none';
+                    companyInfoDiv.style.display = 'none';
                 });
         }, 300);
     });
