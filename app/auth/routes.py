@@ -4,6 +4,7 @@ from app.models import User
 from app import db
 from app.auth import bp
 from app.models import User
+from datetime import datetime
 
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -24,7 +25,7 @@ def login():
             return redirect(next_page or url_for('main.index'))
         flash('Invalid email or password.', 'error')
     
-    return render_template('auth/login.html')
+    return render_template('auth/login.html', now=datetime.now())
 
 @bp.route('/register', methods=['GET', 'POST'])
 def register():
@@ -56,7 +57,7 @@ def register():
             db.session.rollback()
             flash('An error occurred during registration.', 'error')
             
-    return render_template('auth/register.html')
+    return render_template('auth/register.html', now=datetime.now())
 
 @bp.route('/logout')
 def logout():
