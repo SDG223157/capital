@@ -28,10 +28,80 @@ logger = logging.getLogger(__name__)
 # Create Blueprint
 bp = Blueprint('main', __name__)
 
+def verify_ticker(symbol):
+    """Verify ticker with yfinance and get company name"""
+    try:
+        logger.info(f"Verifying ticker: {symbol}")
+        ticker = yf.Ticker(symbol)
+        info = ticker.info
+        
+        if info:
+            if 'longName' in info:
+                return True, info['longName']
+            elif 'shortName' in info:
+                return True, info['shortName']
+            return True, symbol
+                
+        return False, None
+    except Exception as e:
+        logger.error(f"Error verifying ticker {symbol}: {str(e)}")
+        return False, None
+
+
+def load_tickers():
+    """Load tickers from TypeScript file"""
+    try:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(current_dir, '..', 'tickers.ts')
+        
+        logger.debug(f"Current directory: {current_dir}")
+        logger.debug(f"Looking for tickers.ts at: {file_path}")
+        
+        if not os.path.exists(file_path):
+            logger.error(f"Tickers file not found at: {file_path}")
+            file_path = os.path.join(os.getcwd(), 'tickers.ts')
+            logger.debug(f"Trying current directory: {file_path}")
+            
+            if not os.path.exists(file_path):
+                logger.error("Tickers file not found in current directory either")
+                return [], {}
+        
+        logger.info(f"Found tickers.ts at: {file_path}")
+        
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+            logger.debug(f"Read {len(content)} characters from tickers.ts")
+            
+        pattern = r'{[^}]*symbol:\s*"([^"]*)",[^}]*name:\s*"([^"]*)"[^}]*}'
+        matches = re.finditer(pattern, content)
+        
+        TICKERS = []
+        TICKER_DICT = {}
+        
+        for match in matches:
+            symbol, name = match.groups()
+            ticker_obj = {"symbol": symbol, "name": name}
+            TICKERS.append(ticker_obj)
+            TICKER_DICT[symbol] = name
+        
+        logger.info(f"Successfully loaded {len(TICKERS)} tickers")
+        logger.debug(f"First few tickers: {TICKERS[:3]}")
+        
+        return TICKERS, TICKER_DICT
+        
+    except Exception as e:
+        logger.error(f"Error loading tickers: {str(e)}")
+        logger.error(traceback.format_exc())
+        return [], {}
+
+# Load tickers at module level
+TICKERS, TICKER_DICT = load_tickers()
+
 @bp.route('/')
 def index():
     today = datetime.now().strftime('%Y-%m-%d')
     return render_template('index.html', now=datetime.now(), max_date=today)
+
 
 @bp.route('/search_ticker', methods=['GET'])
 def search_ticker():
@@ -45,39 +115,112 @@ def search_ticker():
         
         # List of variations to try
         variations = [query]
+        
+        # Add '^' prefix variation if not present
         if not query.startswith('^'):
             variations.append(f'^{query}')
+        # If query starts with '^', also try without it
         else:
             variations.append(query[1:])
             
+        logger.info(f"Trying ticker variations: {variations}")
+        
         # Try each variation
         for variant in variations:
-            # Exchange suffix logic remains the same...
+            # Check for market-specific patterns first
             exchange_suffix = None
-            
+                  
+            # Shanghai Stock Exchange (.SS)
             if (variant.startswith('60') or variant.startswith('68') or 
                 variant.startswith('5')) and len(variant) == 6:
                 exchange_suffix = '.SS'
+                
+            # Shenzhen Stock Exchange (.SZ)
             elif (variant.startswith('00') or variant.startswith('3')) and len(variant) == 6:
                 exchange_suffix = '.SZ'
-            elif (variant.startswith('00') or variant.startswith('0')) and len(variant) == 4:
+                
+            # Hong Kong Exchange (.HK)
+            elif (variant.startswith('00') or 
+                  variant.startswith('0')) and len(variant) == 4:
                 exchange_suffix = '.HK'
 
-            symbol_to_check = f"{variant}{exchange_suffix}" if exchange_suffix else variant
-            is_valid, company_name = verify_ticker(symbol_to_check)
-            
-            if is_valid and symbol_to_check.upper() != company_name.upper():
-                search_results.append({
-                    'symbol': symbol_to_check,
-                    'name': company_name,
-                    'source': 'verified'
-                })
+            # Check with exchange suffix if applicable
+            if exchange_suffix:
+                symbol_to_check = f"{variant}{exchange_suffix}"
+                is_valid, company_name = verify_ticker(symbol_to_check)
                 
+                if is_valid and symbol_to_check.upper() != company_name.upper():  # Only add if symbol and name are different
+                    search_results.append({
+                        'symbol': symbol_to_check,
+                        'name': company_name,
+                        'source': 'verified'
+                    })
+                    logger.info(f"Found verified stock: {symbol_to_check}")
+            else:
+                is_valid, company_name = verify_ticker(variant)
+                if is_valid and variant.upper() != company_name.upper():  # Only add if symbol and name are different
+                    search_results.append({
+                        'symbol': variant,
+                        'name': company_name,
+                        'source': 'verified'
+                    })
+                    logger.info(f"Found verified stock: {variant}")
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_results = []
+        for result in search_results:
+            if result['symbol'] not in seen:
+                seen.add(result['symbol'])
+                unique_results.append(result)
+        search_results = unique_results
+                
+        # Only proceed with local search if no verified stock was found
+        if not search_results:
+            # Check local dictionary for both variations
+            for variant in variations:
+                if variant in TICKER_DICT:
+                    name = TICKER_DICT[variant]
+                    if variant.upper() != name.upper():  # Only add if symbol and name are different
+                        search_results.append({
+                            'symbol': variant,
+                            'name': name,
+                            'source': 'local'
+                        })
+                        logger.info(f"Found local match: {variant}")
+            
+            # Add partial matches from local data
+            if len(search_results) < 5:
+                partial_matches = []
+                for variant in variations:
+                    matches = [
+                        {'symbol': ticker['symbol'], 'name': ticker['name'], 'source': 'local'}
+                        for ticker in TICKERS
+                        if (variant in ticker['symbol'].upper() or 
+                            variant in ticker['name'].upper()) and 
+                            ticker['symbol'] not in seen and
+                            ticker['symbol'].upper() != ticker['name'].upper() and  # Only add if symbol and name are different
+                            not any(r['symbol'] == ticker['symbol'] for r in search_results)
+                    ]
+                    partial_matches.extend(matches)
+                
+                # Remove duplicates and add to results
+                for match in partial_matches:
+                    if match['symbol'] not in seen:
+                        seen.add(match['symbol'])
+                        search_results.append(match)
+                        if len(search_results) >= 5:
+                            break
+                
+                logger.info(f"Found {len(partial_matches)} partial matches")
+            
         return jsonify(search_results[:5])
         
     except Exception as e:
         logger.error(f"Search error: {str(e)}")
         return jsonify([])
+    
+
 
 @bp.route('/quick_analyze', methods=['POST'])
 def quick_analyze():
