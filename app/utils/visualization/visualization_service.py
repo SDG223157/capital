@@ -125,13 +125,20 @@ class VisualizationService:
         
         return metrics_table, growth_table
 
-    # Find and modify the _create_analysis_summary_table method
     @staticmethod
     def _create_analysis_summary_table(days, end_price, annual_return, 
                                     daily_volatility, annualized_volatility, r2, regression_formula):
         """Create the analysis summary table with colored regression formula"""
-        # Determine color for regression formula
-        formula_color = 'red' if regression_formula.startswith('-') else 'green'
+        # Check for negative coefficient after the equals sign
+        parts = regression_formula.split('=')
+        if len(parts) > 1:
+            # Look at the first number after the equals sign
+            second_part = parts[1].strip()
+            formula_color = 'red' if second_part.startswith(' -') else 'green'
+        else:
+            # Default to green if formula structure is unexpected
+            formula_color = 'green'
+            
         colored_formula = f'<span style="color: {formula_color}">{regression_formula}</span>'
         
         return go.Table(
@@ -158,7 +165,7 @@ class VisualizationService:
                 **TABLE_STYLE['cells']
             )
         )
-
+    
     @staticmethod
     def _create_trading_signal_table(signal_returns):
         """Create the trading signal analysis table"""
