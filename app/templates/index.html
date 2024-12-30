@@ -9,17 +9,15 @@
 <body>
     <!-- Header -->
     <header>
-        <h1>Stock Technical Analysis</h1>
-        <!-- Auth Links -->
-        <div class="auth-links">
-            {% if current_user.is_authenticated %}
-                <span>Welcome, {{ current_user.username }}</span>
-                <a href="{{ url_for('auth.logout') }}">Logout</a>
-            {% else %}
+       
+        <header>
+            <!-- Auth Links - Now using nav-links class -->
+            <div class="nav-links">
                 <a href="{{ url_for('auth.login') }}">Login</a>
                 <a href="{{ url_for('auth.register') }}">Register</a>
-            {% endif %}
-        </div>
+            </div>
+            <h1>Stock Technical Analysis</h1>
+        </header>
     </header>
 
     <main>
