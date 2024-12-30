@@ -84,6 +84,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+
+    // Prevent suggestions from closing when clicking inside the input
+    tickerInput.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (this.value.trim().length > 0) {
+            suggestionsDiv.style.display = 'block';
+        }
+    });
+
     // Form submission (if needed)
     const analyzeForm = document.getElementById('analyze-form');
     if (analyzeForm) {
