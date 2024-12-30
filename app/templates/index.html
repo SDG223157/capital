@@ -9,15 +9,14 @@
 <body>
     <!-- Header -->
     <header>
-       
-        <header>
-            <!-- Auth Links - Now using nav-links class -->
-            <div class="nav-links">
-                <a href="{{ url_for('auth.login') }}">Login</a>
-                <a href="{{ url_for('auth.register') }}">Register</a>
-            </div>
+        <div class="header-container">
+            <!-- Navigation links at top right -->
+            <nav class="top-nav">
+                <a href="{{ url_for('auth.login') }}" class="nav-link">Login</a>
+                <a href="{{ url_for('auth.register') }}" class="nav-link">Register</a>
+            </nav>
             <h1>Stock Technical Analysis</h1>
-        </header>
+        </div>
     </header>
 
     <main>

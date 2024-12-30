@@ -303,51 +303,56 @@ input.error:focus {
 }
 
 /* Header Styles */
+/* Header Styles */
 header {
     background-color: #333;
-    color: white;
-    text-align: center;
-    padding: 1.5rem 0;
-    margin-bottom: 2rem;
-    position: relative;  /* For absolute positioning of nav-links */
+    width: 100%;
+    padding: 10px 0;
 }
 
-header h1 {
-    margin: 0;
-    font-weight: normal;
+.header-container {
+    position: relative;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
 }
 
-/* Navigation Links */
-.nav-links {
+/* Navigation Styles */
+.top-nav {
     position: absolute;
-    top: 20px;
+    top: 10px;
     right: 20px;
     display: flex;
-    gap: 20px;  /* Space between links */
+    gap: 20px;
 }
 
-.nav-links a {
+.nav-link {
     color: white;
     text-decoration: none;
-    font-size: 0.9rem;
+    font-size: 14px;
     padding: 5px 10px;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
+    transition: opacity 0.3s ease;
 }
 
-.nav-links a:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+.nav-link:hover {
+    opacity: 0.8;
+}
+
+h1 {
+    color: white;
+    text-align: center;
+    font-size: 24px;
+    margin: 30px 0;
+    font-weight: normal;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .nav-links {
-        position: static;
-        justify-content: center;
-        margin-bottom: 1rem;
+    .header-container {
+        padding: 0 10px;
     }
     
-    header {
-        padding-top: 1rem;
+    .top-nav {
+        right: 10px;
     }
 }
