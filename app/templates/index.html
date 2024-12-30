@@ -37,11 +37,11 @@
     <div class="search-container">
         <h1 class="main-title">Stock Analysis</h1>
         <form id="search-form" method="post" action="{{ url_for('main.quick_analyze') }}" target="_blank">
-            <div class="search-box">
+            <div class="search-input-wrapper">
+                <span class="search-icon">🔍</span>
                 <input type="text" id="ticker" name="ticker" placeholder="Enter stock ticker (e.g., AAPL)" autocomplete="off">
+                <div class="suggestions"></div>  <!-- Move suggestions div here -->
             </div>
-            <div class="suggestions"></div>
-            <div class="search-buttons">
                 <button type="submit" class="search-button">Analyze Stock</button>
             </div>
         </form>

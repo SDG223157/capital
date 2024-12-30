@@ -1,71 +1,65 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Original ticker search functionality
-    const form = document.getElementById('analysis-form');
     const tickerInput = document.getElementById('ticker');
-    if (tickerInput) {
-        const suggestionsDiv = document.createElement('div');
-        suggestionsDiv.className = 'suggestions';
-        tickerInput.parentNode.appendChild(suggestionsDiv);
-        
-        let debounceTimeout;
+    const suggestionsDiv = document.querySelector('.suggestions');  // Updated selector
+    let debounceTimeout;
 
-        function formatCompanyName(name) {
-            return name.replace(/\\'/g, "'");
+    tickerInput.addEventListener('input', function() {
+        clearTimeout(debounceTimeout);
+        const query = this.value.trim();
+        
+        if (query.length < 1) {
+            suggestionsDiv.style.display = 'none';
+            return;
         }
         
-        // Clear input on double click
-        tickerInput.addEventListener('dblclick', function() {
-            if (this.value) {
-                this.value = '';
-                suggestionsDiv.style.display = 'none';
-            }
-        });
-        
-        tickerInput.addEventListener('input', function() {
-            clearTimeout(debounceTimeout);
-            const query = this.value.trim();
-            
-            if (query.length < 1) {
-                suggestionsDiv.style.display = 'none';
-                return;
-            }
-            
-            debounceTimeout = setTimeout(() => {
-                fetch(`/search_ticker?query=${encodeURIComponent(query)}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        suggestionsDiv.innerHTML = '';
-                        
-                        if (data.length > 0) {
-                            data.forEach(item => {
-                                const div = document.createElement('div');
-                                div.className = 'suggestion-item';
-                                const formattedName = formatCompanyName(item.name);
-                                
-                                div.innerHTML = `
-                                    <span class="symbol">${item.symbol}</span>
-                                    <span class="name">${formattedName}</span>
-                                `;
-                                
-                                div.addEventListener('click', function() {
-                                    tickerInput.value = `${item.symbol}    ${formattedName}`;
-                                    suggestionsDiv.style.display = 'none';
-                                });
-                                suggestionsDiv.appendChild(div);
+        debounceTimeout = setTimeout(() => {
+            fetch(`/search_ticker?query=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    suggestionsDiv.innerHTML = '';
+                    
+                    if (data.length > 0) {
+                        data.forEach(item => {
+                            const div = document.createElement('div');
+                            div.className = 'suggestion-item';
+                            
+                            const symbolSpan = document.createElement('span');
+                            symbolSpan.className = 'symbol';
+                            symbolSpan.textContent = item.symbol;
+                            
+                            const nameSpan = document.createElement('span');
+                            nameSpan.className = 'name';
+                            nameSpan.textContent = item.name;
+                            
+                            div.appendChild(symbolSpan);
+                            div.appendChild(nameSpan);
+                            
+                            div.addEventListener('click', function() {
+                                tickerInput.value = item.symbol;
+                                suggestionsDiv.style.display = 'none';
                             });
-                            suggestionsDiv.style.display = 'block';
-                        } else {
-                            suggestionsDiv.style.display = 'none';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Search error:', error);
+                            
+                            suggestionsDiv.appendChild(div);
+                        });
+                        suggestionsDiv.style.display = 'block';
+                    } else {
                         suggestionsDiv.style.display = 'none';
-                    });
-            }, 300);
-        });
-    }
-
+                    }
+                })
+                .catch(error => {
+                    console.error('Search error:', error);
+                    suggestionsDiv.style.display = 'none';
+                });
+        }, 300);
+    });
+    
+    // Close suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!tickerInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+            suggestionsDiv.style.display = 'none';
+        }
+    });
+});
     // Password visibility toggle
     function togglePassword(button) {
         const input = button.closest('.input-with-icon').querySelector('input');
