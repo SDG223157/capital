@@ -3,6 +3,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const suggestionsDiv = document.querySelector('.suggestions');
     let debounceTimeout;
 
+    function formatCompanyName(name) {
+        return name.replace(/\\'/g, "'");
+    }
+    
+    // Clear input on double click
+    tickerInput.addEventListener('dblclick', function() {
+        if (this.value) {
+            this.value = '';
+            suggestionsDiv.style.display = 'none';
+        }
+    });
     if (!tickerInput || !suggestionsDiv) {
         console.error('Required elements not found');
         return;
