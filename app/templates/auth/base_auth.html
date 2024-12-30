@@ -1,19 +1,45 @@
-{% extends 'base.html' %}
-
-{% block content %}
-<div class="auth-wrapper">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="flash-messages">
-                {% for category, message in messages %}
-                    <div class="flash-message {{ category }}">
-                        {{ message }}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Stock Technical Analysis{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <nav class="top-nav">
+                {% if current_user.is_authenticated %}
+                    <div class="user-dropdown">
+                        <button class="dropdown-button">
+                            {{ current_user.username }}
+                            <span class="dropdown-arrow">▼</span>
+                        </button>
+                        <div class="dropdown-content">
+                            <a href="{{ url_for('user.profile') }}" class="dropdown-item">Profile</a>
+                            <a href="{{ url_for('auth.logout') }}" class="dropdown-item">Logout</a>
+                        </div>
                     </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
-    
-    {% block auth_content %}{% endblock %}
-</div>
-{% endblock %}
+                {% else %}
+                    <a href="{{ url_for('auth.login') }}" class="nav-link">Login</a>
+                    <a href="{{ url_for('auth.register') }}" class="nav-link">Register</a>
+                {% endif %}
+            </nav>
+            <h1>Stock Technical Analysis</h1>
+        </div>
+    </header>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <p>© {{ now.year }} Stock Analysis Tool</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

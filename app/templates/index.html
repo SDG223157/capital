@@ -10,10 +10,23 @@
     <!-- Header -->
     <header>
         <div class="header-container">
-            <!-- Navigation links at top right -->
+            <!-- Navigation with conditional rendering -->
             <nav class="top-nav">
-                <a href="{{ url_for('auth.login') }}" class="nav-link">Login</a>
-                <a href="{{ url_for('auth.register') }}" class="nav-link">Register</a>
+                {% if current_user.is_authenticated %}
+                    <div class="user-dropdown">
+                        <button class="dropdown-button">
+                            {{ current_user.username }}
+                            <span class="dropdown-arrow">▼</span>
+                        </button>
+                        <div class="dropdown-content">
+                            <a href="{{ url_for('auth.profile') }}" class="dropdown-item">Profile</a>
+                            <a href="{{ url_for('auth.logout') }}" class="dropdown-item">Logout</a>
+                        </div>
+                    </div>
+                {% else %}
+                    <a href="{{ url_for('auth.login') }}" class="nav-link">Login</a>
+                    <a href="{{ url_for('auth.register') }}" class="nav-link">Register</a>
+                {% endif %}
             </nav>
             <h1>Stock Technical Analysis</h1>
         </div>
