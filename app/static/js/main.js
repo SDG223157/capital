@@ -1,6 +1,10 @@
 document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('analysis-form');
     const tickerInput = document.getElementById('ticker');
-    const suggestionsDiv = document.querySelector('.suggestions');
+    const suggestionsDiv = document.createElement('div');
+    suggestionsDiv.className = 'suggestions';
+    tickerInput.parentNode.appendChild(suggestionsDiv);
+    
     let debounceTimeout;
 
     function formatCompanyName(name) {
@@ -14,58 +18,58 @@ document.addEventListener('DOMContentLoaded', function() {
             suggestionsDiv.style.display = 'none';
         }
     });
-    if (!tickerInput || !suggestionsDiv) {
-        console.error('Required elements not found');
-        return;
-    }
-
+    
     tickerInput.addEventListener('input', function() {
         clearTimeout(debounceTimeout);
         const query = this.value.trim();
         
         if (query.length < 1) {
             suggestionsDiv.style.display = 'none';
-            suggestionsDiv.innerHTML = '';
             return;
         }
         
         debounceTimeout = setTimeout(() => {
-            console.log('Searching for:', query); // Debug log
             fetch(`/search_ticker?query=${encodeURIComponent(query)}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(data => {
-                    console.log('Search results:', data); // Debug log
                     suggestionsDiv.innerHTML = '';
                     
                     if (data.length > 0) {
-                        data.forEach(item => {
-                            const div = document.createElement('div');
-                            div.className = 'suggestion-item';
-                            
-                            const symbolSpan = document.createElement('span');
-                            symbolSpan.className = 'symbol';
-                            symbolSpan.textContent = item.symbol;
-                            
-                            const nameSpan = document.createElement('span');
-                            nameSpan.className = 'name';
-                            nameSpan.textContent = item.name;
-                            
-                            div.appendChild(symbolSpan);
-                            div.appendChild(nameSpan);
-                            
-                            div.addEventListener('click', function() {
-                                tickerInput.value = item.symbol;
-                                suggestionsDiv.style.display = 'none';
+                        // Filter out results where symbol equals name
+                        const filteredData = data.filter(item => 
+                            item.symbol.toUpperCase() !== item.name.toUpperCase()
+                        );
+                        
+                        if (filteredData.length > 0) {
+                            filteredData.forEach(item => {
+                                const div = document.createElement('div');
+                                div.className = 'suggestion-item';
+                                const formattedName = formatCompanyName(item.name);
+                                
+                                // Create separate spans for symbol and name
+                                const symbolSpan = document.createElement('span');
+                                symbolSpan.className = 'symbol';
+                                symbolSpan.textContent = item.symbol;
+                                
+                                const nameSpan = document.createElement('span');
+                                nameSpan.className = 'name';
+                                nameSpan.textContent = formattedName;
+                                
+                                div.appendChild(symbolSpan);
+                                div.appendChild(nameSpan);
+                                
+                                div.addEventListener('click', function() {
+                                    // Set input value to both symbol and name
+                                    tickerInput.value = `${item.symbol}    ${formattedName}`;
+                                    suggestionsDiv.style.display = 'none';
+                                });
+                                
+                                suggestionsDiv.appendChild(div);
                             });
-                            
-                            suggestionsDiv.appendChild(div);
-                        });
-                        suggestionsDiv.style.display = 'block';
+                            suggestionsDiv.style.display = 'block';
+                        } else {
+                            suggestionsDiv.style.display = 'none';
+                        }
                     } else {
                         suggestionsDiv.style.display = 'none';
                     }
@@ -76,6 +80,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
         }, 300);
     });
+    
     
     // Close suggestions when clicking outside
     document.addEventListener('click', function(e) {
