@@ -22,14 +22,15 @@ def create_app(config_class=Config):
     def load_user(id):
         return User.query.get(int(id))
 
-    # Register blueprints
-    from app.routes import bp as main_bp
-    app.register_blueprint(main_bp)
+    # Import and register blueprints
+    from app.routes import bp as routes_bp
+    app.register_blueprint(routes_bp)
 
-    from app.auth.routes import bp as auth_bp
+    # Register auth blueprint - Make sure this import is correct
+    from app.auth import bp as auth_bp
     app.register_blueprint(auth_bp, url_prefix='/auth')
 
-    from app.user.routes import bp as user_bp
+    from app.user import bp as user_bp
     app.register_blueprint(user_bp, url_prefix='/user')
 
     @app.context_processor
