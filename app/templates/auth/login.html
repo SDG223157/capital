@@ -1,6 +1,4 @@
-{% extends "base.html" %}
-
-{% block title %}Login{% endblock %}
+{% extends 'base.html' %}
 
 {% block content %}
 <div class="auth-container">
@@ -13,7 +11,7 @@
             {% endfor %}
         {% endif %}
     {% endwith %}
-    
+
     <form method="POST" action="{{ url_for('auth.login') }}" class="auth-form">
         <div class="form-group">
             <label for="email">Email</label>
@@ -32,7 +30,7 @@
         
         <button type="submit" class="auth-button">Login</button>
     </form>
-    
+
     <div class="auth-links">
         <a href="{{ url_for('auth.register') }}">Don't have an account? Register</a>
     </div>
