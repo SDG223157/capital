@@ -178,7 +178,7 @@ class VisualizationService:
                     ]
                 ],
                 **TABLE_STYLE['cells']
-                height=30  # Set fixed cell height
+               
             )
         )
         

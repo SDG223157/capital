@@ -90,6 +90,7 @@ TABLE_STYLE = {
     },
     'cells': {
         'font': dict(size=11),
-        'align': 'left'
+        'align': 'left',
+        'height': 30
     }
 }
