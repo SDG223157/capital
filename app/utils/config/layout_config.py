@@ -86,7 +86,8 @@ TABLE_STYLE = {
     'header': {
         'fill_color': 'lightgrey',
         'font': dict(size=12),
-        'align': 'left'
+        'align': 'left',
+        'height': 30
     },
     'cells': {
         'font': dict(size=11),
