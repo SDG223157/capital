@@ -817,7 +817,7 @@ header {
 .nav-link {
     color: white;
     text-decoration: none;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 0.5rem;
     margin-left: 0.25rem;
 }
 
