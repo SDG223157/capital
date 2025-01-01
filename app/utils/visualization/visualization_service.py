@@ -125,18 +125,14 @@ class VisualizationService:
         
         return metrics_table, growth_table
 
-   
     @staticmethod
     def _create_analysis_summary_table(days, end_price, annual_return, 
                                     daily_volatility, annualized_volatility, r2, regression_formula):
         """Create the analysis summary table with colored formula and R²"""
-        # Determine color for regression formula
         try:
-            # Split by equals and get the right side
             equation_parts = regression_formula.split('=')
             if len(equation_parts) > 1:
                 right_side = equation_parts[1].strip()
-                # Find the first number with its sign
                 import re
                 match = re.search(r'[-+]?\d*\.?\d+', right_side)
                 if match:
@@ -149,13 +145,9 @@ class VisualizationService:
         except:
             formula_color = 'green'
             
-        # Color for R²
         r2_color = 'green' if r2 > 0.7 else 'black'
         
-        # Format the values with colors
-        colored_formula = f'<span style="color: {formula_color}">{regression_formula}</span>'
-        colored_r2 = f'<span style="color: {r2_color}">{r2:.4f}</span>'
-        
+        # Use Plotly's native font color formatting
         return go.Table(
             domain=dict(
                 x=LAYOUT_CONFIG['tables']['analysis_summary']['x'],
@@ -170,16 +162,23 @@ class VisualizationService:
                     ['Regression Formula', 'Regression R²', 'Current Price', 'Annualized Return', 
                     'Annual Volatility'],
                     [
-                        colored_formula,
-                        colored_r2,
+                        regression_formula,
+                        f"{r2:.4f}",
                         f"${end_price:.2f}",
                         f"{annual_return:.2f}%",
                         f"{annualized_volatility:.3f}"
                     ]
                 ],
-                **TABLE_STYLE['cells']
+                font=dict(
+                    color=[
+                        ['black', 'black', 'black', 'black', 'black'],  # Colors for first column
+                        [formula_color, r2_color, 'black', 'black', 'black']  # Colors for second column
+                    ]
+                ),
+                **{k: v for k, v in TABLE_STYLE['cells'].items() if k != 'font'}  # Exclude font from TABLE_STYLE
             )
         )
+        
     @staticmethod
     def _create_trading_signal_table(signal_returns):
         """Create the trading signal analysis table"""

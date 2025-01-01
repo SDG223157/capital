@@ -483,7 +483,7 @@ export const tickers = [
   { symbol: "WAB", name: "Wabtec" },
   { symbol: "WBA", name: "Walgreens Boots Alliance" },
   { symbol: "WMT", name: "Walmart" },
-  { symbol: "DIS", name: "Walt Disney Company (The)" },
+  { symbol: "DIS", name: "Walt Disney Company" },
   { symbol: "WBD", name: "Warner Bros. Discovery" },
   { symbol: "WM", name: "Waste Management" },
   { symbol: "WAT", name: "Waters Corporation" },
