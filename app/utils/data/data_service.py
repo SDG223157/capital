@@ -217,12 +217,13 @@ class DataService:
         """
         cleaned_ticker = self.clean_ticker_for_table_name(ticker)
         table_name = f"roic_{cleaned_ticker}"
+        MAX_MISSING_YEARS_TOLERANCE = 2 
         
         try:
+            # First try to get data from database
             if "^" in ticker or "-" in ticker:
                 return None
             
-            # First try to get data from database
             if self.table_exists(table_name):
                 print(f"Getting financial data for {ticker} from database")
                 df = pd.read_sql_table(table_name, self.engine)
@@ -240,7 +241,8 @@ class DataService:
                     actual_years = set(filtered_df['fiscal_year'].values)
                     missing_years = requested_years - actual_years
                     
-                    if len(missing_years) == 0:
+                    # if len(missing_years) == 0:
+                    if len(missing_years) <= MAX_MISSING_YEARS_TOLERANCE:
                         return pd.Series(
                             filtered_df[metric_field].values,
                             index=filtered_df['fiscal_year'],
@@ -277,7 +279,7 @@ class DataService:
                 )
             else:
                 return None
-                    
+                
         except Exception as e:
             print(f"Error in get_financial_data for {ticker}: {str(e)}")
             return None

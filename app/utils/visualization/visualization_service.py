@@ -6,7 +6,6 @@ import numpy as np
 from datetime import datetime, timedelta
 from app.utils.config.layout_config import LAYOUT_CONFIG, CHART_STYLE, TABLE_STYLE
 
-
 class VisualizationService:
     """Service class for creating and managing stock analysis visualizations."""
 
@@ -126,6 +125,7 @@ class VisualizationService:
         
         return metrics_table, growth_table
 
+   
     @staticmethod
     def _create_analysis_summary_table(days, end_price, annual_return, 
                                     daily_volatility, annualized_volatility, r2, regression_formula):
@@ -178,11 +178,8 @@ class VisualizationService:
                     ]
                 ],
                 **TABLE_STYLE['cells']
-               
             )
         )
-        
-    
     @staticmethod
     def _create_trading_signal_table(signal_returns):
         """Create the trading signal analysis table"""
