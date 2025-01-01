@@ -10,6 +10,12 @@
     <header>
         <div class="header-container">
             <nav class="top-nav">
+                <div class="nav-links">
+                    <a href="{{ url_for('main.index') }}" class="nav-link">Home</a>
+                    {% if current_user.is_authenticated and current_user.is_administrator %}
+                        <a href="{{ url_for('main.tables') }}" class="nav-link admin-link">Database Tables</a>
+                    {% endif %}
+                </div>
                 {% if current_user.is_authenticated %}
                     <div class="user-dropdown">
                         <button class="dropdown-button">
@@ -18,12 +24,17 @@
                         </button>
                         <div class="dropdown-content">
                             <a href="{{ url_for('user.profile') }}" class="dropdown-item">Profile</a>
+                            {% if current_user.is_administrator %}
+                                <a href="{{ url_for('main.tables') }}" class="dropdown-item">Database Tables</a>
+                            {% endif %}
                             <a href="{{ url_for('auth.logout') }}" class="dropdown-item">Logout</a>
                         </div>
                     </div>
                 {% else %}
-                    <a href="{{ url_for('auth.login') }}" class="nav-link">Login</a>
-                    <a href="{{ url_for('auth.register') }}" class="nav-link">Register</a>
+                    <div class="auth-links">
+                        <a href="{{ url_for('auth.login') }}" class="nav-link">Login</a>
+                        <a href="{{ url_for('auth.register') }}" class="nav-link">Register</a>
+                    </div>
                 {% endif %}
             </nav>
             <h1>Stock Technical Analysis</h1>
