@@ -10,7 +10,7 @@ from app.utils.config.metrics_config import METRICS_MAP, CAGR_METRICS
 from sqlalchemy import create_engine, inspect, text
 import os
 import logging
-
+import re
 
 class DataService:
     def __init__(self):
@@ -218,11 +218,18 @@ class DataService:
         cleaned_ticker = self.clean_ticker_for_table_name(ticker)
         table_name = f"roic_{cleaned_ticker}"
         MAX_MISSING_YEARS_TOLERANCE = 2 
+        company_name = yf.Ticker(ticker).info['longName']
         
         try:
             # First try to get data from database
             if "^" in ticker or "-" in ticker:
                 return None
+            if company_name:
+            # Check for excluded terms using regex (case insensitive)
+                excluded_terms = r'shares|etf|index|trust'
+                if re.search(excluded_terms, company_name, re.IGNORECASE):
+                    return None
+                
             
             if self.table_exists(table_name):
                 print(f"Getting financial data for {ticker} from database")
