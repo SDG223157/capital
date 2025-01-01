@@ -793,6 +793,10 @@ h1 {
 }
 
 /* 20250101-3 */
+header {
+    background-color: #1a237e;
+    width: 100%;
+}
 .header-container {
     display: flex;
     flex-direction: column;
