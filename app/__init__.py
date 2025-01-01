@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 db = SQLAlchemy()
-migrate = Migrate()  # Add this line
+migrate = Migrate()
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
 login_manager.login_message_category = 'error'
@@ -21,7 +21,7 @@ def create_app(config_class=Config):
 
     # Initialize extensions
     db.init_app(app)
-    migrate.init_app(app, db)  # Add this line
+    migrate.init_app(app, db)
     login_manager.init_app(app)
 
     from app.models import User
@@ -30,6 +30,31 @@ def create_app(config_class=Config):
         return User.query.get(int(id))
 
     with app.app_context():
+        # Create database tables and admin user
+        try:
+            db.create_all()
+            logger.info("Database tables created successfully")
+
+            # Check if admin user exists, if not create one
+            admin_user = User.query.filter_by(email='admin@cfa187260.com').first()
+            if not admin_user:
+                admin = User(
+                    email='admin@cfa187260.com',
+                    username='admin',
+                    first_name='Jiang',
+                    last_name='Chen',
+                    is_admin=True,
+                    role='admin',
+                    is_active=True
+                )
+                admin.set_password('Gern@8280')  # Set your desired password
+                db.session.add(admin)
+                db.session.commit()
+                logger.info("Admin user created successfully!")
+        except Exception as e:
+            logger.error(f"Error during database initialization: {str(e)}")
+            # Don't raise the error - allow the app to continue starting up
+
         # Register blueprints
         from app.routes import bp as main_bp
         logger.debug(f"Registering main blueprint: {main_bp.name}")
