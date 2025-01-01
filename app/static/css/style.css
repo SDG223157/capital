@@ -820,6 +820,7 @@ header {
     text-decoration: none;
     padding: 0.5rem 0.5rem;
     margin-left: 0.25rem;
+    margin-top: 0.5rem;
 }
 
 .nav-link:hover {
