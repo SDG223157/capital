@@ -14,6 +14,12 @@ from sqlalchemy import text
 from flask import send_file
 import pandas as pd
 import io
+from functools import wraps
+from flask import abort
+# from flask_login import current_user
+
+# Add this decorator function to check for admin privileges
+
 
 # Configure logging
 logging.basicConfig(
@@ -27,6 +33,13 @@ logger = logging.getLogger(__name__)
 
 # Create Blueprint
 bp = Blueprint('main', __name__)
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            abort(403)  # Forbidden access
+        return f(*args, **kwargs)
+    return decorated_function
 
 def verify_ticker(symbol):
     """Verify ticker with yfinance and get company name"""
@@ -298,6 +311,7 @@ def analyze():
         return render_template('error.html', error=error_msg), 500
 
 @bp.route('/tables')
+@admin_required
 def tables():
     """Show database tables in document tree structure"""
     try:
@@ -358,6 +372,7 @@ def tables():
         return render_template('tables.html', error=error_msg)
 
 @bp.route('/delete_table/<table_name>', methods=['POST'])
+@admin_required
 def delete_table(table_name):
     """Delete a table from database"""
     try:
@@ -381,7 +396,9 @@ def delete_table(table_name):
         error_msg = f"Error deleting table {table_name}: {str(e)}"
         logger.error(f"{error_msg}\n{traceback.format_exc()}")
         return jsonify({'success': False, 'error': error_msg}), 500
+
 @bp.route('/table-content/<table_name>')
+@admin_required
 def show_table_content(table_name):
     """Show the content of a specific table with sorting and pagination"""
     try:
@@ -445,6 +462,7 @@ def show_table_content(table_name):
 
 
 @bp.route('/export/<table_name>/<format>')
+@admin_required
 def export_table(table_name, format):
     """Export table data in CSV or Excel format"""
     try:

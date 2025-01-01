@@ -15,6 +15,8 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
     is_active = db.Column(db.Boolean, default=True)
+    is_admin = db.Column(db.Boolean, default=False)  # New admin field
+    role = db.Column(db.String(20), default='user')  # New role field for future extensibility
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -25,3 +27,27 @@ class User(UserMixin, db.Model):
     def update_last_login(self):
         self.last_login = datetime.utcnow()
         db.session.commit()
+    
+    @property
+    def is_administrator(self):
+        """Check if user has admin privileges"""
+        return self.is_admin or self.role == 'admin'
+    
+    @classmethod
+    def create_admin(cls, email, username, password, first_name=None, last_name=None):
+        """Create a new admin user"""
+        admin = cls(
+            email=email,
+            username=username,
+            first_name=first_name,
+            last_name=last_name,
+            is_admin=True,
+            role='admin'
+        )
+        admin.set_password(password)
+        db.session.add(admin)
+        db.session.commit()
+        return admin
+        
+    def __repr__(self):
+        return f'<User {self.username}>'
