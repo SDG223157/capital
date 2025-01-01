@@ -818,9 +818,9 @@ header {
 .nav-link {
     color: white;
     text-decoration: none;
-    padding: 0.5rem 0.5rem;
+    padding: 0.5rem 0.25rem;
     margin-left: 0.25rem;
-    margin-top: 1rem;
+    margin-top: 2rem;
 }
 
 .nav-link:hover {
