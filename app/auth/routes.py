@@ -62,43 +62,75 @@ def google_login():
                 "client_secret": current_app.config['GOOGLE_CLIENT_SECRET'],
                 "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                 "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": ["http://jcfa187260.net/auth/login/google/callback"]  # Updated to match actual request
+                "redirect_uris": [current_app.config['GOOGLE_REDIRECT_URI']]
             }
         },
-        scopes=['openid', 'email', 'profile']
+        scopes=['openid', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile']
     )
-    flow.redirect_uri = "http://jcfa187260.net/auth/login/google/callback"
+    flow.redirect_uri = current_app.config['GOOGLE_REDIRECT_URI']
+    
     authorization_url, state = flow.authorization_url(
         access_type='offline',
         include_granted_scopes='true'
     )
     return redirect(authorization_url)
 
-@bp.route('/login/google/callback')  # Updated route to match
+@bp.route('/login/google/callback')
 def google_callback():
-    flow = Flow.from_client_config(
-        {
-            "web": {
-                "client_id": current_app.config['GOOGLE_CLIENT_ID'],
-                "client_secret": current_app.config['GOOGLE_CLIENT_SECRET'],
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": ["http://jcfa187260.net/auth/login/google/callback"]
-            }
-        },
-        scopes=['openid', 'email', 'profile']
-    )
-    flow.redirect_uri = "http://jcfa187260.net/auth/login/google/callback"
-    
     try:
-        flow.fetch_token(authorization_response=request.url)
+        flow = Flow.from_client_config(
+            {
+                "web": {
+                    "client_id": current_app.config['GOOGLE_CLIENT_ID'],
+                    "client_secret": current_app.config['GOOGLE_CLIENT_SECRET'],
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "redirect_uris": [current_app.config['GOOGLE_REDIRECT_URI']]
+                }
+            },
+            scopes=['openid', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile']
+        )
+        flow.redirect_uri = current_app.config['GOOGLE_REDIRECT_URI']
+        
+        # Get the authorization code from the request
+        authorization_response = request.url
+        flow.fetch_token(authorization_response=authorization_response)
+        
         credentials = flow.credentials
         
-        # ... rest of your callback logic ...
+        # Get user info from Google
+        from google.oauth2 import id_token
+        from google.auth.transport import requests
+        
+        id_info = id_token.verify_oauth2_token(
+            credentials.id_token, requests.Request(), current_app.config['GOOGLE_CLIENT_ID']
+        )
+        
+        email = id_info.get('email')
+        if not email:
+            flash('Could not get email from Google.', 'error')
+            return redirect(url_for('auth.login'))
+            
+        # Handle user login/registration
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            user = User(
+                email=email,
+                username=id_info.get('name', email.split('@')[0]),
+                is_google_user=True
+            )
+            db.session.add(user)
+            db.session.commit()
+            
+        login_user(user)
+        return redirect(url_for('main.index'))
+        
     except Exception as e:
         current_app.logger.error(f"Google OAuth error: {str(e)}")
         flash('Failed to log in with Google.', 'error')
         return redirect(url_for('auth.login'))
+
+
 @bp.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:

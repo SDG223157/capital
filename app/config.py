@@ -15,14 +15,14 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev')
     
     # Google OAuth configuration
-    GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
+     # Google OAuth config
+    GOOGLE_CLIENT_ID = "55315286115-c3pfanof3pnngvrp4tmg1f78tmsuqtto.apps.googleusercontent.com"
     GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
-    GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
+    GOOGLE_REDIRECT_URI = "http://jcfa187260.net/auth/login/google/callback"  # Updated
     
-    # Server configuration
-    SERVER_NAME = os.getenv('SERVER_NAME', 'jcfa187260.net')
-    PREFERRED_URL_SCHEME = os.getenv('PREFERRED_URL_SCHEME', 'https')
-    
+    # Server config
+    SERVER_NAME = "jcfa187260.net"
+    PREFERRED_URL_SCHEME = "http"  # Changed to http for now
     # OAuth redirect URI
     GOOGLE_REDIRECT_URI = f"{PREFERRED_URL_SCHEME}://{SERVER_NAME}/auth/google/callback"
     
