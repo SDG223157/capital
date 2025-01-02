@@ -18,11 +18,9 @@ class Config:
      # Google OAuth config
     GOOGLE_CLIENT_ID = "55315286115-c3pfanof3pnngvrp4tmg1f78tmsuqtto.apps.googleusercontent.com"
     GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
-    GOOGLE_REDIRECT_URI = "http://jcfa187260.net/auth/login/google/callback"  # Updated
-    
-    # Server config
+    GOOGLE_REDIRECT_URI = "http://jcfa187260.net/auth/google/callback"  # Updated to match exactly
     SERVER_NAME = "jcfa187260.net"
-    PREFERRED_URL_SCHEME = "http"  # Changed to http for now
+    PREFERRED_URL_SCHEME = "http"
     # OAuth redirect URI
     GOOGLE_REDIRECT_URI = f"{PREFERRED_URL_SCHEME}://{SERVER_NAME}/auth/google/callback"
     

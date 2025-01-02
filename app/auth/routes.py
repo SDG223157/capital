@@ -53,7 +53,7 @@ def login():
 from google_auth_oauthlib.flow import Flow
 from pathlib import Path
 
-@bp.route('/login/google')
+@bp.route('/google') 
 def google_login():
     flow = Flow.from_client_config(
         {
@@ -75,7 +75,7 @@ def google_login():
     )
     return redirect(authorization_url)
 
-@bp.route('/login/google/callback')
+@bp.route('/google/callback')
 def google_callback():
     try:
         flow = Flow.from_client_config(
