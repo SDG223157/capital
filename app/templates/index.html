@@ -7,9 +7,13 @@
     <form id="analyze-form" method="POST" action="{{ url_for('main.analyze') }}">
         <div class="form-group">
             <label for="ticker">Ticker Symbol:</label>
-            <input type="text" id="ticker" name="ticker" placeholder="Enter stock symbol..." required>
+            <div class="input-container">
+                <input type="text" id="ticker" name="ticker" placeholder="Enter stock symbol..." required>
+            </div>
         </div>
-        <button type="submit">Analyze Stock</button>
+        <div class="button-container">
+            <button type="submit" class="analyze-button">Analyze Stock</button>
+        </div>
     </form>
 </div>
 
@@ -18,21 +22,4 @@
     {{ chart_data | safe }}
 </div>
 {% endif %}
-{% endblock %}
-
-{% block scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('analyze-form');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            const ticker = document.getElementById('ticker').value.trim();
-            if (!ticker) {
-                e.preventDefault();
-                alert('Please enter a ticker symbol');
-            }
-        });
-    }
-});
-</script>
 {% endblock %}
