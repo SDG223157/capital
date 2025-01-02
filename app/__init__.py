@@ -1,11 +1,11 @@
-from flask import Flask
+from flask import Flask, request, redirect
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from datetime import datetime
 import logging
 from app.config import Config
 from flask_migrate import Migrate
-from oauthlib.oauth2 import WebApplicationClient
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -20,13 +20,26 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
+    # Add ProxyFix middleware for HTTPS handling
+    app.wsgi_app = ProxyFix(
+        app.wsgi_app, 
+        x_for=1,
+        x_proto=1,
+        x_host=1,
+        x_port=1
+    )
+
     # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
 
-    # Initialize OAuth 2.0 client
-    app.google_client = WebApplicationClient(app.config['GOOGLE_CLIENT_ID'])
+    # Force HTTPS
+    @app.before_request
+    def before_request():
+        if not request.is_secure and not app.debug:
+            url = request.url.replace('http://', 'https://', 1)
+            return redirect(url, code=301)
 
     from app.models import User
     @login_manager.user_loader
@@ -75,12 +88,6 @@ def create_app(config_class=Config):
         from app.user.routes import bp as user_bp
         logger.debug(f"Registering user blueprint: {user_bp.name}")
         app.register_blueprint(user_bp, url_prefix='/user')
-
-        # Configure SSL if in production
-        if not app.debug and not app.testing:
-            if app.config['PREFERRED_URL_SCHEME'] == 'https':
-                app.config['SESSION_COOKIE_SECURE'] = True
-                app.config['REMEMBER_COOKIE_SECURE'] = True
 
         @app.context_processor
         def utility_processor():
