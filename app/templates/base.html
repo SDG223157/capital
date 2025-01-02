@@ -6,11 +6,11 @@
     <title>{% block title %}Stock Technical Analysis{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block styles %}{% endblock %}
-    {% block head_scripts %}{% endblock %}
 </head>
 <body>
     <header>
         <div class="header-container">
+            <h1>Stock Technical Analysis</h1>
             <nav class="top-nav">
                 {% if current_user.is_authenticated %}
                     <div class="user-dropdown">
@@ -32,7 +32,6 @@
                     <a href="{{ url_for('auth.register') }}" class="nav-link">Register</a>
                 {% endif %}
             </nav>
-            <h1>Stock Technical Analysis</h1>
         </div>
     </header>
 
@@ -59,180 +58,5 @@
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block scripts %}{% endblock %}
-
-    <style>
-        :root {
-            --primary-color: #007bff;
-            --primary-hover: #0056b3;
-            --error-bg: #f8d7da;
-            --error-color: #721c24;
-            --success-bg: #d4edda;
-            --success-color: #155724;
-            --header-bg: #f8f9fa;
-            --footer-bg: #f8f9fa;
-        }
-
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            line-height: 1.6;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        header {
-            background-color: var(--header-bg);
-            padding: 1rem 0;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .header-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 1rem;
-        }
-
-        .top-nav {
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .nav-link {
-            color: #333;
-            text-decoration: none;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            transition: background-color 0.2s;
-        }
-
-        .nav-link:hover {
-            background-color: rgba(0, 0, 0, 0.05);
-        }
-
-        .user-dropdown {
-            position: relative;
-            display: inline-block;
-        }
-
-        .dropdown-button {
-            background: none;
-            border: none;
-            padding: 0.5rem 1rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 1rem;
-        }
-
-        .dropdown-arrow {
-            font-size: 0.8rem;
-        }
-
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            right: 0;
-            background-color: white;
-            min-width: 160px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-            border-radius: 4px;
-            z-index: 1;
-        }
-
-        .user-dropdown:hover .dropdown-content {
-            display: block;
-        }
-
-        .dropdown-item {
-            color: #333;
-            padding: 0.75rem 1rem;
-            text-decoration: none;
-            display: block;
-            transition: background-color 0.2s;
-        }
-
-        .dropdown-item:hover {
-            background-color: #f8f9fa;
-        }
-
-        main {
-            flex: 1;
-            padding: 2rem 1rem;
-            max-width: 1200px;
-            margin: 0 auto;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        .flash-messages {
-            max-width: 800px;
-            margin: 0 auto 2rem;
-        }
-
-        .flash-message {
-            padding: 1rem;
-            border-radius: 4px;
-            margin-bottom: 1rem;
-            position: relative;
-        }
-
-        .flash-message.error {
-            background-color: var(--error-bg);
-            color: var(--error-color);
-        }
-
-        .flash-message.success {
-            background-color: var(--success-bg);
-            color: var(--success-color);
-        }
-
-        .close-flash {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            font-size: 1.2rem;
-            cursor: pointer;
-            opacity: 0.5;
-            transition: opacity 0.2s;
-        }
-
-        .close-flash:hover {
-            opacity: 1;
-        }
-
-        footer {
-            background-color: var(--footer-bg);
-            padding: 1rem;
-            text-align: center;
-            margin-top: auto;
-        }
-
-        @media (max-width: 768px) {
-            .header-container h1 {
-                font-size: 1.5rem;
-            }
-
-            .top-nav {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .user-dropdown {
-                width: 100%;
-            }
-
-            .dropdown-content {
-                width: 100%;
-            }
-        }
-    </style>
 </body>
 </html>
