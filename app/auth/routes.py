@@ -1,11 +1,29 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
+from google.oauth2 import id_token
+from google_auth_oauthlib.flow import Flow
+from google.auth.transport import requests as google_requests
 from app import db
 from app.models import User
 from datetime import datetime
 
 bp = Blueprint('auth', __name__)
+
+def create_google_oauth_flow():
+    flow = Flow.from_client_config(
+        {
+            "web": {
+                "client_id": current_app.config['GOOGLE_CLIENT_ID'],
+                "client_secret": current_app.config['GOOGLE_CLIENT_SECRET'],
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [url_for('auth.google_callback', _external=True)]
+            }
+        },
+        scopes=['openid', 'email', 'profile']
+    )
+    return flow
 
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -31,6 +49,68 @@ def login():
         return redirect(next_page)
 
     return render_template('auth/login.html', title='Login')
+
+@bp.route('/login/google')
+def google_login():
+    flow = create_google_oauth_flow()
+    authorization_url, state = flow.authorization_url(
+        access_type='offline',
+        include_granted_scopes='true'
+    )
+    return redirect(authorization_url)
+
+@bp.route('/login/google/callback')
+def google_callback():
+    try:
+        flow = create_google_oauth_flow()
+        flow.fetch_token(authorization_response=request.url)
+
+        credentials = flow.credentials
+        id_info = id_token.verify_oauth2_token(
+            credentials.id_token,
+            google_requests.Request(),
+            current_app.config['GOOGLE_CLIENT_ID']
+        )
+
+        email = id_info.get('email')
+        if not email:
+            flash('Could not get email from Google.', 'error')
+            return redirect(url_for('auth.login'))
+
+        # Check if user exists
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            # Create new user
+            username = id_info.get('name', email.split('@')[0])
+            # Ensure username is unique
+            base_username = username
+            counter = 1
+            while User.query.filter_by(username=username).first():
+                username = f"{base_username}{counter}"
+                counter += 1
+
+            user = User(
+                username=username,
+                email=email,
+                password_hash=generate_password_hash('google-oauth-user'),  # Set a random password
+                created_at=datetime.utcnow(),
+                is_google_user=True  # Add this field to your User model
+            )
+            try:
+                db.session.add(user)
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                flash('An error occurred during registration.', 'error')
+                return redirect(url_for('auth.login'))
+
+        login_user(user)
+        flash('Logged in successfully with Google.', 'success')
+        return redirect(url_for('main.index'))
+
+    except Exception as e:
+        flash('Failed to log in with Google.', 'error')
+        return redirect(url_for('auth.login'))
 
 @bp.route('/register', methods=['GET', 'POST'])
 def register():

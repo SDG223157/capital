@@ -17,6 +17,7 @@ class User(UserMixin, db.Model):
     is_active = db.Column(db.Boolean, default=True)
     is_admin = db.Column(db.Boolean, default=False)
     role = db.Column(db.String(20), default='user')
+    is_google_user = db.Column(db.Boolean, default=False)
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

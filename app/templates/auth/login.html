@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% block title %}Login - Stock Technical Analysis{% endblock %}
+
 {% block content %}
 <div class="auth-container">
     <h2>Login</h2>
@@ -7,7 +9,10 @@
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-                <div class="flash-message {{ category }}">{{ message }}</div>
+                <div class="flash-message {{ category }}">
+                    {{ message }}
+                    <button type="button" class="close-flash" onclick="this.parentElement.style.display='none'">&times;</button>
+                </div>
             {% endfor %}
         {% endif %}
     {% endwith %}
@@ -20,7 +25,12 @@
         
         <div class="form-group">
             <label for="password">Password</label>
-            <input type="password" id="password" name="password" required>
+            <div class="input-with-icon">
+                <input type="password" id="password" name="password" required>
+                <button type="button" class="password-toggle" onclick="togglePassword(this)">
+                    <i>👁️</i>
+                </button>
+            </div>
         </div>
         
         <div class="form-check">
@@ -31,8 +41,242 @@
         <button type="submit" class="auth-button">Login</button>
     </form>
 
+    <div class="auth-divider">
+        <span>or</span>
+    </div>
+
+    <a href="{{ url_for('auth.google_login') }}" class="google-auth-button">
+        <svg class="google-icon" width="18" height="18" viewBox="0 0 18 18">
+            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285f4"/>
+            <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34a853"/>
+            <path d="M3.964 10.705c-.18-.54-.282-1.117-.282-1.705s.102-1.165.282-1.705V4.963H.957C.347 6.167 0 7.538 0 9s.348 2.833.957 4.037l3.007-2.332z" fill="#fbbc05"/>
+            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.963L3.964 7.3C4.672 5.17 6.656 3.58 9 3.58z" fill="#ea4335"/>
+        </svg>
+        Continue with Google
+    </a>
+
     <div class="auth-links">
         <a href="{{ url_for('auth.register') }}">Don't have an account? Register</a>
+        <a href="{{ url_for('auth.reset_password_request') }}" class="forgot-password">Forgot Password?</a>
     </div>
 </div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .auth-container {
+        max-width: 400px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .auth-form {
+        margin: 1.5rem 0;
+    }
+
+    .form-group {
+        margin-bottom: 1.2rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #333;
+        font-weight: 500;
+    }
+
+    .form-group input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 1rem;
+        transition: border-color 0.2s;
+    }
+
+    .form-group input:focus {
+        border-color: #007bff;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    }
+
+    .input-with-icon {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .password-toggle {
+        position: absolute;
+        right: 10px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 5px;
+        color: #666;
+    }
+
+    .password-toggle:focus {
+        outline: none;
+    }
+
+    .form-check {
+        margin: 1rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .form-check input[type="checkbox"] {
+        width: auto;
+    }
+
+    .auth-button {
+        width: 100%;
+        padding: 0.75rem;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .auth-button:hover {
+        background-color: #0056b3;
+    }
+
+    .auth-divider {
+        text-align: center;
+        margin: 1.5rem 0;
+        position: relative;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        width: 45%;
+        height: 1px;
+        background-color: #ddd;
+    }
+
+    .auth-divider::before {
+        left: 0;
+    }
+
+    .auth-divider::after {
+        right: 0;
+    }
+
+    .auth-divider span {
+        background-color: #fff;
+        padding: 0 10px;
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .google-auth-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background-color: #fff;
+        color: #333;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+
+    .google-auth-button:hover {
+        background-color: #f8f9fa;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .google-icon {
+        width: 18px;
+        height: 18px;
+    }
+
+    .auth-links {
+        margin-top: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .auth-links a {
+        color: #333;
+        text-decoration: none;
+        font-size: 0.9rem;
+    }
+
+    .auth-links a:hover {
+        text-decoration: underline;
+    }
+
+    .forgot-password {
+        color: #666;
+        font-size: 0.85rem;
+    }
+
+    .flash-message {
+        padding: 1rem;
+        border-radius: 4px;
+        margin-bottom: 1rem;
+        position: relative;
+    }
+
+    .flash-message.error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .flash-message.success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .close-flash {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+        opacity: 0.5;
+        transition: opacity 0.2s;
+    }
+
+    .close-flash:hover {
+        opacity: 1;
+    }
+
+    @media (max-width: 480px) {
+        .auth-container {
+            margin: 1rem;
+            padding: 1.5rem;
+        }
+
+        .auth-button,
+        .google-auth-button {
+            padding: 0.6rem;
+        }
+    }
+</style>
 {% endblock %}
