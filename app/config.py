@@ -17,3 +17,6 @@ class Config:
     GOOGLE_CLIENT_ID = "55315286115-8qgks57reafv5mn12h7dd7aicoq758ef.apps.googleusercontent.com"
     GOOGLE_CLIENT_SECRET = "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"
     GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
+    SERVER_NAME = "jcfa187260.net"  # Remove the port number for production
+    PREFERRED_URL_SCHEME = "https"   
+    GOOGLE_REDIRECT_URI = "https://jcfa187260.net/auth/google/callback"

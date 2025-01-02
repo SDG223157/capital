@@ -52,7 +52,20 @@ def login():
 
 @bp.route('/login/google')
 def google_login():
-    flow = create_google_oauth_flow()
+    flow = Flow.from_client_config(
+        {
+            "web": {
+                "client_id": current_app.config['GOOGLE_CLIENT_ID'],
+                "client_secret": current_app.config['GOOGLE_CLIENT_SECRET'],
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                # Make sure this matches exactly what you configured in Google Console
+                "redirect_uris": [url_for('auth.google_callback', _external=True)]
+            }
+        },
+        scopes=['openid', 'email', 'profile'],
+    )
+    # Make sure to specify access type and include granted scopes
     authorization_url, state = flow.authorization_url(
         access_type='offline',
         include_granted_scopes='true'
