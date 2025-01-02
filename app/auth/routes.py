@@ -50,26 +50,40 @@ def login():
 
     return render_template('auth/login.html', title='Login')
 
+from google_auth_oauthlib.flow import Flow
+from pathlib import Path
+
 @bp.route('/login/google')
 def google_login():
+    # Create the flow using the client secrets file from the Google API Console
+    client_config = {
+        "web": {
+            "client_id": current_app.config['GOOGLE_CLIENT_ID'],
+            "client_secret": current_app.config['GOOGLE_CLIENT_SECRET'],
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "redirect_uris": [url_for('auth.google_callback', _external=True)],
+            "project_id": "your-project-id",  # Add your Google Cloud project ID
+            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs"
+        }
+    }
+    
     flow = Flow.from_client_config(
-        {
-            "web": {
-                "client_id": current_app.config['GOOGLE_CLIENT_ID'],
-                "client_secret": current_app.config['GOOGLE_CLIENT_SECRET'],
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                # Make sure this matches exactly what you configured in Google Console
-                "redirect_uris": [url_for('auth.google_callback', _external=True)]
-            }
-        },
-        scopes=['openid', 'email', 'profile'],
+        client_config,
+        scopes=['openid', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile'],
+        state=None
     )
-    # Make sure to specify access type and include granted scopes
+    
+    # Set the redirect URI in the flow
+    flow.redirect_uri = url_for('auth.google_callback', _external=True)
+    
+    # Generate authorization URL
     authorization_url, state = flow.authorization_url(
         access_type='offline',
-        include_granted_scopes='true'
+        include_granted_scopes='true',
+        prompt='consent'
     )
+    
     return redirect(authorization_url)
 
 @bp.route('/login/google/callback')

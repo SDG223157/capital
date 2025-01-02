@@ -1,8 +1,10 @@
+import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from datetime import datetime
 import logging
+from app import config
 from app.config import Config
 from flask_migrate import Migrate 
 
@@ -17,6 +19,8 @@ login_manager.login_message_category = 'error'
 
 def create_app(config_class=Config):
     app = Flask(__name__)
+    config_name = os.getenv('FLASK_ENV', 'development')
+    app.config.from_object(config[config_name])
     app.config.from_object(config_class)
 
     # Initialize extensions
