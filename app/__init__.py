@@ -1,12 +1,11 @@
-import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from datetime import datetime
 import logging
-from app import config
 from app.config import Config
-from flask_migrate import Migrate 
+from flask_migrate import Migrate
+from oauthlib.oauth2 import WebApplicationClient
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -19,14 +18,15 @@ login_manager.login_message_category = 'error'
 
 def create_app(config_class=Config):
     app = Flask(__name__)
-    config_name = os.getenv('FLASK_ENV', 'development')
-    app.config.from_object(config[config_name])
     app.config.from_object(config_class)
 
     # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
+
+    # Initialize OAuth 2.0 client
+    app.google_client = WebApplicationClient(app.config['GOOGLE_CLIENT_ID'])
 
     from app.models import User
     @login_manager.user_loader
@@ -76,6 +76,12 @@ def create_app(config_class=Config):
         logger.debug(f"Registering user blueprint: {user_bp.name}")
         app.register_blueprint(user_bp, url_prefix='/user')
 
+        # Configure SSL if in production
+        if not app.debug and not app.testing:
+            if app.config['PREFERRED_URL_SCHEME'] == 'https':
+                app.config['SESSION_COOKIE_SECURE'] = True
+                app.config['REMEMBER_COOKIE_SECURE'] = True
+
         @app.context_processor
         def utility_processor():
             return {
@@ -87,4 +93,19 @@ def create_app(config_class=Config):
         for rule in app.url_map.iter_rules():
             logger.debug(f"{rule.endpoint}: {rule.rule}")
 
+        # Error handlers
+        @app.errorhandler(404)
+        def not_found_error(error):
+            return 'Page not found', 404
+
+        @app.errorhandler(500)
+        def internal_error(error):
+            db.session.rollback()
+            return 'Internal server error', 500
+
     return app
+
+# Add global exception handler
+@db.event.listens_for(db.session, 'after_rollback')
+def handle_after_rollback(session):
+    logger.warning("Database session rollback occurred")
