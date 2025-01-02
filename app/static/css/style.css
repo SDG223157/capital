@@ -1006,3 +1006,73 @@ h1 {
     z-index: 1000;
     margin-top: 4px;
 }
+/* Form styling */
+.ticker-form {
+    max-width: 800px;  /* Increased from 400px */
+    margin: 120px auto; /* Increased top margin to move down */
+    padding: 20px;
+}
+
+.form-group {
+    margin-bottom: 30px; /* Increased spacing */
+}
+
+.form-group label {
+    display: block;
+    font-size: 1.3rem; /* Increased font size */
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.input-container {
+    margin-bottom: 30px; /* Increased spacing */
+}
+
+.input-container input {
+    width: 100%;
+    padding: 24px; /* Doubled padding */
+    font-size: 1.2rem; /* Increased font size */
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-sizing: border-box;
+    color: #333;
+}
+
+.input-container input::placeholder {
+    color: #999;
+}
+
+.button-container {
+    text-align: center;
+    margin-top: 30px; /* Added more space above button */
+}
+
+.analyze-button {
+    padding: 16px 40px; /* Doubled padding */
+    font-size: 1.2rem; /* Increased font size */
+    background-color: white;
+    border: 1px solid #333;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.analyze-button:hover {
+    background-color: #f5f5f5;
+}
+
+/* Adjusted suggestions dropdown for larger input */
+.suggestions {
+    position: absolute;
+    width: 100%;
+    max-height: 300px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: none;
+    z-index: 1000;
+    margin-top: 4px;
+    font-size: 1.2rem; /* Matched font size */
+}
