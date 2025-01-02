@@ -1,4 +1,6 @@
-/* Reset and Base Styles */
+/* -------------------------------------- */
+/* 1. Reset & Base Styles */
+/* -------------------------------------- */
 * {
     margin: 0;
     padding: 0;
@@ -16,22 +18,152 @@ body {
     background-color: #ffffff;
 }
 
-/* Header Styles */
+/* -------------------------------------- */
+/* 2. Header & Navigation */
+/* -------------------------------------- */
 header {
-    background-color: #333;
+    /* Merged from multiple definitions */
+    background-color: #1a237e;  /* Final override */
+    width: 100%;
+    padding: 10px 0;           /* Overridden from 1.5rem 0 */
     color: white;
     text-align: center;
-    padding: 1.5rem 0;
     margin-bottom: 2rem;
     position: relative;
 }
 
-header h1 {
-    margin: 0;
-    font-weight: normal;
+.header-container {
+    /* Combined from repeated definitions */
+    position: relative;
+    max-width: 1200px;        /* Kept from first definition */
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    background-color: #1a237e; /* Final override */
+    color: white;
+    padding: 1rem;
 }
 
-/* Main Content Area */
+.top-nav {
+    /*
+       These properties combine from multiple .top-nav rules.
+       The final rule sets justify-content: flex-end, etc.
+       Since none later removed position/absolute, it remains.
+    */
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    display: flex;
+    justify-content: flex-end;  /* Final override */
+    align-items: center;
+    width: 100%;
+    gap: 20px;                  /* From the earliest definition */
+    padding: 1rem;             /* From second definition */
+    margin-bottom: 0.5rem;     /* From third/fourth definition */
+    margin-top: 0.5rem;        /* From fourth definition */
+}
+
+.nav-link {
+    /* Final merged styles */
+    color: white;
+    text-decoration: none;
+    font-size: 14px;
+    padding: 0.5rem 0.25rem;    /* Last override */
+    margin-left: 0.25rem;       /* Last override */
+    margin-top: 2rem;           /* Last override */
+    transition: opacity 0.3s ease;
+}
+
+.nav-link:hover {
+    color: #ddd;
+    opacity: 0.8;
+}
+
+.user-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 5px 10px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.dropdown-arrow {
+    font-size: 10px;
+    transition: transform 0.3s ease;
+}
+
+.dropdown-content {
+    /*
+       Final version consistently uses display: none by default
+       and displays on hover (see below).
+    */
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background-color: #fff;
+    min-width: 160px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    z-index: 1;
+    border-radius: 4px;
+}
+
+.user-dropdown:hover .dropdown-content {
+    display: block;
+}
+
+.user-dropdown:hover .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.dropdown-item {
+    color: #333;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    transition: background-color 0.2s ease;
+}
+
+.dropdown-item:hover {
+    background-color: #f5f5f5;
+}
+
+/* Highlight admin-specific link */
+.admin-link {
+    color: #ff6b6b;
+}
+
+.dropdown-item[href*="tables"] {
+    color: #ff6b6b;
+    border-left: 3px solid #ff6b6b;
+}
+
+/* -------------------------------------- */
+/* 3. Headings */
+/* -------------------------------------- */
+/* Combining repeated h1 definitions into one final version */
+h1 {
+    color: white;
+    text-align: center;
+    font-size: 24px;
+    font-weight: normal;
+    margin: 0;
+    padding: 1rem 0;
+}
+
+/* -------------------------------------- */
+/* 4. Main Content & Forms */
+/* -------------------------------------- */
 main {
     flex: 1;
     display: flex;
@@ -41,30 +173,26 @@ main {
     width: 100%;
 }
 
-/* Form Container */
 .form-container {
     width: 100%;
     max-width: 600px;
     padding: 2rem;
-    background: transparent; 
+    background: transparent;
     border-radius: 4px;
     box-shadow: none;
     margin-bottom: 2rem;
 }
 
-/* Form Title */
 .form-container h2 {
     margin-bottom: 1.5rem;
     color: #333;
     font-weight: 500;
 }
 
-/* Form Group */
 .form-group {
     margin-bottom: 1.5rem;
 }
 
-/* Labels */
 label {
     display: block;
     margin-bottom: 0.5rem;
@@ -73,13 +201,13 @@ label {
     color: #333;
 }
 
-/* Ticker Input Container - Important for positioning */
+/* Ticker Input Container */
 .ticker-input-container {
     position: relative;
     width: 100%;
 }
 
-/* Input Fields */
+/* Text Inputs */
 input[type="text"],
 input[type="number"],
 input[type="date"] {
@@ -208,11 +336,20 @@ input[type="text"]::placeholder {
     z-index: 1001;
 }
 
-/* Auth Links */
+/* -------------------------------------- */
+/* 5. Auth Links */
+/* -------------------------------------- */
 .auth-links {
+    /*
+       Originally was absolute + top/right, then replaced with flex.
+       By cascade, we end up with them combined unless you remove the
+       old absolute positioning manually.
+    */
     position: absolute;
     top: 1rem;
     right: 1rem;
+    display: flex;
+    gap: 1rem;
 }
 
 .auth-links a {
@@ -226,7 +363,9 @@ input[type="text"]::placeholder {
     text-decoration: underline;
 }
 
-/* Footer */
+/* -------------------------------------- */
+/* 6. Footer */
+/* -------------------------------------- */
 footer {
     background-color: #333;
     color: white;
@@ -240,7 +379,9 @@ footer p {
     padding-right: 1rem;
 }
 
-/* Flash Messages */
+/* -------------------------------------- */
+/* 7. Flash Messages */
+/* -------------------------------------- */
 .flash-messages {
     width: 100%;
     max-width: 600px;
@@ -265,7 +406,9 @@ footer p {
     border: 1px solid #f5c6cb;
 }
 
-/* Responsive Design */
+/* -------------------------------------- */
+/* 8. Responsive Adjustments */
+/* -------------------------------------- */
 @media (max-width: 768px) {
     .form-container {
         padding: 1rem;
@@ -287,7 +430,9 @@ footer p {
     }
 }
 
-/* Error States */
+/* -------------------------------------- */
+/* 9. Error States */
+/* -------------------------------------- */
 .error-message {
     color: #dc3545;
     font-size: 0.875rem;
@@ -302,257 +447,9 @@ input.error:focus {
     box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25);
 }
 
-/* Header Styles */
-/* Header Styles */
-/* Header Styles */
-header {
-    background-color: #333;
-    width: 100%;
-    padding: 10px 0;
-}
-
-.header-container {
-    position: relative;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
-}
-
-/* Navigation Styles */
-.top-nav {
-    position: absolute;
-    top: 10px;
-    right: 20px;
-    display: flex;
-    gap: 20px;
-}
-
-.nav-link {
-    color: white;
-    text-decoration: none;
-    font-size: 14px;
-    padding: 5px 10px;
-    transition: opacity 0.3s ease;
-}
-
-.nav-link:hover {
-    opacity: 0.8;
-}
-
-/* User Dropdown Styles */
-.user-dropdown {
-    position: relative;
-}
-
-.dropdown-button {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 14px;
-    cursor: pointer;
-    padding: 5px 10px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.dropdown-arrow {
-    font-size: 10px;
-    transition: transform 0.3s ease;
-}
-
-.dropdown-content {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    background-color: white;
-    min-width: 160px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    border-radius: 4px;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-10px);
-    transition: all 0.3s ease;
-}
-
-.user-dropdown:hover .dropdown-content {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-.user-dropdown:hover .dropdown-arrow {
-    transform: rotate(180deg);
-}
-
-.dropdown-item {
-    color: #333;
-    text-decoration: none;
-    padding: 10px 15px;
-    display: block;
-    transition: background-color 0.2s ease;
-}
-
-.dropdown-item:hover {
-    background-color: #f5f5f5;
-}
-
-/* First dropdown item */
-.dropdown-item:first-child {
-    border-radius: 4px 4px 0 0;
-}
-
-/* Last dropdown item */
-.dropdown-item:last-child {
-    border-radius: 0 0 4px 4px;
-}
-
-h1 {
-    color: white;
-    text-align: center;
-    font-size: 24px;
-    margin: 30px 0;
-    font-weight: normal;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .header-container {
-        padding: 0 10px;
-    }
-    
-    .top-nav {
-        right: 10px;
-    }
-    
-    .dropdown-content {
-        right: -10px;
-    }
-}
-
-/* Profile Container */
-.profile-container {
-    max-width: 600px;
-    margin: 2rem auto;
-    padding: 2rem;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.profile-container h2 {
-    color: #333;
-    margin-bottom: 1.5rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 2px solid #f0f0f0;
-}
-
-/* Profile Form */
-.profile-form .form-group {
-    margin-bottom: 1.5rem;
-}
-
-.profile-form label {
-    display: block;
-    margin-bottom: 0.5rem;
-    color: #333;
-    font-weight: 500;
-}
-
-.profile-form input {
-    width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 0.9rem;
-}
-
-.profile-form input:disabled {
-    background-color: #f5f5f5;
-    cursor: not-allowed;
-}
-
-.profile-form input:focus {
-    outline: none;
-    border-color: #666;
-    box-shadow: 0 0 0 2px rgba(51, 51, 51, 0.1);
-}
-
-/* Profile Button */
-.profile-button {
-    width: 100%;
-    padding: 0.75rem;
-    background-color: #333;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-
-.profile-button:hover {
-    background-color: #444;
-}
-
-/* User Dropdown Styles */
-.user-dropdown {
-    position: relative;
-}
-
-.dropdown-button {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 14px;
-    cursor: pointer;
-    padding: 5px 10px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.dropdown-arrow {
-    font-size: 10px;
-    transition: transform 0.3s ease;
-}
-
-.dropdown-content {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    background-color: white;
-    min-width: 160px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    border-radius: 4px;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-10px);
-    transition: all 0.3s ease;
-}
-
-.user-dropdown:hover .dropdown-content {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-.user-dropdown:hover .dropdown-arrow {
-    transform: rotate(180deg);
-}
-
-.dropdown-item {
-    color: #333;
-    text-decoration: none;
-    padding: 10px 15px;
-    display: block;
-    transition: background-color 0.2s ease;
-}
-
-.dropdown-item:hover {
-    background-color: #f5f5f5;
-}
-
+/* -------------------------------------- */
+/* 10. Profile Page Styles */
+/* -------------------------------------- */
 .profile-container {
     max-width: 600px;
     margin: 2rem auto;
@@ -586,6 +483,13 @@ h1 {
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 0.9rem;
+    background-color: #fff;
+    transition: border-color 0.2s ease-in-out;
+}
+
+.profile-form input:disabled {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
 }
 
 .profile-form input:focus {
@@ -649,262 +553,6 @@ h1 {
     background-color: #c82333;
 }
 
-/* 20250101 */
-
-.top-nav {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-    width: 100%;
-}
-
-.nav-links {
-    display: flex;
-    gap: 1rem;
-}
-
-.admin-link {
-    color: #ff6b6b;
-    font-weight: 500;
-}
-
-.auth-links {
-    display: flex;
-    gap: 1rem;
-}
-
-.dropdown-content {
-    display: none;
-    position: absolute;
-    right: 0;
-    background-color: #fff;
-    min-width: 160px;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-    z-index: 1;
-    border-radius: 4px;
-}
-
-.user-dropdown:hover .dropdown-content {
-    display: block;
-}
-
-.dropdown-item {
-    color: #333;
-    padding: 12px 16px;
-    text-decoration: none;
-    display: block;
-}
-
-.dropdown-item:hover {
-    background-color: #f5f5f5;
-}
-
-/* Highlight admin-specific items in dropdown */
-.dropdown-item[href*="tables"] {
-    color: #ff6b6b;
-    border-left: 3px solid #ff6b6b;
-}
-
-/* 20250101-2 */
-.header-container {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    background-color: #333;
-    color: white;
-    padding: 1rem;
-}
-
-.top-nav {
-    display: flex;
-    justify-content: flex-end;  /* Align items to the right */
-    align-items: center;
-    width: 100%;
-    margin-bottom: 0.5rem;
-}
-
-.nav-link {
-    color: white;
-    text-decoration: none;
-    padding: 0.5rem 1rem;
-    margin-left: 1rem;
-}
-
-.nav-link:hover {
-    color: #ddd;
-}
-
-h1 {
-    text-align: center;
-    margin: 0;
-    padding: 1rem 0;
-}
-
-/* For logged-in users */
-.user-dropdown {
-    position: relative;
-    display: inline-block;
-}
-
-.dropdown-button {
-    background: none;
-    border: none;
-    color: white;
-    padding: 0.5rem 1rem;
-    cursor: pointer;
-    font-size: 1rem;
-}
-
-.dropdown-content {
-    display: none;
-    position: absolute;
-    right: 0;
-    background-color: white;
-    min-width: 160px;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-    z-index: 1;
-    border-radius: 4px;
-}
-
-.user-dropdown:hover .dropdown-content {
-    display: block;
-}
-
-.dropdown-item {
-    color: #333;
-    padding: 12px 16px;
-    text-decoration: none;
-    display: block;
-}
-
-.dropdown-item:hover {
-    background-color: #f5f5f5;
-}
-
-/* Admin specific styling */
-.admin-link {
-    color: #ff6b6b;
-}
-
-.dropdown-item[href*="tables"] {
-    color: #ff6b6b;
-    border-left: 3px solid #ff6b6b;
-}
-
-/* 20250101-3 */
-header {
-    background-color: #1a237e;
-    width: 100%;
-}
-.header-container {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    background-color: #1a237e;
-    color: white;
-    padding: 1rem;
-}
-
-.top-nav {
-    display: flex;
-    justify-content: flex-end;  /* Align items to the right */
-    align-items: center;
-    width: 100%;
-    margin-bottom: 0.5rem;
-    margin-top: 0.5rem;
-}
-
-.nav-link {
-    color: white;
-    text-decoration: none;
-    padding: 0.5rem 0.25rem;
-    margin-left: 0.25rem;
-    margin-top: 2rem;
-}
-
-.nav-link:hover {
-    color: #ddd;
-}
-
-h1 {
-    text-align: center;
-    margin: 0;
-    padding: 1rem 0;
-}
-
-/* For logged-in users */
-.user-dropdown {
-    position: relative;
-    display: inline-block;
-}
-
-.dropdown-button {
-    background: none;
-    border: none;
-    color: white;
-    padding: 0.5rem 1rem;
-    cursor: pointer;
-    font-size: 1rem;
-}
-
-.dropdown-content {
-    display: none;
-    position: absolute;
-    right: 0;
-    background-color: white;
-    min-width: 160px;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-    z-index: 1;
-    border-radius: 4px;
-}
-
-.user-dropdown:hover .dropdown-content {
-    display: block;
-}
-
-.dropdown-item {
-    color: #333;
-    padding: 12px 16px;
-    text-decoration: none;
-    display: block;
-}
-
-.dropdown-item:hover {
-    background-color: #f5f5f5;
-}
-
-/* Admin specific styling */
-.admin-link {
-    color: #ff6b6b;
-}
-
-.dropdown-item[href*="tables"] {
-    color: #ff6b6b;
-    border-left: 3px solid #ff6b6b;
-}
-
-/* Google Auth Button */
-.google-auth-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    width: 100%;
-    padding: 0.75rem;
-    background-color: white;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    color: #333;
-    text-decoration: none;
-    margin-bottom: 1rem;
-    transition: background-color 0.2s;
-}
-
-.google-auth-button:hover {
-    background-color: #f5f5f5;
-}
-
 .auth-divider {
     text-align: center;
     margin: 20px 0;
@@ -933,4 +581,28 @@ h1 {
     background-color: #fff;
     padding: 0 10px;
     color: #666;
+}
+
+.google-auth-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #fff;
+    color: #333;
+    text-decoration: none;
+    transition: background-color 0.2s;
+}
+
+.google-auth-button:hover {
+    background-color: #f5f5f5;
+}
+
+.google-auth-button img {
+    width: 20px;
+    height: 20px;
 }
