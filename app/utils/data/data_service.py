@@ -339,38 +339,53 @@ class DataService:
               
               
         
-    def store_historical_data(self, ticker: str, start_date: str = None, end_date: str = None) -> bool:
-            """
-            Fetch and store historical price data from yfinance (max 30 years)
-            """
-            try:
-                print(f"Fetching historical data for {ticker} from yfinance")
-                ticker_obj = yf.Ticker(ticker)
+    def store_financial_data(self, ticker: str, start_year: str = None, end_year: str = None) -> bool:
+        """Fetch and store financial data from ROIC API"""
+        try:
+            print(f"Fetching financial data for {ticker} from ROIC API")
+            
+            # If no years specified, use last 10 years
+            if not start_year or not end_year:
+                current_year = datetime.now().year
+                end_year = str(current_year)
+                start_year = str(current_year - 10)
+
+            all_metrics_data = []
+            
+            # Single attempt to fetch data for each metric
+            for metric_description in self.METRICS:
+                metric_field = self.METRICS[metric_description]
+                query = f"get({metric_field}(fa_period_reference=range('{start_year}', '{end_year}'))) for('{ticker}')"
+                url = f"{self.BASE_URL}?query={query}&apikey={self.API_KEY}"
+
+                response = requests.get(url)
+                response.raise_for_status()
                 
-                # Calculate 30 years ago from now
-                end_dt = pd.Timestamp.now()
-                start_dt = end_dt - pd.DateOffset(years=10)
-                
-                # Fetch data for max period
-                df = ticker_obj.history(start=start_dt.strftime('%Y-%m-%d'))
-                
-                if df.empty:
-                    print(f"No historical data found for {ticker}")
-                    return False
-                
-                # Process the data
-                df.index = df.index.tz_localize(None)
-                cleaned_ticker = self.clean_ticker_for_table_name(ticker)
-                table_name = f"his_{cleaned_ticker}"
-                
-                # Store in database
-                return self.store_dataframe(df, table_name)
-                    
-            except Exception as e:
-                print(f"Error storing historical data for {ticker}: {e}")
+                json_data = response.json()
+                if json_data:  # If we got any data at all, use it
+                    df = pd.DataFrame(json_data)
+                    if len(df) > 1:  # Check if we have more than just the header row
+                        df.columns = df.iloc[0]
+                        df = df.drop(0).reset_index(drop=True)
+                        all_metrics_data.append(df)
+
+            if not all_metrics_data:
+                print(f"No financial data found for {ticker}")
                 return False
 
-        
+            # Combine all metrics data
+            combined_df = pd.concat(all_metrics_data, axis=1)
+            combined_df = combined_df.loc[:,~combined_df.columns.duplicated()]
+            
+            # Store in database
+            cleaned_ticker = self.clean_ticker_for_table_name(ticker)
+            table_name = f"roic_{cleaned_ticker}"
+            return self.store_dataframe(combined_df, table_name)
+                
+        except Exception as e:
+            print(f"Error storing financial data for {ticker}: {e}")
+            return False
+            
     def get_analysis_dates(self, end_date: str, lookback_type: str, 
                             lookback_value: int) -> str:
             """
