@@ -274,70 +274,51 @@ class DataService:
             return False
 
     def get_financial_data(self, ticker: str, metric_description: str, start_year: str, end_year: str) -> pd.Series:
-            """Get financial data with improved handling of incomplete data"""
-            cleaned_ticker = self.clean_ticker_for_table_name(ticker)
-            table_name = f"roic_{cleaned_ticker}"
-            MAX_MISSING_YEARS_TOLERANCE = 2
+        """Get financial data from MySQL database or ROIC API if not exists/incomplete."""
+        cleaned_ticker = self.clean_ticker_for_table_name(ticker)
+        table_name = f"roic_{cleaned_ticker}"
+        
+        try:
+            if "^" in ticker or "-" in ticker:
+                return None
+            
+            if self.table_exists(table_name):
+                print(f"Getting financial data for {ticker} from database")
+                df = pd.read_sql_table(table_name, self.engine)
                 
-            try:
-                if "^" in ticker or "-" in ticker:
-                    return None
+                metric_field = self.METRICS.get(metric_description.lower())
+                if metric_field in df.columns:
+                    df['fiscal_year'] = df['fiscal_year'].astype(int)
                     
-                if self.table_exists(table_name):
-                    print(f"Getting financial data for {ticker} from database")
-                    df = pd.read_sql_table(table_name, self.engine)
-                    
-                    metric_field = self.METRICS.get(metric_description.lower())
-                    if metric_field in df.columns:
-                        df['fiscal_year'] = df['fiscal_year'].astype(int)
-                        
-                        # Get actual available years range
-                        actual_start = df['fiscal_year'].min()
-                        actual_end = df['fiscal_year'].max()
-                        
-                        # Adjust requested range if needed
-                        adjusted_start = max(int(start_year), actual_start)
-                        adjusted_end = min(int(end_year), actual_end)
-                        
-                        # Filter for available years
-                        mask = (df['fiscal_year'] >= adjusted_start) & (df['fiscal_year'] <= adjusted_end)
-                        filtered_df = df[mask]
-                        
-                        # Check if we have enough data points
-                        available_years = set(filtered_df['fiscal_year'].values)
-                        requested_years = set(range(adjusted_start, adjusted_end + 1))
-                        missing_years = requested_years - available_years
-                        
-                        if len(missing_years) <= MAX_MISSING_YEARS_TOLERANCE:
-                            return pd.Series(
-                                filtered_df[metric_field].values,
-                                index=filtered_df['fiscal_year'],
-                                name=metric_description
-                            )
-                        
-                # If we get here, either the table doesn't exist or we need to fetch new data
-                success = self.store_financial_data(ticker, str(actual_start), str(actual_end))
-                if success:
-                    # Try reading the data again
-                    df = pd.read_sql_table(table_name, self.engine)
-                    metric_field = self.METRICS.get(metric_description.lower())
-                    if metric_field in df.columns:
-                        df['fiscal_year'] = df['fiscal_year'].astype(int)
-                        mask = (df['fiscal_year'] >= adjusted_start) & (df['fiscal_year'] <= adjusted_end)
-                        filtered_df = df[mask]
+                    # Just filter by the years we have, don't check for gaps
+                    filtered_df = df[df['fiscal_year'].notna()]  # Get all available years
+                    if not filtered_df.empty:
                         return pd.Series(
                             filtered_df[metric_field].values,
                             index=filtered_df['fiscal_year'],
                             name=metric_description
                         )
-                
-                return None
+
+            # If we get here, we need to fetch new data
+            success = self.store_financial_data(ticker, start_year, end_year)
+            if success:
+                df = pd.read_sql_table(table_name, self.engine)
+                metric_field = self.METRICS.get(metric_description.lower())
+                if metric_field in df.columns:
+                    df['fiscal_year'] = df['fiscal_year'].astype(int)
+                    filtered_df = df[df['fiscal_year'].notna()]
+                    if not filtered_df.empty:
+                        return pd.Series(
+                            filtered_df[metric_field].values,
+                            index=filtered_df['fiscal_year'],
+                            name=metric_description
+                        )
+            
+            return None
                     
-            except Exception as e:
-                print(f"Error in get_financial_data for {ticker}: {str(e)}")
-                return None
-              
-              
+        except Exception as e:
+            print(f"Error in get_financial_data for {ticker}: {str(e)}")
+            return None
         
     def store_financial_data(self, ticker: str, start_year: str = None, end_year: str = None) -> bool:
         """Fetch and store financial data from ROIC API"""
