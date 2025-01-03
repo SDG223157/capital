@@ -611,3 +611,82 @@ input.error:focus {
 .flash-message {
     transition: opacity 0.3s ease-in-out;
 }
+
+.login-container {
+    max-width: 400px;  /* Container to control overall form width */
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* Make all form elements consistent width */
+.form-group {
+    width: 100%;
+    margin-bottom: 1.5rem;
+}
+
+/* Style for input fields */
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="password"] {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    box-sizing: border-box;  /* Ensure padding doesn't affect width */
+}
+
+/* Remember me container */
+.remember-me {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 1rem 0;
+}
+
+/* Login button styling */
+.login-button {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: #1a237e;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+/* Divider styling */
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 1.5rem 0;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #ddd;
+}
+
+.divider span {
+    padding: 0 1rem;
+    color: #666;
+}
+
+/* Google button styling */
+.google-button {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
