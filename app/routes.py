@@ -175,6 +175,7 @@ def normalize_ticker(symbol):
         'CADDOLLAR': '6C=F',   # Canadian Dollar Futures
         'AUDDOLLAR': '6A=F',   # Australian Dollar Futures
         'CHFDOLLAR': '6S=F',   # Swiss Franc Futures
+        'CNHDOLLAR': 'CNH=F',  # Offshore Chinese Yuan Futures
         
         # Alternative search terms
         'CRUDE': 'CL=F',       # Alternative for oil
@@ -185,7 +186,10 @@ def normalize_ticker(symbol):
         'EURO': 'GE=F',        # Alternative for EUR
         'CAD': '6C=F',         # Alternative for Canadian Dollar
         'AUD': '6A=F',         # Alternative for Australian Dollar
-        'CHF': '6S=F'          # Alternative for Swiss Franc
+        'CHF': '6S=F',         # Alternative for Swiss Franc
+        'CNH': 'CNH=F',        # Alternative for Chinese Yuan
+        'YUAN': 'CNH=F',       # Alternative for Chinese Yuan
+        'RMB': 'CNH=F'         # Alternative for Chinese Yuan
     }
     
     # ETF and asset mappings
