@@ -59,6 +59,8 @@ class DataService:
         Removes '.', '^', and '-' characters.
         """
         return ticker.replace('.', '').replace('^', '').replace('-', '').lower()
+    
+    
     def get_historical_data(self, ticker: str, start_date: str, end_date: str) -> pd.DataFrame:
         """
         Get historical data from MySQL database or yfinance if not exists.
@@ -91,109 +93,77 @@ class DataService:
             
             # Adjust end_date if it's beyond latest trading day
             end_date = min(pd.to_datetime(end_date), pd.to_datetime(latest_trading_day)).strftime('%Y-%m-%d')
-            if end_date != pd.to_datetime(latest_trading_day).strftime('%Y-%m-%d'):
-                logging.info(f"Adjusted end date to latest trading day: {latest_trading_day}")
             
             # First try to get data from database
             if self.table_exists(table_name):
                 logging.info(f"Getting historical data for {ticker} from database")
                 
                 # Get table's date range
-                # date_range_query = text("""
-                #     SELECT MIN(Date) as min_date, MAX(Date) as max_date 
-                #     FROM {}
-                # """.format(table_name))
-                # date_range = pd.read_sql_query(date_range_query, self.engine)
+                date_range_query = text("""
+                    SELECT MIN(Date) as min_date, MAX(Date) as max_date 
+                    FROM {}
+                """.format(table_name))
+                date_range = pd.read_sql_query(date_range_query, self.engine)
                 
-                # # Check for None in date_range values
-                # min_date = date_range['min_date'][0]
-                # max_date = date_range['max_date'][0]
+                # Check for None in date_range values
+                min_date = date_range['min_date'][0]
+                max_date = date_range['max_date'][0]
                 
-                # # If min_date or max_date is None, refresh all data
-                # if min_date is None or max_date is None:
-                #     logging.info(f"Database date range is invalid for {ticker}: min_date={min_date}, max_date={max_date}")
-                #     logging.info("Refreshing data from external source...")
-                #     success = self.store_historical_data(ticker)
-                #     if not success:
-                #         raise ValueError(f"Failed to store data for {ticker}")
-                #     df = pd.read_sql_table(table_name, self.engine)
-                #     df.set_index('Date', inplace=True)
-                #     return df[(df.index >= start_date) & (df.index <= end_date)]
+                # If min_date or max_date is None, refresh all data
+                if min_date is None or max_date is None:
+                    logging.info(f"Database date range is invalid for {ticker}: min_date={min_date}, max_date={max_date}")
+                    logging.info("Refreshing data from external source...")
+                    success = self.store_historical_data(ticker)
+                    if not success:
+                        raise ValueError(f"Failed to store data for {ticker}")
+                    df = pd.read_sql_table(table_name, self.engine)
+                    df.set_index('Date', inplace=True)
+                    return df[(df.index >= start_date) & (df.index <= end_date)]
                 
-                # # Convert dates for comparison
-                # db_start = pd.to_datetime(min_date).strftime('%Y-%m-%d')
-                # db_end = pd.to_datetime(max_date).strftime('%Y-%m-%d')
-                # requested_end = pd.to_datetime(end_date).strftime('%Y-%m-%d')
+                # Convert dates for comparison
+                db_end = pd.to_datetime(max_date).strftime('%Y-%m-%d')
+                current_date = pd.Timestamp.now().strftime('%Y-%m-%d')
                 
-                # logging.info(f"Database date range: {db_start} to {db_end}")
-                # logging.info(f"Requested date range: {start_date} to {requested_end}")
+                # Check if data is more than 10 days old
+                days_difference = (pd.to_datetime(current_date) - pd.to_datetime(db_end)).days
                 
-                # # If requested end date is beyond database end date, fetch new data
-                # if requested_end > db_end:
-                #     logging.info(f"Requested end date {requested_end} is beyond database end date {db_end}")
-                #     logging.info("Fetching new data from yfinance...")
+                if days_difference > 10:
+                    logging.info(f"Data is {days_difference} days old. Updating from yfinance...")
                     
-                #     # Fetch new data from yfinance
-                #     ticker_obj = yf.Ticker(ticker)
+                    # Fetch new data from yfinance
+                    ticker_obj = yf.Ticker(ticker)
                     
-                #     # Read existing data
-                #     existing_data = pd.read_sql_table(table_name, self.engine)
-                #     existing_data.set_index('Date', inplace=True)
+                    # Read existing data
+                    existing_data = pd.read_sql_table(table_name, self.engine)
+                    existing_data.set_index('Date', inplace=True)
                     
-                #     # Delete the last 10 days of data
-                #     cutoff_date = pd.to_datetime(db_end) - pd.Timedelta(days=10)
-                #     logging.info(f"Removing last 10 days of data (from {cutoff_date} to {db_end})")
-                #     existing_data = existing_data[existing_data.index < cutoff_date]
+                    # Delete the last 10 days of data
+                    cutoff_date = pd.to_datetime(db_end) - pd.Timedelta(days=10)
+                    logging.info(f"Removing last 10 days of data (from {cutoff_date} to {db_end})")
+                    existing_data = existing_data[existing_data.index < cutoff_date]
                     
-                #     # Fetch new data starting from the cutoff date
-                #     new_data = ticker_obj.history(start=cutoff_date.strftime('%Y-%m-%d'), end=requested_end)
-                #     new_data.index = new_data.index.tz_localize(None)
+                    # Fetch new data starting from the cutoff date
+                    new_data = ticker_obj.history(start=cutoff_date.strftime('%Y-%m-%d'), end=current_date)
+                    new_data.index = new_data.index.tz_localize(None)
                     
-                #     # Log data shapes before combining
-                #     logging.info(f"Existing data shape (before merge): {existing_data.shape}")
-                #     logging.info(f"New data shape (before merge): {new_data.shape}")
+                    # Combine the datasets
+                    combined_data = pd.concat([existing_data, new_data])
                     
-                #     # Check for and log any duplicate dates in each dataset
-                #     existing_duplicates = existing_data.index.duplicated(keep=False)
-                #     new_duplicates = new_data.index.duplicated(keep=False)
+                    # Handle duplicates with explicit rules
+                    combined_data = combined_data[~combined_data.index.duplicated(keep='last')]
                     
-                #     if existing_duplicates.any():
-                #         logging.warning(f"Found {existing_duplicates.sum()} duplicate dates in existing data")
-                #     if new_duplicates.any():
-                #         logging.warning(f"Found {new_duplicates.sum()} duplicate dates in new data")
+                    # Sort index
+                    combined_data.sort_index(inplace=True)
                     
-                #     # Combine the datasets
-                #     combined_data = pd.concat([existing_data, new_data])
+                    # Update database with combined data
+                    success = self.store_dataframe(combined_data, table_name)
+                    if not success:
+                        raise ValueError(f"Failed to update data for {ticker}")
                     
-                #     # Handle duplicates with explicit rules
-                #     duplicate_dates = combined_data.index.duplicated(keep=False)
-                #     if duplicate_dates.any():
-                #         logging.info(f"Found {duplicate_dates.sum()} duplicate dates after combining")
-                #         # Keep the latest data point (from new_data) for each date
-                #         combined_data = combined_data[~combined_data.index.duplicated(keep='last')]
-                    
-                #     # Sort index and verify sort order
-                #     combined_data.sort_index(inplace=True)
-                #     if not combined_data.index.is_monotonic_increasing:
-                #         logging.error("Data is not properly sorted after sort_index operation")
-                #         raise ValueError("Failed to properly sort the combined data")
-                    
-                #     # Verify data continuity
-                #     date_gaps = pd.date_range(start=combined_data.index.min(), 
-                #                             end=combined_data.index.max(), 
-                #                             freq='B').difference(combined_data.index)
-                #     if not date_gaps.empty:
-                #         logging.warning(f"Found {len(date_gaps)} gaps in the data")
-                    
-                #     # Update database with combined data
-                #     success = self.store_dataframe(combined_data, table_name)
-                #     if not success:
-                #         raise ValueError(f"Failed to update data for {ticker}")
-                    
-                #     # Return the filtered data for the requested range
-                #     return combined_data[(combined_data.index >= start_date) & (combined_data.index <= requested_end)]
+                    # Return the filtered data for the requested range
+                    return combined_data[(combined_data.index >= start_date) & (combined_data.index <= end_date)]
                 
-                # If data is within database range, return filtered data
+                # If data is current enough, return filtered data from database
                 df = pd.read_sql_table(table_name, self.engine)
                 df.set_index('Date', inplace=True)
                 return df[(df.index >= start_date) & (df.index <= end_date)]
@@ -210,6 +180,9 @@ class DataService:
         except Exception as e:
             logging.error(f"Error in get_historical_data for {ticker}: {str(e)}")
             raise
+    
+    
+    
     def get_financial_data(self, ticker: str, metric_description: str, 
                         start_year: str, end_year: str) -> pd.Series:
         """
