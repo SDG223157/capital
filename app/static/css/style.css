@@ -461,7 +461,7 @@ input.error:focus {
 }
 
 .profile-container h2 {
-    margin-bottom: 1.5rem;
+    margin-bottom: 0.5rem;
     color: #333;
     padding-bottom: 0.5rem;
     border-bottom: 2px solid #f0f0f0;
