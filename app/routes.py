@@ -115,6 +115,15 @@ def index():
     today = datetime.now().strftime('%Y-%m-%d')
     return render_template('index.html', now=datetime.now(), max_date=today)
 
+def normalize_ticker(symbol):
+    """Normalize ticker symbols to their proper format."""
+    ticker_mappings = {
+        'NDQ': 'QQQ',    # NASDAQ-100 ETF
+        'SPX': 'SPY',    # S&P 500 ETF
+        'DJI': 'DIA',    # Dow Jones ETF
+        'FTSE': 'ISF.L'  # FTSE 100 ETF
+    }
+    return ticker_mappings.get(symbol, symbol)
 
 @bp.route('/search_ticker', methods=['GET'])
 def search_ticker():
@@ -126,8 +135,15 @@ def search_ticker():
         search_results = []
         logger.info(f"Searching for ticker: {query}")
         
+        # First, check if the query needs to be normalized
+        normalized_query = normalize_ticker(query)
+        
         # List of variations to try
         variations = [query]
+        
+        # Add normalized version if different from query
+        if normalized_query != query:
+            variations.append(normalized_query)
         
         # Add '^' prefix variation if not present
         if not query.startswith('^'):
@@ -137,6 +153,9 @@ def search_ticker():
             variations.append(query[1:])
             
         logger.info(f"Trying ticker variations: {variations}")
+        
+        # Add ETF-specific checks
+        etf_suffixes = ['.L', '.TO', '.AX']  # London, Toronto, Australia exchanges
         
         # Try each variation
         for variant in variations:
@@ -159,37 +178,50 @@ def search_ticker():
             elif len(variant) == 4 and variant.isdigit():
                 exchange_suffix = '.HK'
 
-            # Check with exchange suffix if applicable
+            # Try the base variant first
+            symbols_to_try = [variant]
+            
+            # Add exchange suffix if applicable
             if exchange_suffix:
-                symbol_to_check = f"{variant}{exchange_suffix}"
-                is_valid, company_name = verify_ticker(symbol_to_check)
-                
-                if is_valid:
-                    # If symbol exists in TICKER_DICT, use that name instead
-                    if symbol_to_check in TICKER_DICT:
-                        company_name = TICKER_DICT[symbol_to_check]
+                symbols_to_try.append(f"{variant}{exchange_suffix}")
+            
+            # For potential ETFs, try with different suffixes
+            if len(variant) >= 2:  # Only try ETF suffixes for reasonable length symbols
+                symbols_to_try.extend([f"{variant}{suffix}" for suffix in etf_suffixes])
+
+            # Try each symbol variation
+            for symbol_to_check in symbols_to_try:
+                try:
+                    is_valid, company_name = verify_ticker(symbol_to_check)
                     
-                    if symbol_to_check.upper() != company_name.upper():  # Only add if symbol and name are different
-                        search_results.append({
-                            'symbol': symbol_to_check,
-                            'name': company_name,
-                            'source': 'verified'
-                        })
-                        logger.info(f"Found verified stock: {symbol_to_check}")
-            else:
-                is_valid, company_name = verify_ticker(variant)
-                if is_valid:
-                    # If symbol exists in TICKER_DICT, use that name instead
-                    if variant in TICKER_DICT:
-                        company_name = TICKER_DICT[variant]
+                    if is_valid:
+                        # If symbol exists in TICKER_DICT, use that name instead
+                        if symbol_to_check in TICKER_DICT:
+                            company_name = TICKER_DICT[symbol_to_check]
                         
-                    if variant.upper() != company_name.upper():  # Only add if symbol and name are different
-                        search_results.append({
-                            'symbol': variant,
-                            'name': company_name,
-                            'source': 'verified'
-                        })
-                        logger.info(f"Found verified stock: {variant}")
+                        # For ETFs, append "ETF" to the name if not already present
+                        if ('ETF' not in company_name.upper() and 
+                            any(suffix in symbol_to_check for suffix in ['.L', '.TO', '.AX'])):
+                            company_name = f"{company_name} ETF"
+                        
+                        if symbol_to_check.upper() != company_name.upper():  # Only add if symbol and name are different
+                            result = {
+                                'symbol': symbol_to_check,
+                                'name': company_name,
+                                'source': 'verified'
+                            }
+                            # Add ETF indicator if applicable
+                            if normalized_query != query or 'ETF' in company_name.upper():
+                                result['type'] = 'ETF'
+                            
+                            search_results.append(result)
+                            logger.info(f"Found verified stock/ETF: {symbol_to_check}")
+                            
+                            # Break after finding a valid match for this variant
+                            break
+                except Exception as e:
+                    logger.warning(f"Error checking symbol {symbol_to_check}: {str(e)}")
+                    continue
         
         # Remove duplicates while preserving order
         seen = set()
@@ -207,12 +239,15 @@ def search_ticker():
                 partial_matches = []
                 for variant in variations:
                     matches = [
-                        {'symbol': ticker['symbol'], 'name': ticker['name'], 'source': 'local'}
+                        {'symbol': ticker['symbol'], 
+                         'name': ticker['name'], 
+                         'source': 'local',
+                         'type': 'ETF' if 'ETF' in ticker['name'].upper() else None}
                         for ticker in TICKERS
                         if (variant in ticker['symbol'].upper() or 
                             variant in ticker['name'].upper()) and 
                             ticker['symbol'] not in seen and
-                            ticker['symbol'].upper() != ticker['name'].upper() and  # Only add if symbol and name are different
+                            ticker['symbol'].upper() != ticker['name'].upper() and
                             not any(r['symbol'] == ticker['symbol'] for r in search_results)
                     ]
                     partial_matches.extend(matches)
