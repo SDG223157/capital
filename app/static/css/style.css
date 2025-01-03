@@ -418,6 +418,7 @@ footer p {
         position: static;
         text-align: center;
         margin-bottom: 0.5rem;
+        margin-top: 1.5rem;
     }
 
     .auth-links a {
