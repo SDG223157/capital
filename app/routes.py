@@ -169,27 +169,66 @@ def normalize_ticker(symbol):
         'ZT': 'ZT=F',       # 2-Year T-Note Futures
         
         # Currency
-        'EURODOLLAR': 'GE=F',  # Euro FX Futures
-        'GBPDOLLAR': '6B=F',   # British Pound Futures
-        'JPYDOLLAR': '6J=F',   # Japanese Yen Futures
-        'CADDOLLAR': '6C=F',   # Canadian Dollar Futures
-        'AUDDOLLAR': '6A=F',   # Australian Dollar Futures
-        'CHFDOLLAR': '6S=F',   # Swiss Franc Futures
-        'CNHDOLLAR': 'CNH=F',  # Offshore Chinese Yuan Futures
+        'EURODOLLAR': 'GE=F',  # Euro FX Futures (EU)
+        'GBPDOLLAR': '6B=F',   # British Pound Futures (UK)
+        'JPYDOLLAR': '6J=F',   # Japanese Yen Futures (Japan)
+        'CADDOLLAR': '6C=F',   # Canadian Dollar Futures (Canada)
+        'AUDDOLLAR': '6A=F',   # Australian Dollar Futures (Australia)
+        'CHFDOLLAR': '6S=F',   # Swiss Franc Futures (Switzerland)
+        'CNHDOLLAR': 'CNH=F',  # Offshore Chinese Yuan Futures (China)
+        'KRWDOLLAR': 'KRW=F',  # South Korean Won Futures (South Korea)
+        'INRDOLLAR': 'INR=F',  # Indian Rupee Futures (India)
+        'MXNDOLLAR': '6M=F',   # Mexican Peso Futures (Mexico)
+        'BRLdollar': 'BRL=F',  # Brazilian Real Futures (Brazil)
+        'SEKDOLLAR': 'SEK=F',  # Swedish Krona Futures (Sweden)
+        'NZDDOLLAR': '6N=F',   # New Zealand Dollar Futures (New Zealand)
+        'SGDDOLLAR': 'SGD=F',  # Singapore Dollar Futures (Singapore)
+        'HKDDOLLAR': 'HKD=F',  # Hong Kong Dollar Futures (Hong Kong)
+        'TWDDOLLAR': 'TWD=F',  # Taiwan Dollar Futures (Taiwan)
+        'RUBDOLLAR': 'RUB=F',  # Russian Ruble Futures (Russia)
+        'TRYDOLLAR': 'TRY=F',  # Turkish Lira Futures (Turkey)
+        'PLNDOLLAR': 'PLN=F',  # Polish Zloty Futures (Poland)
+        'IDRDOLLAR': 'IDR=F',  # Indonesian Rupiah Futures (Indonesia)
+        'ZAEDOLLAR': 'ZAR=F',  # South African Rand Futures (South Africa)
         
-        # Alternative search terms
-        'CRUDE': 'CL=F',       # Alternative for oil
-        'GAS': 'NG=F',         # Alternative for natural gas
-        'SOY': 'ZS=F',         # Alternative for soybean
+        # Alternative search terms for currencies
         'POUND': '6B=F',       # Alternative for GBP
+        'GBP': '6B=F',         # Alternative for British Pound
         'YEN': '6J=F',         # Alternative for JPY
+        'JPY': '6J=F',         # Alternative for Japanese Yen
         'EURO': 'GE=F',        # Alternative for EUR
+        'EUR': 'GE=F',         # Alternative for Euro
         'CAD': '6C=F',         # Alternative for Canadian Dollar
         'AUD': '6A=F',         # Alternative for Australian Dollar
         'CHF': '6S=F',         # Alternative for Swiss Franc
         'CNH': 'CNH=F',        # Alternative for Chinese Yuan
         'YUAN': 'CNH=F',       # Alternative for Chinese Yuan
-        'RMB': 'CNH=F'         # Alternative for Chinese Yuan
+        'RMB': 'CNH=F',        # Alternative for Chinese Yuan
+        'KRW': 'KRW=F',        # Alternative for Korean Won
+        'WON': 'KRW=F',        # Alternative for Korean Won
+        'INR': 'INR=F',        # Alternative for Indian Rupee
+        'RUPEE': 'INR=F',      # Alternative for Indian Rupee
+        'MXN': '6M=F',         # Alternative for Mexican Peso
+        'PESO': '6M=F',        # Alternative for Mexican Peso
+        'BRL': 'BRL=F',        # Alternative for Brazilian Real
+        'REAL': 'BRL=F',       # Alternative for Brazilian Real
+        'SEK': 'SEK=F',        # Alternative for Swedish Krona
+        'KRONA': 'SEK=F',      # Alternative for Swedish Krona
+        'NZD': '6N=F',         # Alternative for New Zealand Dollar
+        'KIWI': '6N=F',        # Alternative for New Zealand Dollar
+        'SGD': 'SGD=F',        # Alternative for Singapore Dollar
+        'HKD': 'HKD=F',        # Alternative for Hong Kong Dollar
+        'TWD': 'TWD=F',        # Alternative for Taiwan Dollar
+        'RUB': 'RUB=F',        # Alternative for Russian Ruble
+        'RUBLE': 'RUB=F',      # Alternative for Russian Ruble
+        'TRY': 'TRY=F',        # Alternative for Turkish Lira
+        'LIRA': 'TRY=F',       # Alternative for Turkish Lira
+        'PLN': 'PLN=F',        # Alternative for Polish Zloty
+        'ZLOTY': 'PLN=F',      # Alternative for Polish Zloty
+        'IDR': 'IDR=F',        # Alternative for Indonesian Rupiah
+        'RUPIAH': 'IDR=F',     # Alternative for Indonesian Rupiah
+        'ZAR': 'ZAR=F',        # Alternative for South African Rand
+        'RAND': 'ZAR=F'        # Alternative for South African Rand
     }
     
     # ETF and asset mappings
