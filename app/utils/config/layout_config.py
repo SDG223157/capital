@@ -69,7 +69,7 @@ CHART_STYLE = {
         'price': dict(width=3),
         'regression': dict(width=2, dash='dash'),
         'bands': dict(width=1),
-        'retracement': dict(width=1),
+        'retracement': dict(width=2, dash='dot'),
         'position': dict(width=2, dash='dot')
     },
     'marker_styles': {
