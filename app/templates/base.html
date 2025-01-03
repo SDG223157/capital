@@ -53,5 +53,21 @@
     </footer>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Find all flash messages
+            const flashMessages = document.querySelectorAll('.flash-message');
+            
+            // Make each message disappear after 3 seconds
+            flashMessages.forEach(function(message) {
+                setTimeout(function() {
+                    message.style.opacity = '0';
+                    setTimeout(function() {
+                        message.remove();
+                    }, 300); // Wait for fade out animation
+                }, 3000);
+            });
+        });
+        </script>
 </body>
 </html>

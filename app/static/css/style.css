@@ -606,3 +606,7 @@ input.error:focus {
     width: 20px;
     height: 20px;
 }
+
+.flash-message {
+    transition: opacity 0.3s ease-in-out;
+}
