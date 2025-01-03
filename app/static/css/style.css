@@ -452,7 +452,7 @@ input.error:focus {
 /* 10. Profile Page Styles */
 /* -------------------------------------- */
 .profile-container {
-    max-width: 900px;
+    max-width: 600px;
     margin: 2rem auto;
     padding: 2rem;
     background: white;
