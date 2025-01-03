@@ -117,13 +117,38 @@ def index():
 
 def normalize_ticker(symbol):
     """Normalize ticker symbols to their proper format."""
-    ticker_mappings = {
+    # Common index mappings
+    index_mappings = {
+        'HSI': '^HSI',    # Hang Seng Index
+        'GSPC': '^GSPC',  # S&P 500
+        'DJI': '^DJI',    # Dow Jones Industrial Average
+        'IXIC': '^IXIC',  # NASDAQ Composite
+        'N225': '^N225',  # Nikkei 225
+    }
+    
+    # ETF mappings
+    etf_mappings = {
         'NDQ': 'QQQ',    # NASDAQ-100 ETF
         'SPX': 'SPY',    # S&P 500 ETF
-        'DJI': 'DIA',    # Dow Jones ETF
+        'DJX': 'DIA',    # Dow Jones ETF
         'FTSE': 'ISF.L'  # FTSE 100 ETF
     }
-    return ticker_mappings.get(symbol, symbol)
+    
+    # Convert to uppercase for consistent matching
+    symbol = symbol.upper()
+    
+    # Remove '^' if present for checking
+    clean_symbol = symbol[1:] if symbol.startswith('^') else symbol
+    
+    # Check if it's a known index
+    if clean_symbol in index_mappings:
+        return index_mappings[clean_symbol]
+    
+    # Check ETF mappings
+    if clean_symbol in etf_mappings:
+        return etf_mappings[clean_symbol]
+        
+    return symbol
 
 @bp.route('/search_ticker', methods=['GET'])
 def search_ticker():
@@ -139,43 +164,20 @@ def search_ticker():
         normalized_query = normalize_ticker(query)
         
         # List of variations to try
-        variations = [query]
-        
-        # Add normalized version if different from query
+        variations = [normalized_query]  # Start with normalized query first
         if normalized_query != query:
-            variations.append(normalized_query)
+            variations.append(query)  # Add original query as backup
             
         logger.info(f"Trying ticker variations: {variations}")
-        
-        # Try each variation
-        found_base_match = False  # Flag to track if we found a match for the base ticker
+        found_base_match = False
         
         for variant in variations:
-            # Check for market-specific patterns first
-            exchange_suffix = None
-                  
-            # Shanghai Stock Exchange (.SS)
-            if (variant.startswith('60') or variant.startswith('68') or 
-                variant.startswith('5')) and len(variant) == 6:
-                exchange_suffix = '.SS'
-                
-            # Shenzhen Stock Exchange (.SZ)
-            elif (variant.startswith('00') or variant.startswith('3')) and len(variant) == 6:
-                exchange_suffix = '.SZ'
-                
-            # Hong Kong Exchange (.HK)
-            elif (variant.startswith('00') or 
-                  variant.startswith('0')) and len(variant) == 4:
-                exchange_suffix = '.HK'
-            elif len(variant) == 4 and variant.isdigit():
-                exchange_suffix = '.HK'
-
             # Try base variant first
             try:
                 is_valid, company_name = verify_ticker(variant)
                 
                 if is_valid:
-                    found_base_match = True  # Set flag if we find a valid match
+                    found_base_match = True
                     
                     # If symbol exists in TICKER_DICT, use that name instead
                     if variant in TICKER_DICT:
@@ -185,54 +187,34 @@ def search_ticker():
                         result = {
                             'symbol': variant,
                             'name': company_name,
-                            'source': 'verified'
+                            'source': 'verified',
+                            'type': 'Index' if variant.startswith('^') else None
                         }
                         search_results.append(result)
-                        logger.info(f"Found verified stock: {variant}")
+                        logger.info(f"Found verified stock/index: {variant}")
+                        break  # Break after finding a valid match
             except Exception as e:
                 logger.warning(f"Error checking base symbol {variant}: {str(e)}")
 
-            # Only try exchange suffix if no base match found
-            if not found_base_match and exchange_suffix:
-                symbol_with_suffix = f"{variant}{exchange_suffix}"
-                try:
-                    is_valid, company_name = verify_ticker(symbol_with_suffix)
-                    
-                    if is_valid:
-                        # If symbol exists in TICKER_DICT, use that name instead
-                        if symbol_with_suffix in TICKER_DICT:
-                            company_name = TICKER_DICT[symbol_with_suffix]
-                        
-                        if symbol_with_suffix.upper() != company_name.upper():  # Only add if symbol and name are different
+            # Check for exchange-specific patterns if no match found
+            if not found_base_match and variant[0].isdigit():
+                # Handle Hong Kong stocks
+                if len(variant) == 4 and variant.isdigit():
+                    symbol_with_suffix = f"{variant}.HK"
+                    try:
+                        is_valid, company_name = verify_ticker(symbol_with_suffix)
+                        if is_valid:
+                            if symbol_with_suffix in TICKER_DICT:
+                                company_name = TICKER_DICT[symbol_with_suffix]
                             search_results.append({
                                 'symbol': symbol_with_suffix,
                                 'name': company_name,
                                 'source': 'verified'
                             })
-                            logger.info(f"Found verified stock with suffix: {symbol_with_suffix}")
-                except Exception as e:
-                    logger.warning(f"Error checking symbol with suffix {symbol_with_suffix}: {str(e)}")
-
-            # Only try "^" prefix if no matches found and ticker doesn't start with a number
-            if not found_base_match and not variant[0].isdigit() and not variant.startswith('^'):
-                prefixed_variant = f"^{variant}"
-                try:
-                    is_valid, company_name = verify_ticker(prefixed_variant)
-                    
-                    if is_valid:
-                        # If symbol exists in TICKER_DICT, use that name instead
-                        if prefixed_variant in TICKER_DICT:
-                            company_name = TICKER_DICT[prefixed_variant]
-                        
-                        if prefixed_variant.upper() != company_name.upper():  # Only add if symbol and name are different
-                            search_results.append({
-                                'symbol': prefixed_variant,
-                                'name': company_name,
-                                'source': 'verified'
-                            })
-                            logger.info(f"Found verified stock with prefix: {prefixed_variant}")
-                except Exception as e:
-                    logger.warning(f"Error checking prefixed symbol {prefixed_variant}: {str(e)}")
+                            logger.info(f"Found verified Hong Kong stock: {symbol_with_suffix}")
+                            break
+                    except Exception as e:
+                        logger.warning(f"Error checking HK symbol: {str(e)}")
         
         # Remove duplicates while preserving order
         seen = set()
@@ -250,7 +232,10 @@ def search_ticker():
                 partial_matches = []
                 for variant in variations:
                     matches = [
-                        {'symbol': ticker['symbol'], 'name': ticker['name'], 'source': 'local'}
+                        {'symbol': ticker['symbol'], 
+                         'name': ticker['name'], 
+                         'source': 'local',
+                         'type': 'Index' if ticker['symbol'].startswith('^') else None}
                         for ticker in TICKERS
                         if (variant in ticker['symbol'].upper() or 
                             variant in ticker['name'].upper()) and 
