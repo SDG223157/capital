@@ -8,7 +8,7 @@
     <!-- Add minimal styles just for the title -->
     <style>
         h1 {
-            font-size: 2.0rem;
+            font-size: 2.2rem;
             font-weight: 800;
             background: linear-gradient(45deg, #22d3ee, #818cf8);
             -webkit-background-clip: text;
@@ -19,8 +19,10 @@
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             letter-spacing: -0.025em;
         }
+
         .title-space {
-            margin: 0 1rem;  /* Increase/decrease 1rem to adjust spacing */
+            margin: 0 1rem;  /* Adds space between words */
+            display: inline-block;
         }
     </style>
 </head>
@@ -48,7 +50,7 @@
                     <a href="{{ url_for('auth.register') }}" class="nav-link">Register</a>
                 {% endif %}
             </nav>
-            <h1>TrendWise Finance</h1>
+            <h1>TrendWise<span class="title-space"></span>Finance</h1>
         </div>
     </header>
 
