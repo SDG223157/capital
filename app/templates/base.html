@@ -5,6 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}TrendWise Finance{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Add minimal styles just for the title -->
+    <style>
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(45deg, #22d3ee, #818cf8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-align: center;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            letter-spacing: -0.025em;
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -68,6 +83,6 @@
                 }, 3000);
             });
         });
-        </script>
+    </script>
 </body>
 </html>
