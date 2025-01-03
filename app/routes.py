@@ -119,38 +119,107 @@ def normalize_ticker(symbol):
     """Normalize ticker symbols to their proper format."""
     # Common index mappings
     index_mappings = {
-        'HSI': '^HSI',    # Hang Seng Index
-        'GSPC': '^GSPC',  # S&P 500
-        'DJI': '^DJI',    # Dow Jones Industrial Average
-        'IXIC': '^IXIC',  # NASDAQ Composite
-        'N225': '^N225',  # Nikkei 225
+        'HSI': '^HSI',     # Hang Seng Index
+        'GSPC': '^GSPC',   # S&P 500
+        'DJI': '^DJI',     # Dow Jones Industrial Average
+        'IXIC': '^IXIC',   # NASDAQ Composite
+        'N225': '^N225',   # Nikkei 225
+        'FTSE': '^FTSE',   # FTSE 100 Index
     }
     
-    # ETF and crypto mappings
+    # Futures mappings
+    futures_mappings = {
+        # Metals
+        'GOLD': 'GC=F',     # Gold Futures
+        'SILVER': 'SI=F',    # Silver Futures
+        'COPPER': 'HG=F',    # Copper Futures
+        'PLATINUM': 'PL=F',  # Platinum Futures
+        'PALLADIUM': 'PA=F', # Palladium Futures
+        
+        # Energy
+        'OIL': 'CL=F',      # Crude Oil Futures
+        'BRENT': 'BZ=F',    # Brent Crude Oil Futures
+        'NATGAS': 'NG=F',   # Natural Gas Futures
+        'HEATOIL': 'HO=F',  # Heating Oil Futures
+        'GASOLINE': 'RB=F',  # RBOB Gasoline Futures
+        
+        # Agriculture
+        'CORN': 'ZC=F',     # Corn Futures
+        'WHEAT': 'ZW=F',    # Wheat Futures
+        'SOYBEAN': 'ZS=F',  # Soybean Futures
+        'COFFEE': 'KC=F',   # Coffee Futures
+        'SUGAR': 'SB=F',    # Sugar Futures
+        'COTTON': 'CT=F',   # Cotton Futures
+        'COCOA': 'CC=F',    # Cocoa Futures
+        'LUMBER': 'LBS=F',  # Lumber Futures
+        'CATTLE': 'LE=F',   # Live Cattle Futures
+        'HOGS': 'HE=F',     # Lean Hogs Futures
+        
+        # Financial
+        'ES': 'ES=F',       # E-mini S&P 500 Futures
+        'NQ': 'NQ=F',       # E-mini NASDAQ 100 Futures
+        'RTY': 'RTY=F',     # E-mini Russell 2000 Futures
+        'YM': 'YM=F',       # E-mini Dow Futures
+        'VIX': 'VX=F',      # VIX Futures
+        
+        # Bonds/Rates
+        'ZB': 'ZB=F',       # U.S. Treasury Bond Futures
+        'ZN': 'ZN=F',       # 10-Year T-Note Futures
+        'ZF': 'ZF=F',       # 5-Year T-Note Futures
+        'ZT': 'ZT=F',       # 2-Year T-Note Futures
+        
+        # Currency
+        'EURODOLLAR': 'GE=F',  # Euro FX Futures
+        'GBPDOLLAR': '6B=F',   # British Pound Futures
+        'JPYDOLLAR': '6J=F',   # Japanese Yen Futures
+        'CADDOLLAR': '6C=F',   # Canadian Dollar Futures
+        'AUDDOLLAR': '6A=F',   # Australian Dollar Futures
+        'CHFDOLLAR': '6S=F',   # Swiss Franc Futures
+        
+        # Alternative search terms
+        'CRUDE': 'CL=F',       # Alternative for oil
+        'GAS': 'NG=F',         # Alternative for natural gas
+        'SOY': 'ZS=F',         # Alternative for soybean
+        'POUND': '6B=F',       # Alternative for GBP
+        'YEN': '6J=F',         # Alternative for JPY
+        'EURO': 'GE=F',        # Alternative for EUR
+        'CAD': '6C=F',         # Alternative for Canadian Dollar
+        'AUD': '6A=F',         # Alternative for Australian Dollar
+        'CHF': '6S=F'          # Alternative for Swiss Franc
+    }
+    
+    # ETF and asset mappings
     asset_mappings = {
         'NDQ': ['QQQ'],               # NASDAQ-100 ETF
         'SPX': ['SPY'],               # S&P 500 ETF
         'DJX': ['DIA'],               # Dow Jones ETF
-        'FTSE': ['ISF.L'],            # FTSE 100 ETF
+        'FTSE': ['ISF.L', '^FTSE'],   # FTSE 100 ETF and Index
         'BTC': ['BTC-USD', 'BTC'],    # Bitcoin price and BTC Trust
         'ETH': ['ETH-USD', 'ETHE'],   # Ethereum and its ETF
+        'GOLD': ['GC=F', 'GLD'],      # Gold Futures and Gold ETF
     }
     
     # Convert to uppercase for consistent matching
     symbol = symbol.upper()
-    
-    # Remove '^' if present for checking
     clean_symbol = symbol[1:] if symbol.startswith('^') else symbol
+    
+    # Get all variations for the symbol
+    variations = []
+    
+    # Check futures first (for commodities)
+    if clean_symbol in futures_mappings:
+        variations.append(futures_mappings[clean_symbol])
     
     # Check if it's a known index
     if clean_symbol in index_mappings:
-        return [index_mappings[clean_symbol]]
+        variations.append(index_mappings[clean_symbol])
     
     # Check asset mappings for multiple variations
     if clean_symbol in asset_mappings:
-        return asset_mappings[clean_symbol]
+        variations.extend(asset_mappings[clean_symbol])
         
-    return [symbol]
+    # If no mappings found, return original symbol
+    return variations if variations else [symbol]
 
 @bp.route('/search_ticker', methods=['GET'])
 def search_ticker():
@@ -164,11 +233,12 @@ def search_ticker():
         
         # Get normalized variations
         normalized_queries = normalize_ticker(query)
+        logger.info(f"Normalized variations: {normalized_queries}")
         
         # List to store seen symbols for deduplication
         seen_symbols = set()
         
-        # First check local TICKERS for exact matches to ensure ETF appears
+        # First check local TICKERS for exact matches
         for ticker in TICKERS:
             if ticker['symbol'].upper() == query or ticker['symbol'].upper() in normalized_queries:
                 if ticker['symbol'] not in seen_symbols:
@@ -177,9 +247,9 @@ def search_ticker():
                         'symbol': ticker['symbol'],
                         'name': ticker['name'],
                         'source': 'local',
-                        'type': 'ETF' if 'ETF' in ticker['name'] or 'TRUST' in ticker['name'] else None
+                        'type': determine_asset_type(ticker['symbol'], ticker['name'])
                     })
-                    logger.info(f"Found local ETF match: {ticker['symbol']}")
+                    logger.info(f"Found local match: {ticker['symbol']}")
         
         # Then try each normalized variation with yfinance
         for variant in normalized_queries:
@@ -247,6 +317,8 @@ def determine_asset_type(symbol: str, name: str) -> str:
         return 'ETF'
     elif any(term in name for term in ['BITCOIN', 'ETH', 'CRYPTO']):
         return 'Crypto'
+    elif '=F' in symbol:
+        return 'Futures'
     return None
 
 @bp.route('/quick_analyze', methods=['POST'])
