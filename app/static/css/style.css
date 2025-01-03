@@ -339,30 +339,31 @@ input[type="text"]::placeholder {
 /* -------------------------------------- */
 /* 5. Auth Links */
 /* -------------------------------------- */
+.auth-container {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 2rem;
+    position: relative;
+}
+
 .auth-links {
-    /*
-       Originally was absolute + top/right, then replaced with flex.
-       By cascade, we end up with them combined unless you remove the
-       old absolute positioning manually.
-    */
-    position: absolute;
-    top: 2rem;
-    right: 2rem;
+    position: relative;  /* Changed from absolute */
+    margin-top: 2rem;   /* Add space between form and link */
+    margin-left: 0;     /* Align to the left */
     display: flex;
     gap: 1rem;
 }
 
 .auth-links a {
-    color: white;
+    color: #1a237e;     /* Match the header color */
     text-decoration: none;
-    margin-left: 1rem;
     font-size: 0.9rem;
 }
 
 .auth-links a:hover {
     text-decoration: underline;
 }
-
 /* -------------------------------------- */
 /* 6. Footer */
 /* -------------------------------------- */
@@ -417,7 +418,7 @@ footer p {
     .auth-links {
         position: static;
         text-align: center;
-        margin-bottom: 1rem;
+        margin-bottom: 1.5rem;
     }
 
     .auth-links a {
