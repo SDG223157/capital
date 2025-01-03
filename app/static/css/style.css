@@ -368,7 +368,7 @@ input[type="text"]::placeholder {
 /* 6. Footer */
 /* -------------------------------------- */
 footer {
-    background-color: #333;
+    background-color:#1a237e;
     color: white;
     text-align: right;
     padding: 1rem;
