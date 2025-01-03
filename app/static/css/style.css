@@ -346,8 +346,8 @@ input[type="text"]::placeholder {
        old absolute positioning manually.
     */
     position: absolute;
-    top: 1rem;
-    right: 1rem;
+    top: 2rem;
+    right: 2rem;
     display: flex;
     gap: 1rem;
 }
