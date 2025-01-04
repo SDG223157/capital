@@ -265,7 +265,6 @@ def normalize_ticker(symbol):
     # If no mappings found, return original symbol
     return variations if variations else [symbol]
 
-
 @bp.route('/search_ticker', methods=['GET'])
 def search_ticker():
     query = request.args.get('query', '').upper()
@@ -276,60 +275,106 @@ def search_ticker():
         search_results = []
         logger.info(f"Searching for ticker: {query}")
         
-        # Get normalized variations
-        variations = normalize_ticker(query)
-        logger.info(f"Normalized variations: {variations}")
+        # List of variations to try
+        variations = [query]
         
-        # Track seen symbols
-        seen_symbols = set()
+        # Process exchange suffixes first
+        exchange_suffix = None
         
-        # Try each variation
-        for variant in variations:
-            if variant not in seen_symbols:
-                try:
-                    is_valid, company_name = verify_ticker(variant)
-                    
-                    if is_valid:
-                        # If symbol exists in TICKER_DICT, use that name instead
-                        if variant in TICKER_DICT:
-                            company_name = TICKER_DICT[variant]
-                            
-                        if variant.upper() != company_name.upper():  # Only add if symbol and name are different
-                            result = {
-                                'symbol': variant,
-                                'name': company_name,
-                                'source': 'verified',
-                                'type': determine_asset_type(variant, company_name)
-                            }
-                            search_results.append(result)
-                            seen_symbols.add(variant)
-                            logger.info(f"Found verified asset: {variant}")
-                except Exception as e:
-                    logger.warning(f"Error checking symbol {variant}: {str(e)}")
-        
-        # If no results found or few results, try local search
-        if len(search_results) < 5:
-            partial_matches = []
-            for ticker in TICKERS:
-                if (query in ticker['symbol'].upper() or 
-                    query in ticker['name'].upper()) and \
-                    ticker['symbol'] not in seen_symbols and \
-                    ticker['symbol'].upper() != ticker['name'].upper():
-                    
-                    partial_matches.append({
-                        'symbol': ticker['symbol'],
-                        'name': ticker['name'],
-                        'source': 'local',
-                        'type': determine_asset_type(ticker['symbol'], ticker['name'])
-                    })
+        # Shanghai Stock Exchange (.SS)
+        if (query.startswith('60') or query.startswith('68') or 
+            query.startswith('51') or query.startswith('56') or
+            query.startswith('58')) and len(query) == 6:
+            exchange_suffix = '.SS'
             
-            # Add partial matches up to limit
-            for match in partial_matches:
-                if match['symbol'] not in seen_symbols:
-                    seen_symbols.add(match['symbol'])
-                    search_results.append(match)
-                    if len(search_results) >= 5:
-                        break
+        # Shenzhen Stock Exchange (.SZ)
+        elif (query.startswith('00') or query.startswith('30')) and len(query) == 6:
+            exchange_suffix = '.SZ'
+            
+        # Hong Kong Exchange (.HK)
+        elif len(query) == 4 and query.isdigit():
+            exchange_suffix = '.HK'
+
+        # Check with exchange suffix if applicable
+        if exchange_suffix:
+            symbol_to_check = f"{query}{exchange_suffix}"
+            is_valid, company_name = verify_ticker(symbol_to_check)
+            
+            if is_valid:
+                # If symbol exists in TICKER_DICT, use that name instead
+                if symbol_to_check in TICKER_DICT:
+                    company_name = TICKER_DICT[symbol_to_check]
+                
+                if symbol_to_check.upper() != company_name.upper():  # Only add if symbol and name are different
+                    search_results.append({
+                        'symbol': symbol_to_check,
+                        'name': company_name,
+                        'source': 'verified',
+                        'type': determine_asset_type(symbol_to_check, company_name)
+                    })
+                    logger.info(f"Found verified stock: {symbol_to_check}")
+        
+        # If no results from exchange suffix, try normalized variations
+        if not search_results:
+            normalized_variations = normalize_ticker(query)
+            variations.extend([v for v in normalized_variations if v != query])
+            
+            for variant in variations:
+                if variant != f"{query}{exchange_suffix}":  # Skip if already checked with exchange suffix
+                    try:
+                        is_valid, company_name = verify_ticker(variant)
+                        if is_valid:
+                            # If symbol exists in TICKER_DICT, use that name instead
+                            if variant in TICKER_DICT:
+                                company_name = TICKER_DICT[variant]
+                                
+                            if variant.upper() != company_name.upper():  # Only add if symbol and name are different
+                                result = {
+                                    'symbol': variant,
+                                    'name': company_name,
+                                    'source': 'verified',
+                                    'type': determine_asset_type(variant, company_name)
+                                }
+                                search_results.append(result)
+                                logger.info(f"Found verified asset: {variant}")
+                    except Exception as e:
+                        logger.warning(f"Error checking symbol {variant}: {str(e)}")
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_results = []
+        for result in search_results:
+            if result['symbol'] not in seen:
+                seen.add(result['symbol'])
+                unique_results.append(result)
+        search_results = unique_results
+                
+        # Only proceed with local search if no verified stock was found
+        if not search_results:
+            # Add partial matches from local data
+            if len(search_results) < 5:
+                partial_matches = []
+                for variant in variations:
+                    matches = [
+                        {'symbol': ticker['symbol'], 
+                         'name': ticker['name'], 
+                         'source': 'local',
+                         'type': determine_asset_type(ticker['symbol'], ticker['name'])}
+                        for ticker in TICKERS
+                        if (variant in ticker['symbol'].upper() or 
+                            variant in ticker['name'].upper()) and 
+                            ticker['symbol'] not in seen and
+                            ticker['symbol'].upper() != ticker['name'].upper()
+                    ]
+                    partial_matches.extend(matches)
+                
+                # Add partial matches up to limit
+                for match in partial_matches:
+                    if match['symbol'] not in seen:
+                        seen.add(match['symbol'])
+                        search_results.append(match)
+                        if len(search_results) >= 5:
+                            break
             
         return jsonify(search_results[:5])
         
@@ -337,23 +382,30 @@ def search_ticker():
         logger.error(f"Search error: {str(e)}")
         return jsonify([])
 
-
 def determine_asset_type(symbol: str, name: str) -> str:
     """Determine the type of asset based on symbol and name."""
     symbol = symbol.upper()
     name = name.upper()
     
-    if symbol.startswith('^'):
+    if symbol.endswith('.HK'):
+        return 'Hong Kong Stock'
+    elif symbol.endswith('.SS'):
+        return 'Shanghai Stock'
+    elif symbol.endswith('.SZ'):
+        return 'Shenzhen Stock'
+    elif symbol.startswith('^'):
         return 'Index'
+    elif symbol.endswith('=F'):
+        return 'Futures'
     elif '-USD' in symbol:
         return 'Crypto'
-    elif 'ETF' in name or 'TRUST' in name:
+    elif 'ETF' in name:
         return 'ETF'
-    elif any(term in name for term in ['BITCOIN', 'ETH', 'CRYPTO']):
-        return 'Crypto'
-    elif '=F' in symbol:
-        return 'Futures'
+    elif 'TRUST' in name:
+        return 'Trust'
     return None
+
+
 
 @bp.route('/quick_analyze', methods=['POST'])
 def quick_analyze():
