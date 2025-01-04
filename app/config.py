@@ -17,10 +17,10 @@ class Config:
     TESTING = False
     # Google OAuth configuration
      # Google OAuth config
-    GOOGLE_CLIENT_ID = "178454917807-ivou0uehjcamas4s4p2qsjhbf218ks43.apps.googleusercontent.com"
+    GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
     GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
-    GOOGLE_REDIRECT_URI = "https://cfa187260.biz/auth/google/callback"  # Updated to match exactly
-    SERVER_NAME = "cfa187260.biz"
+    GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI')
+    SERVER_NAME = os.getenv('SERVER_NAME')
     PREFERRED_URL_SCHEME = "https"
     # OAuth redirect URI
     GOOGLE_REDIRECT_URI = f"{PREFERRED_URL_SCHEME}://{SERVER_NAME}/auth/google/callback"
