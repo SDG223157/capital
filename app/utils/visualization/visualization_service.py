@@ -127,7 +127,7 @@ class VisualizationService:
 
     @staticmethod
     def _create_analysis_summary_table(days, end_price, annual_return, 
-                                    daily_volatility, annualized_volatility, r2, regression_formula):
+                                    daily_volatility, annualized_volatility, r2, regression_formula, final_score):
         """Create the analysis summary table with colored formula and R²"""
         try:
             equation_parts = regression_formula.split('=')
@@ -160,19 +160,20 @@ class VisualizationService:
             cells=dict(
                 values=[
                     ['Regression Formula', 'Regression R²', 'Current Price', 'Annualized Return', 
-                    'Annual Volatility'],
+                    'Annual Volatility',"Final Score"],
                     [
                         regression_formula,
                         f"{r2:.4f}",
                         f"${end_price:.2f}",
                         f"{annual_return:.2f}%",
-                        f"{annualized_volatility:.3f}"
+                        f"{annualized_volatility:.3f}",
+                        f"{final_score:.1f}"
                     ]
                 ],
                 font=dict(
                     color=[
-                        ['black', 'black', 'black', 'black', 'black'],  # Colors for first column
-                        [formula_color, r2_color, 'black', 'black', 'black']  # Colors for second column
+                        ['black', 'black', 'black', 'black', 'black', 'black'],  # Colors for first column
+                        [formula_color, r2_color, 'black', 'black', 'black', 'black']  # Colors for second column
                     ]
                 ),
                 **{k: v for k, v in TABLE_STYLE['cells'].items() if k != 'font'}  # Exclude font from TABLE_STYLE
@@ -496,7 +497,8 @@ class VisualizationService:
             daily_volatility=daily_volatility,
             annualized_volatility=annualized_volatility,
             r2=regression_results['r2'],
-            regression_formula=regression_results['equation']
+            regression_formula=regression_results['equation'],
+            final_score=regression_results['total_score']['score']
         )
         fig.add_trace(analysis_table)
 

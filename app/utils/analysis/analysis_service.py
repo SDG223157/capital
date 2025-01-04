@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
+from app.utils.data.data_service import DataService
 
 class AnalysisService:
     @staticmethod
@@ -60,60 +61,167 @@ class AnalysisService:
         equation = "ln(y) = " + " ".join(terms)
         return equation
 
+    
     @staticmethod
     def perform_polynomial_regression(data, future_days=180):
-        """Perform polynomial regression analysis"""
-        # Transform to log scale
-        data['Log_Close'] = np.log(data['Close'])
-        
-        # Prepare data
-        scale = 1
-        X = (data.index - data.index[0]).days.values.reshape(-1, 1)
-        y = data['Log_Close'].values
-        X_scaled = X / (np.max(X) * scale)
-        
-        # Polynomial regression
-        poly_features = PolynomialFeatures(degree=2)
-        X_poly = poly_features.fit_transform(X_scaled)
-        model = LinearRegression()
-        model.fit(X_poly, y)
-        
-        # Generate predictions
-        X_future = np.arange(len(data) + future_days).reshape(-1, 1)
-        X_future_scaled = X_future / np.max(X) * scale
-        X_future_poly = poly_features.transform(X_future_scaled)
-        y_pred_log = model.predict(X_future_poly)
-        
-        # Transform predictions back
-        y_pred = np.exp(y_pred_log)
-        
-        # Calculate confidence bands
-        residuals = y - model.predict(X_poly)
-        std_dev = np.std(residuals)
-        y_pred_upper = np.exp(y_pred_log + 2 * std_dev)
-        y_pred_lower = np.exp(y_pred_log - 2 * std_dev)
-        
-        # Calculate metrics
-        r2 = r2_score(y, model.predict(X_poly))
-        coef = model.coef_
-        intercept = model.intercept_
-        max_x = np.max(X)
-        
-        # Format equation
-        equation = AnalysisService.format_regression_equation(coef, intercept, max_x)
-        
-        return {
-            'predictions': y_pred,
-            'upper_band': y_pred_upper,
-            'lower_band': y_pred_lower,
-            'r2': r2,
-            'coefficients': coef,
-            'intercept': intercept,
-            'std_dev': std_dev,
-            'equation': equation,
-            'max_x': max_x
-        }
-
+        """Perform polynomial regression analysis and calculate scoring"""
+        try:
+            # Transform to log scale
+            data['Log_Close'] = np.log(data['Close'])
+            
+            # Prepare data
+            scale = 1
+            X = (data.index - data.index[0]).days.values.reshape(-1, 1)
+            y = data['Log_Close'].values
+            X_scaled = X / (np.max(X) * scale)
+            
+            # Polynomial regression
+            poly_features = PolynomialFeatures(degree=2)
+            X_poly = poly_features.fit_transform(X_scaled)
+            model = LinearRegression()
+            model.fit(X_poly, y)
+            
+            # Generate predictions
+            X_future = np.arange(len(data) + future_days).reshape(-1, 1)
+            X_future_scaled = X_future / np.max(X) * scale
+            X_future_poly = poly_features.transform(X_future_scaled)
+            y_pred_log = model.predict(X_future_poly)
+            
+            # Transform predictions back
+            y_pred = np.exp(y_pred_log)
+            
+            # Calculate confidence bands
+            residuals = y - model.predict(X_poly)
+            std_dev = np.std(residuals)
+            y_pred_upper = np.exp(y_pred_log + 2 * std_dev)
+            y_pred_lower = np.exp(y_pred_log - 2 * std_dev)
+            
+            # Calculate metrics
+            r2 = r2_score(y, model.predict(X_poly))
+            coef = model.coef_
+            intercept = model.intercept_
+            max_x = np.max(X)
+            
+            # Format equation
+            equation = AnalysisService.format_regression_equation(coef, intercept, max_x)
+            
+            # Calculate returns for scoring
+            returns = data['Close'].pct_change().dropna()
+            annual_return = returns.mean() * 252
+            annual_volatility = returns.std() * np.sqrt(252)
+            
+            # Get S&P 500 benchmark data using DataService
+            data_service = DataService()
+            end_date = datetime.now().strftime('%Y-%m-%d')
+            start_date = (datetime.now() - timedelta(days=2*365)).strftime('%Y-%m-%d')
+            
+            sp500_data = data_service.get_historical_data('^GSPC', start_date, end_date)
+            
+            if sp500_data is None or sp500_data.empty:
+                # Fallback to default parameters if can't get SP500 data
+                sp500_params = {
+                    'quad_coef': -0.1134,
+                    'linear_coef': 0.4700,
+                    'r_squared': 0.9505,
+                    'annual_return': 0.2384,
+                    'annual_volatility': 0.125
+                }
+            else:
+                # Calculate SP500 parameters
+                sp500_log = np.log(sp500_data['Close'])
+                sp500_X = (sp500_data.index - sp500_data.index[0]).days.values.reshape(-1, 1)
+                sp500_X_scaled = sp500_X / np.max(sp500_X)
+                
+                sp500_poly = poly_features.fit_transform(sp500_X_scaled)
+                sp500_model = LinearRegression()
+                sp500_model.fit(sp500_poly, sp500_log)
+                
+                sp500_returns = sp500_data['Close'].pct_change().dropna()
+                
+                sp500_params = {
+                    'quad_coef': sp500_model.coef_[2],
+                    'linear_coef': sp500_model.coef_[1],
+                    'r_squared': r2_score(sp500_log, sp500_model.predict(sp500_poly)),
+                    'annual_return': sp500_returns.mean() * 252,
+                    'annual_volatility': sp500_returns.std() * np.sqrt(252)
+                }
+            
+            # Calculate component scores
+            def score_trend(value, benchmark):
+                ratio = abs(value / benchmark)
+                if ratio >= 1.25: return 100
+                if ratio >= 1.10: return 80
+                if ratio >= 0.90: return 60
+                if ratio >= 0.75: return 40
+                return 20
+            
+            def score_metric(value, benchmark, thresholds, reverse=False):
+                if reverse:
+                    if value <= benchmark * 0.8: return 100
+                    if value <= benchmark: return 80
+                    if value <= benchmark * 1.2: return 60
+                    if value <= benchmark * 1.4: return 40
+                    return 20
+                else:
+                    if value >= benchmark * 1.2: return 100
+                    if value >= benchmark: return 80
+                    if value >= benchmark * 0.8: return 60
+                    if value >= benchmark * 0.6: return 40
+                    return 20
+            
+            # Calculate scores
+            quad_score = score_trend(coef[2], sp500_params['quad_coef'])
+            linear_score = score_trend(coef[1], sp500_params['linear_coef'])
+            trend_score = quad_score * 0.4 + linear_score * 0.6
+            
+            r2_score = score_metric(r2, sp500_params['r_squared'], [0.95, 0.90, 0.85])
+            return_score = score_metric(annual_return, sp500_params['annual_return'], [1.2, 0.8, 0.6])
+            vol_score = score_metric(annual_volatility, sp500_params['annual_volatility'], [0.8, 1.2, 1.4], True)
+            
+            # Calculate final score
+            weights = {'trend': 0.35, 'r2': 0.20, 'return': 0.25, 'volatility': 0.20}
+            final_score = (
+                trend_score * weights['trend'] +
+                r2_score * weights['r2'] +
+                return_score * weights['return'] +
+                vol_score * weights['volatility']
+            )
+            
+            # Determine rating
+            if final_score >= 90: rating = 'Excellent'
+            elif final_score >= 75: rating = 'Very Good'
+            elif final_score >= 60: rating = 'Good'
+            elif final_score >= 40: rating = 'Fair'
+            else: rating = 'Poor'
+            
+            return {
+                'predictions': y_pred,
+                'upper_band': y_pred_upper,
+                'lower_band': y_pred_lower,
+                'r2': r2,
+                'coefficients': coef,
+                'intercept': intercept,
+                'std_dev': std_dev,
+                'equation': equation,
+                'max_x': max_x,
+                'total_score': {
+                    'score': final_score,
+                    'rating': rating,
+                    'components': {
+                        'trend': {'score': trend_score, 'quad': quad_score, 'linear': linear_score},
+                        'r2': r2_score,
+                        'return': return_score,
+                        'volatility': vol_score
+                    },
+                    'benchmarks': sp500_params
+                }
+            }
+            
+        except Exception as e:
+            print(f"Error in polynomial regression: {str(e)}")
+            return None
+    
+    
     @staticmethod
     def calculate_growth_rates(df):
         """Calculate period-over-period growth rates for financial metrics"""
