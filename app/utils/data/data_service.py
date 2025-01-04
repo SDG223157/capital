@@ -213,7 +213,7 @@ class DataService:
         
         try:
             # First try to get data from database
-            if "^" in ticker or "-" in ticker:
+            if "^" in ticker or "-" in ticker or "=" in ticker:
                 return None
             # if company_name:
             # # Check for excluded terms using regex (case insensitive)
