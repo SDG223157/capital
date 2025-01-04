@@ -245,7 +245,7 @@ class AnalysisService:
                 vol_score = score_metric(annual_volatility, sp500_params['annual_volatility'], [0.8, 1.2, 1.4], True)
 
                 # Calculate final score
-                weights = {'trend': 0.4, 'r2': 0.20, 'return': 0.25, 'volatility': 0.15}
+                weights = {'trend': 0.35, 'r2': 0.15, 'return': 0.35, 'volatility': 0.15}
                 final_score = (
                     trend_score * weights['trend'] +
                     r2_score_val * weights['r2'] +
