@@ -56,10 +56,28 @@ class DataService:
     def clean_ticker_for_table_name(self, ticker: str) -> str:
         """
         Clean ticker symbol for use in table name.
-        Removes '.', '^', and '-' characters.
+        Removes special characters and converts to valid table name format.
+        
+        Parameters:
+        -----------
+        ticker : str
+            Original ticker symbol
+        
+        Returns:
+        --------
+        str
+            Cleaned ticker symbol safe for use in table names
         """
-        return ticker.replace('.', '').replace('^', '').replace('-', '').lower()
-    
+        # Replace any non-alphanumeric characters with underscore
+        cleaned = ''.join(c if c.isalnum() else '_' for c in ticker)
+        # Remove leading/trailing underscores
+        cleaned = cleaned.strip('_')
+        # Convert to lowercase
+        cleaned = cleaned.lower()
+        # If the cleaned string is empty, use a default
+        if not cleaned:
+            cleaned = 'unknown'
+        return cleaned
     
     def get_historical_data(self, ticker: str, start_date: str, end_date: str) -> pd.DataFrame:
         """
