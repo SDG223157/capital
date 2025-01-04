@@ -174,7 +174,7 @@ class VisualizationService:
                 font=dict(
                     color=[
                         ['black', 'black', 'black', 'black', 'black', 'black'],  # Colors for first column
-                        [formula_color, r2_color, 'black', 'black', 'black']  # Colors for second column
+                        [ 'black',formula_color, r2_color, 'black', 'black']  # Colors for second column
                     ]
                 ),
                 **{k: v for k, v in TABLE_STYLE['cells'].items() if k != 'font'}  # Exclude font from TABLE_STYLE
