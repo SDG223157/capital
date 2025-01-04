@@ -398,13 +398,17 @@ def determine_asset_type(symbol: str, name: str) -> str:
     elif symbol.endswith('=F'):
         return 'Futures'
     elif '-USD' in symbol:
-        return 'Crypto'
+        if symbol[:-4] in ['BTC', 'ETH', 'SOL', 'DOGE', 'XRP', 'ADA', 'DOT']:
+            return 'Crypto'
+        else:
+            return 'Currency'
+    elif any(currency in symbol for currency in ['HKD', 'CNH', 'JPY', 'EUR', 'GBP', 'AUD', 'CAD', 'CHF']):
+        return 'Currency'
     elif 'ETF' in name:
         return 'ETF'
     elif 'TRUST' in name:
         return 'Trust'
     return None
-
 
 
 @bp.route('/quick_analyze', methods=['POST'])
