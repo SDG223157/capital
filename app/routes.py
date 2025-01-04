@@ -115,6 +115,7 @@ def index():
     today = datetime.now().strftime('%Y-%m-%d')
     return render_template('index.html', now=datetime.now(), max_date=today)
 
+
 def normalize_ticker(symbol):
     """Normalize ticker symbols to their proper format."""
     # Common index mappings

@@ -159,21 +159,22 @@ class VisualizationService:
             ),
             cells=dict(
                 values=[
-                    ['Regression Formula', 'Regression R²', 'Current Price', 'Annualized Return', 
-                    'Annual Volatility',"Final Score"],
+                    ["Final Score",'Regression Formula', 'Regression R²', 'Current Price', 'Annualized Return', 
+                    'Annual Volatility'],
                     [
+                        f"{final_score:.1f}",
                         regression_formula,
                         f"{r2:.4f}",
                         f"${end_price:.2f}",
                         f"{annual_return:.2f}%",
-                        f"{annualized_volatility:.3f}",
-                        f"{final_score:.1f}"
+                        f"{annualized_volatility:.3f}"
+                        
                     ]
                 ],
                 font=dict(
                     color=[
                         ['black', 'black', 'black', 'black', 'black', 'black'],  # Colors for first column
-                        [formula_color, r2_color, 'black', 'black', 'black', 'black']  # Colors for second column
+                        [formula_color, r2_color, 'black', 'black', 'black']  # Colors for second column
                     ]
                 ),
                 **{k: v for k, v in TABLE_STYLE['cells'].items() if k != 'font'}  # Exclude font from TABLE_STYLE
