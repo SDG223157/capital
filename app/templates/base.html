@@ -39,7 +39,7 @@
                         <div class="dropdown-content">
                             <a href="{{ url_for('user.profile') }}" class="dropdown-item">Profile</a>
                             {% if current_user.is_administrator %}
-                                <a href="{{ url_for('main.tables') }}" class="dropdown-item">Database Tables</a>
+                                <a href="{{ url_for('main.tables') }}" class="dropdown-item">Database</a>
                             {% endif %}
                             <a href="{{ url_for('auth.logout') }}" class="dropdown-item">Logout</a>
                         </div>
