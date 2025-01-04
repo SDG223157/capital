@@ -265,6 +265,7 @@ def normalize_ticker(symbol):
     # If no mappings found, return original symbol
     return variations if variations else [symbol]
 
+
 @bp.route('/search_ticker', methods=['GET'])
 def search_ticker():
     query = request.args.get('query', '').upper()
@@ -276,63 +277,51 @@ def search_ticker():
         logger.info(f"Searching for ticker: {query}")
         
         # Get normalized variations
-        normalized_queries = normalize_ticker(query)
-        logger.info(f"Normalized variations: {normalized_queries}")
+        variations = normalize_ticker(query)
+        logger.info(f"Normalized variations: {variations}")
         
-        # List to store seen symbols for deduplication
+        # Track seen symbols
         seen_symbols = set()
         
-        # First check local TICKERS for exact matches
-        for ticker in TICKERS:
-            if ticker['symbol'].upper() == query or ticker['symbol'].upper() in normalized_queries:
-                if ticker['symbol'] not in seen_symbols:
-                    seen_symbols.add(ticker['symbol'])
-                    search_results.append({
+        # Try each variation
+        for variant in variations:
+            if variant not in seen_symbols:
+                try:
+                    is_valid, company_name = verify_ticker(variant)
+                    
+                    if is_valid:
+                        # If symbol exists in TICKER_DICT, use that name instead
+                        if variant in TICKER_DICT:
+                            company_name = TICKER_DICT[variant]
+                            
+                        if variant.upper() != company_name.upper():  # Only add if symbol and name are different
+                            result = {
+                                'symbol': variant,
+                                'name': company_name,
+                                'source': 'verified',
+                                'type': determine_asset_type(variant, company_name)
+                            }
+                            search_results.append(result)
+                            seen_symbols.add(variant)
+                            logger.info(f"Found verified asset: {variant}")
+                except Exception as e:
+                    logger.warning(f"Error checking symbol {variant}: {str(e)}")
+        
+        # If no results found or few results, try local search
+        if len(search_results) < 5:
+            partial_matches = []
+            for ticker in TICKERS:
+                if (query in ticker['symbol'].upper() or 
+                    query in ticker['name'].upper()) and \
+                    ticker['symbol'] not in seen_symbols and \
+                    ticker['symbol'].upper() != ticker['name'].upper():
+                    
+                    partial_matches.append({
                         'symbol': ticker['symbol'],
                         'name': ticker['name'],
                         'source': 'local',
                         'type': determine_asset_type(ticker['symbol'], ticker['name'])
                     })
-                    logger.info(f"Found local match: {ticker['symbol']}")
-        
-        # Then try each normalized variation with yfinance
-        for variant in normalized_queries:
-            if variant not in seen_symbols:  # Only check if we haven't seen this symbol
-                try:
-                    is_valid, company_name = verify_ticker(variant)
-                    
-                    if is_valid:
-                        if variant in TICKER_DICT:
-                            company_name = TICKER_DICT[variant]
-                        
-                        result = {
-                            'symbol': variant,
-                            'name': company_name,
-                            'source': 'verified',
-                            'type': determine_asset_type(variant, company_name)
-                        }
-                        search_results.append(result)
-                        seen_symbols.add(variant)
-                        logger.info(f"Found verified asset: {variant}")
-                except Exception as e:
-                    logger.warning(f"Error checking symbol {variant}: {str(e)}")
-
-        # If still no results or few results, add partial matches
-        if len(search_results) < 5:
-            partial_matches = []
-            for variant in normalized_queries:
-                matches = [
-                    {'symbol': ticker['symbol'], 
-                     'name': ticker['name'], 
-                     'source': 'local',
-                     'type': determine_asset_type(ticker['symbol'], ticker['name'])}
-                    for ticker in TICKERS
-                    if (variant in ticker['symbol'].upper() or 
-                        variant in ticker['name'].upper()) and 
-                        ticker['symbol'] not in seen_symbols and
-                        ticker['symbol'].upper() != ticker['name'].upper()
-                ]
-                partial_matches.extend(matches)
             
             # Add partial matches up to limit
             for match in partial_matches:
@@ -341,12 +330,13 @@ def search_ticker():
                     search_results.append(match)
                     if len(search_results) >= 5:
                         break
-        
+            
         return jsonify(search_results[:5])
         
     except Exception as e:
         logger.error(f"Search error: {str(e)}")
         return jsonify([])
+
 
 def determine_asset_type(symbol: str, name: str) -> str:
     """Determine the type of asset based on symbol and name."""
