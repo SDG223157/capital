@@ -235,14 +235,14 @@ class AnalysisService:
                 # Calculate component scores
                 quad_score = score_trend(coef[2], sp500_params['quad_coef'])
                 linear_score = score_trend(coef[1], sp500_params['linear_coef'])
-                trend_score = quad_score * 0.6 + linear_score * 0.4
+                trend_score = quad_score * 0.8 + linear_score * 0.2
 
                 r2_score_val = score_metric(r2, sp500_params['r_squared'], [0.95, 0.90, 0.85])
                 return_score = score_metric(annual_return, sp500_params['annual_return'], [1.2, 0.8, 0.6])
                 vol_score = score_metric(annual_volatility, sp500_params['annual_volatility'], [0.8, 1.2, 1.4], True)
 
                 # Calculate final score
-                weights = {'trend': 0.4, 'r2': 0.20, 'return': 0.20, 'volatility': 0.20}
+                weights = {'trend': 0.4, 'r2': 0.20, 'return': 0.25, 'volatility': 0.15}
                 final_score = (
                     trend_score * weights['trend'] +
                     r2_score_val * weights['r2'] +
