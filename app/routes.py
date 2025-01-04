@@ -641,3 +641,131 @@ def export_table(table_name, format):
         error_msg = f"Error exporting table {table_name}: {str(e)}"
         logger.error(f"{error_msg}\n{traceback.format_exc()}")
         return jsonify({'error': error_msg}), 500
+
+
+@bp.route('/delete_all_historical', methods=['POST'])
+@admin_required
+def delete_all_historical():
+    """Delete all historical data tables"""
+    try:
+        logger.info('Attempting to delete all historical data tables')
+        
+        # Get all tables from database
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        
+        # Filter for historical tables
+        historical_tables = [table for table in tables if table.startswith('his_')]
+        
+        if not historical_tables:
+            return jsonify({
+                'success': False, 
+                'error': 'No historical tables found'
+            }), 404
+        
+        # Delete each historical table
+        deleted_count = 0
+        errors = []
+        
+        for table in historical_tables:
+            try:
+                query = text(f'DROP TABLE `{table}`')
+                db.session.execute(query)
+                deleted_count += 1
+            except Exception as table_error:
+                error_msg = f"Error deleting table {table}: {str(table_error)}"
+                logger.error(error_msg)
+                errors.append(error_msg)
+        
+        # Commit the transaction
+        db.session.commit()
+        
+        # Prepare response message
+        if deleted_count == len(historical_tables):
+            message = f'Successfully deleted all {deleted_count} historical tables'
+            logger.info(message)
+            return jsonify({
+                'success': True,
+                'message': message
+            })
+        else:
+            message = f'Partially completed: Deleted {deleted_count} out of {len(historical_tables)} tables'
+            if errors:
+                message += f'. Errors: {"; ".join(errors)}'
+            logger.warning(message)
+            return jsonify({
+                'success': True,
+                'message': message
+            })
+            
+    except Exception as e:
+        error_msg = f"Error deleting historical tables: {str(e)}"
+        logger.error(f"{error_msg}\n{traceback.format_exc()}")
+        return jsonify({
+            'success': False,
+            'error': error_msg
+        }), 500
+
+    
+@bp.route('/delete_all_financial', methods=['POST'])
+@admin_required
+def delete_all_financial():
+    """Delete all financial data tables"""
+    try:
+        logger.info('Attempting to delete all financial data tables')
+        
+        # Get all tables from database
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        
+        # Filter for financial tables
+        financial_tables = [table for table in tables if table.startswith('roic_')]
+        
+        if not financial_tables:
+            return jsonify({
+                'success': False, 
+                'error': 'No financial tables found'
+            }), 404
+        
+        # Delete each financial table
+        deleted_count = 0
+        errors = []
+        
+        for table in financial_tables:
+            try:
+                query = text(f'DROP TABLE `{table}`')
+                db.session.execute(query)
+                deleted_count += 1
+            except Exception as table_error:
+                error_msg = f"Error deleting table {table}: {str(table_error)}"
+                logger.error(error_msg)
+                errors.append(error_msg)
+        
+        # Commit the transaction
+        db.session.commit()
+        
+        # Prepare response message
+        if deleted_count == len(financial_tables):
+            message = f'Successfully deleted all {deleted_count} financial tables'
+            logger.info(message)
+            return jsonify({
+                'success': True,
+                'message': message
+            })
+        else:
+            message = f'Partially completed: Deleted {deleted_count} out of {len(financial_tables)} tables'
+            if errors:
+                message += f'. Errors: {"; ".join(errors)}'
+            logger.warning(message)
+            return jsonify({
+                'success': True,
+                'message': message
+            })
+            
+    except Exception as e:
+        error_msg = f"Error deleting financial tables: {str(e)}"
+        logger.error(f"{error_msg}\n{traceback.format_exc()}")
+        return jsonify({
+            'success': False,
+            'error': error_msg
+        }), 500

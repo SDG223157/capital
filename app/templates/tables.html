@@ -99,6 +99,19 @@
         .delete-btn:hover {
             background-color: #c82333;
         }
+        .delete-all-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            float: right;
+            margin-bottom: 10px;
+        }
+        .delete-all-btn:hover {
+            background-color: #c82333;
+        }
         .confirm-modal {
             display: none;
             position: fixed;
@@ -176,11 +189,16 @@
 
         {% if historical_tables %}
         <div class="tree-section">
-            <div class="tree-title">
-                Historical Data Tables
-                <span style="font-size: 14px; color: #666;">
-                    (Daily stock price data)
-                </span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div class="tree-title">
+                    Historical Data Tables
+                    <span style="font-size: 14px; color: #666;">
+                        (Daily stock price data)
+                    </span>
+                </div>
+                <button class="delete-all-btn" onclick="showDeleteAllConfirm()">
+                    Delete All Historical Data
+                </button>
             </div>
             {% for table in historical_tables %}
             <div class="tree-item" data-table="{{ table.name }}">
@@ -199,11 +217,16 @@
 
         {% if financial_tables %}
         <div class="tree-section">
-            <div class="tree-title">
-                Financial Data Tables
-                <span style="font-size: 14px; color: #666;">
-                    (Company financial metrics)
-                </span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div class="tree-title">
+                    Financial Data Tables
+                    <span style="font-size: 14px; color: #666;">
+                        (Company financial metrics)
+                    </span>
+                </div>
+                <button class="delete-all-btn" onclick="showDeleteAllFinancialConfirm()">
+                    Delete All Financial Data
+                </button>
             </div>
             {% for table in financial_tables %}
             <div class="tree-item" data-table="{{ table.name }}">
@@ -255,6 +278,30 @@
         </div>
     </div>
 
+    <!-- Delete All Historical Confirmation Modal -->
+    <div id="confirmDeleteAllModal" class="confirm-modal">
+        <div class="modal-content">
+            <h3>Confirm Delete All Historical Data</h3>
+            <p>Are you sure you want to delete ALL historical data tables? This action cannot be undone.</p>
+            <div class="modal-buttons">
+                <button onclick="closeDeleteAllModal()" style="background-color: #6c757d; color: white;">Cancel</button>
+                <button onclick="confirmDeleteAll()" style="background-color: #dc3545; color: white;">Delete All</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete All Financial Confirmation Modal -->
+    <div id="confirmDeleteAllFinancialModal" class="confirm-modal">
+        <div class="modal-content">
+            <h3>Confirm Delete All Financial Data</h3>
+            <p>Are you sure you want to delete ALL financial data tables? This action cannot be undone.</p>
+            <div class="modal-buttons">
+                <button onclick="closeDeleteAllFinancialModal()" style="background-color: #6c757d; color: white;">Cancel</button>
+                <button onclick="confirmDeleteAllFinancial()" style="background-color: #dc3545; color: white;">Delete All</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let tableToDelete = null;
 
@@ -266,6 +313,14 @@
         function closeModal() {
             document.getElementById('confirmModal').style.display = 'none';
             tableToDelete = null;
+        }
+
+        function showDeleteAllConfirm() {
+            document.getElementById('confirmDeleteAllModal').style.display = 'block';
+        }
+
+        function closeDeleteAllModal() {
+            document.getElementById('confirmDeleteAllModal').style.display = 'none';
         }
 
         function confirmDelete() {
@@ -299,6 +354,62 @@
             .finally(() => {
                 closeModal();
             });
+        }
+
+        function showDeleteAllFinancialConfirm() {
+            document.getElementById('confirmDeleteAllFinancialModal').style.display = 'block';
+        }
+
+        function closeDeleteAllFinancialModal() {
+            document.getElementById('confirmDeleteAllFinancialModal').style.display = 'none';
+        }
+
+        async function confirmDeleteAllFinancial() {
+            try {
+                const response = await fetch('/delete_all_financial', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert(data.error || 'Error deleting tables');
+                }
+            } catch (error) {
+                alert('Error deleting tables');
+                console.error('Error:', error);
+            } finally {
+                closeDeleteAllFinancialModal();
+            }
+        }
+
+        async function confirmDeleteAll() {
+            try {
+                const response = await fetch('/delete_all_historical', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert(data.error || 'Error deleting tables');
+                }
+            } catch (error) {
+                alert('Error deleting tables');
+                console.error('Error:', error);
+            } finally {
+                closeDeleteAllModal();
+            }
         }
     </script>
 </body>
