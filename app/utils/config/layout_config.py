@@ -35,11 +35,11 @@ LAYOUT_CONFIG = {
         'non_stock': {
             'analysis_summary': {
                 'x': [0.05, 0.48],
-                'y': [0.32, 0.55]
+                'y': [0.32, 0.57]
             },
             'trading_signals': {
                 'x': [0.52, 0.95],
-                'y': [0.32, 0.55]
+                'y': [0.32, 0.57]
             }
         }
     },
@@ -56,8 +56,8 @@ LAYOUT_CONFIG = {
         'non_stock': {
             'headers': {
                 'chart': {'x': 0.05, 'y': 0.97},
-                'analysis_summary': {'x': 0.05, 'y': 0.46},
-                'trading_signals': {'x': 0.56, 'y': 0.46}
+                'analysis_summary': {'x': 0.05, 'y': 0.56},
+                'trading_signals': {'x': 0.56, 'y': 0.56}
             }
         }
     },
@@ -92,14 +92,14 @@ TABLE_STYLE = {
     'non_stock': {
         'header': {
             'fill_color': 'lightgrey',
-            'font': dict(size=12),
+            'font': dict(size=16),
             'align': 'left',
-            'height': 60  # Double height for non-stocks
+            'height': 40  # Double height for non-stocks
         },
         'cells': {
-            'font': dict(size=11),
+            'font': dict(size=14),
             'align': 'left',
-            'height': 60  # Double height for non-stocks
+            'height': 40  # Double height for non-stocks
         }
     }
 }
