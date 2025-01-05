@@ -62,6 +62,7 @@ class AnalysisService:
         return equation
 
 
+
     @staticmethod
     def perform_polynomial_regression(data, future_days=180):
         """Perform polynomial regression analysis and calculate scoring"""
@@ -83,7 +84,7 @@ class AnalysisService:
                         'score': 0,
                         'rating': 'Error',
                         'components': {
-                            'trend': {'score': 0, 'quad': 0, 'linear': 0},
+                            'trend': {'score': 0, 'quad': 0, 'linear': 0, 'direction': 'Unknown'},
                             'r2': 0,
                             'return': 0,
                             'volatility': 0
@@ -196,7 +197,7 @@ class AnalysisService:
                         'score': 0,
                         'rating': 'Error',
                         'components': {
-                            'trend': {'score': 0, 'quad': 0, 'linear': 0},
+                            'trend': {'score': 0, 'quad': 0, 'linear': 0, 'direction': 'Unknown'},
                             'r2': 0,
                             'return': 0,
                             'volatility': 0
@@ -210,42 +211,65 @@ class AnalysisService:
                 annual_return = returns.mean() * 252
                 annual_volatility = returns.std() * np.sqrt(252)
                 
-                def score_trend(value, benchmark):
-                    ratio = abs(value / benchmark)
-                    if ratio >= 1.25: return 100
-                    if ratio >= 1.10: return 80
-                    if ratio >= 0.90: return 60
-                    if ratio >= 0.75: return 40
-                    return 20
+                def score_metric(value, benchmark, thresholds, reverse=False, trend_type=None):
+                    """
+                    Score a metric against benchmark using provided thresholds.
+                    For trend coefficients, consider trend direction.
+                    """
+                    if trend_type == 'trend':
+                        ratio = abs(value / benchmark)
+                        is_downtrend = (value < 0 and benchmark < 0)
+                        
+                        if is_downtrend:
+                            # For downtrend, higher ratio means stronger downtrend (worse)
+                            if ratio >= 1.25: return 20     # Very strong downtrend
+                            if ratio >= 1.10: return 40     # Strong downtrend
+                            if ratio >= 0.90: return 60     # Similar downtrend
+                            if ratio >= 0.75: return 80     # Weaker downtrend
+                            return 100                      # Very weak downtrend
+                        else:
+                            # For uptrend or mixed trend, use original logic
+                            if ratio >= 1.25: return 100
+                            if ratio >= 1.10: return 80
+                            if ratio >= 0.90: return 60
+                            if ratio >= 0.75: return 40
+                            return 20
+                    elif isinstance(thresholds, list):
+                        upper, middle, lower = thresholds
+                        if reverse:
+                            if value <= benchmark * upper: return 100
+                            if value <= benchmark: return 80
+                            if value <= benchmark * middle: return 60
+                            if value <= benchmark * lower: return 40
+                            return 20
+                        else:
+                            if value >= benchmark * upper: return 100
+                            if value >= benchmark: return 80
+                            if value >= benchmark * middle: return 60
+                            if value >= benchmark * lower: return 40
+                            return 20
 
-                def score_metric(value, benchmark, thresholds, reverse=False):
-                    if reverse:
-                        if value <= benchmark * 0.8: return 100
-                        if value <= benchmark: return 80
-                        if value <= benchmark * 1.2: return 60
-                        if value <= benchmark * 1.4: return 40
-                        return 20
-                    else:
-                        if value >= benchmark * 1.2: return 100
-                        if value >= benchmark: return 80
-                        if value >= benchmark * 0.8: return 60
-                        if value >= benchmark * 0.6: return 40
-                        return 20
-
-                # Calculate component scores
+                # Check trend direction
+                is_downtrend = (coef[2] < 0 and coef[1] < 0)
+                trend_direction = "Down" if is_downtrend else "Up"
                 
-               
-                    
-                quad_score = score_trend(coef[2], sp500_params['quad_coef'])
-                linear_score = score_trend(coef[1], sp500_params['linear_coef'])
-                trend_score = quad_score * 0.8 + linear_score * 0.2
+                # Calculate component scores with trend consideration
+                quad_score = score_metric(coef[2], sp500_params['quad_coef'], 1.25, trend_type='trend')
+                linear_score = score_metric(coef[1], sp500_params['linear_coef'], 1.25, trend_type='trend')
+                
+                # Adjust trend score based on direction
+                if is_downtrend:
+                    trend_score = min(quad_score, linear_score)  # Use worse score for downtrend
+                else:
+                    trend_score = quad_score * 0.4 + linear_score * 0.6  # Normal weighted average
 
-                r2_score_val = score_metric(r2, sp500_params['r_squared'], [0.95, 0.90, 0.85])
+                # Regular metrics scoring
+                r2_score_val = score_metric(r2, sp500_params['r_squared'], [1.2, 0.8, 0.6])
                 return_score = score_metric(annual_return, sp500_params['annual_return'], [1.2, 0.8, 0.6])
                 vol_score = score_metric(annual_volatility, sp500_params['annual_volatility'], [0.8, 1.2, 1.4], True)
 
                 # Calculate final score
-                weights = {'trend': 0.35, 'r2': 0.15, 'return': 0.35, 'volatility': 0.15}
+                weights = {'trend': 0.35, 'r2': 0.20, 'return': 0.25, 'volatility': 0.20}
                 final_score = (
                     trend_score * weights['trend'] +
                     r2_score_val * weights['r2'] +
@@ -265,6 +289,7 @@ class AnalysisService:
                 final_score = 0
                 rating = 'Error'
                 trend_score = quad_score = linear_score = r2_score_val = return_score = vol_score = 0
+                trend_direction = 'Unknown'
 
             # 5. Return complete results
             return {
@@ -284,7 +309,8 @@ class AnalysisService:
                         'trend': {
                             'score': float(trend_score),
                             'quad': float(quad_score),
-                            'linear': float(linear_score)
+                            'linear': float(linear_score),
+                            'direction': trend_direction
                         },
                         'r2': float(r2_score_val),
                         'return': float(return_score),
@@ -317,14 +343,15 @@ class AnalysisService:
                     'score': 0,
                     'rating': 'Error',
                     'components': {
-                        'trend': {'score': 0, 'quad': 0, 'linear': 0},
+                        'trend': {'score': 0, 'quad': 0, 'linear': 0, 'direction': 'Unknown'},
                         'r2': 0,
                         'return': 0,
                         'volatility': 0
                     }
                 }
             }
-        
+
+
     @staticmethod
     def calculate_growth_rates(df):
         """Calculate period-over-period growth rates for financial metrics"""
