@@ -92,7 +92,7 @@ TABLE_STYLE = {
     'non_stock': {
         'header': {
             'fill_color': 'lightgrey',
-            'font': dict(size=14),
+            'font': dict(size=16),
             'align': 'left',
             'height': 40  # Double height for non-stocks
         },
