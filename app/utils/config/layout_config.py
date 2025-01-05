@@ -35,11 +35,11 @@ LAYOUT_CONFIG = {
         'non_stock': {
             'analysis_summary': {
                 'x': [0.05, 0.48],
-                'y': [0.32, 0.45]
+                'y': [0.32, 0.55]
             },
             'trading_signals': {
                 'x': [0.52, 0.95],
-                'y': [0.32, 0.45]
+                'y': [0.32, 0.55]
             }
         }
     },
@@ -92,12 +92,12 @@ TABLE_STYLE = {
     'non_stock': {
         'header': {
             'fill_color': 'lightgrey',
-            'font': dict(size=12*2.5),
+            'font': dict(size=12),
             'align': 'left',
             'height': 60  # Double height for non-stocks
         },
         'cells': {
-            'font': dict(size=11*2),
+            'font': dict(size=11),
             'align': 'left',
             'height': 60  # Double height for non-stocks
         }
