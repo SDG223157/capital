@@ -159,7 +159,7 @@ class VisualizationService:
             ),
             cells=dict(
                 values=[
-                    ["Final Score",'Regression Formula', 'Regression R²', 'Current Price', 'Annualized Return', 
+                    ["Score",'Regression Formula', 'Regression R²', 'Current Price', 'Annualized Return', 
                     'Annual Volatility'],
                     [
                         f"{final_score:.1f}",

@@ -62,10 +62,10 @@ class AnalysisService:
         return equation
 
 
-
+    
     @staticmethod
     def perform_polynomial_regression(data, future_days=180):
-        """Perform polynomial regression analysis and calculate scoring"""
+        """Perform polynomial regression analysis with coefficient ratio analysis"""
         try:
             # 1. Input validation
             if data is None or data.empty:
@@ -84,7 +84,16 @@ class AnalysisService:
                         'score': 0,
                         'rating': 'Error',
                         'components': {
-                            'trend': {'score': 0, 'quad': 0, 'linear': 0, 'direction': 'Unknown'},
+                            'trend': {
+                                'score': 0,
+                                'quad': 0,
+                                'linear': 0,
+                                'direction': 'Unknown',
+                                'ratio_analysis': {
+                                    'ratio': 0,
+                                    'type': 'Unknown'
+                                }
+                            },
                             'r2': 0,
                             'return': 0,
                             'volatility': 0
@@ -112,7 +121,6 @@ class AnalysisService:
                     sp500_model = LinearRegression()
                     sp500_model.fit(X_sp_poly, y_sp)
                     
-                    # Calculate S&P 500 metrics
                     sp500_r2 = r2_score(y_sp, sp500_model.predict(X_sp_poly))
                     sp500_returns = sp500_data['Close'].pct_change().dropna()
                     sp500_annual_return = sp500_returns.mean() * 252
@@ -134,7 +142,6 @@ class AnalysisService:
                         'annual_return': 0.2384,
                         'annual_volatility': 0.125
                     }
-                    print("Using default S&P 500 parameters:", sp500_params)
             except Exception as sp_error:
                 print(f"Error calculating S&P 500 parameters: {str(sp_error)}")
                 sp500_params = {
@@ -145,7 +152,7 @@ class AnalysisService:
                     'annual_volatility': 0.125
                 }
 
-            # 3. Perform regression on input data
+            # 3. Perform regression analysis
             try:
                 data['Log_Close'] = np.log(data['Close'])
                 X = (data.index - data.index[0]).days.values.reshape(-1, 1)
@@ -156,6 +163,10 @@ class AnalysisService:
                 X_poly = poly_features.fit_transform(X_scaled)
                 model = LinearRegression()
                 model.fit(X_poly, y)
+                
+                coef = model.coef_
+                intercept = model.intercept_
+                max_x = np.max(X)
                 
                 # Calculate predictions
                 X_future = np.arange(len(data) + future_days).reshape(-1, 1)
@@ -172,11 +183,6 @@ class AnalysisService:
                 
                 # Calculate R²
                 r2 = r2_score(y, model.predict(X_poly))
-                
-                # Get coefficients
-                coef = model.coef_
-                intercept = model.intercept_
-                max_x = np.max(X)
                 
                 # Format equation
                 equation = AnalysisService.format_regression_equation(coef, intercept, max_x)
@@ -197,7 +203,16 @@ class AnalysisService:
                         'score': 0,
                         'rating': 'Error',
                         'components': {
-                            'trend': {'score': 0, 'quad': 0, 'linear': 0, 'direction': 'Unknown'},
+                            'trend': {
+                                'score': 0,
+                                'quad': 0,
+                                'linear': 0,
+                                'direction': 'Unknown',
+                                'ratio_analysis': {
+                                    'ratio': 0,
+                                    'type': 'Unknown'
+                                }
+                            },
                             'r2': 0,
                             'return': 0,
                             'volatility': 0
@@ -205,30 +220,56 @@ class AnalysisService:
                     }
                 }
 
-            # 4. Calculate scoring
+            # 4. Calculate scoring with ratio analysis
             try:
                 returns = data['Close'].pct_change().dropna()
                 annual_return = returns.mean() * 252
                 annual_volatility = returns.std() * np.sqrt(252)
-                
+
+                def analyze_coefficient_ratio(quad_coef, linear_coef):
+                    """Analyze the ratio between linear and quadratic coefficients."""
+                    try:
+                        ratio = abs(linear_coef / quad_coef) if quad_coef != 0 else float('inf')
+                        
+                        if ratio > 5:
+                            return ratio, "Linear"
+                        elif ratio < 0.2:
+                            return ratio, "Quadratic"
+                        else:
+                            return ratio, "Balanced"
+                    except:
+                        return 0, "Unknown"
+
+                def adjust_trend_score(base_score, ratio_type, is_downtrend):
+                    """Adjust trend score based on coefficient ratio and trend direction."""
+                    if is_downtrend:
+                        if ratio_type == "Linear":
+                            return max(20, base_score - 20)  # Penalize linear downtrend
+                        elif ratio_type == "Quadratic":
+                            return min(100, base_score + 10)  # Slightly favor quadratic downtrend
+                    else:
+                        if ratio_type == "Balanced":
+                            return min(100, base_score + 10)  # Favor balanced uptrend
+                        elif ratio_type == "Linear":
+                            return base_score  # Keep original score
+                        elif ratio_type == "Quadratic":
+                            return max(20, base_score - 10)  # Slightly penalize strong quadratic
+                    
+                    return base_score
+
                 def score_metric(value, benchmark, thresholds, reverse=False, trend_type=None):
-                    """
-                    Score a metric against benchmark using provided thresholds.
-                    For trend coefficients, consider trend direction.
-                    """
+                    """Score metrics with consideration for trend type."""
                     if trend_type == 'trend':
                         ratio = abs(value / benchmark)
                         is_downtrend = (value < 0 and benchmark < 0)
                         
                         if is_downtrend:
-                            # For downtrend, higher ratio means stronger downtrend (worse)
-                            if ratio >= 1.25: return 20     # Very strong downtrend
-                            if ratio >= 1.10: return 40     # Strong downtrend
-                            if ratio >= 0.90: return 60     # Similar downtrend
-                            if ratio >= 0.75: return 80     # Weaker downtrend
-                            return 100                      # Very weak downtrend
+                            if ratio >= 1.25: return 20
+                            if ratio >= 1.10: return 40
+                            if ratio >= 0.90: return 60
+                            if ratio >= 0.75: return 80
+                            return 100
                         else:
-                            # For uptrend or mixed trend, use original logic
                             if ratio >= 1.25: return 100
                             if ratio >= 1.10: return 80
                             if ratio >= 0.90: return 60
@@ -249,21 +290,25 @@ class AnalysisService:
                             if value >= benchmark * lower: return 40
                             return 20
 
-                # Check trend direction
+                # Analyze trend direction and coefficient ratio
                 is_downtrend = (coef[2] < 0 and coef[1] < 0)
                 trend_direction = "Down" if is_downtrend else "Up"
+                coef_ratio, ratio_type = analyze_coefficient_ratio(coef[2], coef[1])
                 
-                # Calculate component scores with trend consideration
+                # Calculate initial scores
                 quad_score = score_metric(coef[2], sp500_params['quad_coef'], 1.25, trend_type='trend')
                 linear_score = score_metric(coef[1], sp500_params['linear_coef'], 1.25, trend_type='trend')
                 
-                # Adjust trend score based on direction
+                # Calculate base trend score
                 if is_downtrend:
-                    trend_score = min(quad_score, linear_score)  # Use worse score for downtrend
+                    base_trend_score = min(quad_score, linear_score)
                 else:
-                    trend_score = quad_score * 0.4 + linear_score * 0.6  # Normal weighted average
-
-                # Regular metrics scoring
+                    base_trend_score = quad_score * 0.4 + linear_score * 0.6
+                
+                # Adjust trend score based on ratio analysis
+                final_trend_score = adjust_trend_score(base_trend_score, ratio_type, is_downtrend)
+                
+                # Calculate other metrics
                 r2_score_val = score_metric(r2, sp500_params['r_squared'], [1.2, 0.8, 0.6])
                 return_score = score_metric(annual_return, sp500_params['annual_return'], [1.2, 0.8, 0.6])
                 vol_score = score_metric(annual_volatility, sp500_params['annual_volatility'], [0.8, 1.2, 1.4], True)
@@ -271,7 +316,7 @@ class AnalysisService:
                 # Calculate final score
                 weights = {'trend': 0.35, 'r2': 0.20, 'return': 0.25, 'volatility': 0.20}
                 final_score = (
-                    trend_score * weights['trend'] +
+                    final_trend_score * weights['trend'] +
                     r2_score_val * weights['r2'] +
                     return_score * weights['return'] +
                     vol_score * weights['volatility']
@@ -288,8 +333,10 @@ class AnalysisService:
                 print(f"Error in scoring calculation: {str(e)}")
                 final_score = 0
                 rating = 'Error'
-                trend_score = quad_score = linear_score = r2_score_val = return_score = vol_score = 0
+                final_trend_score = quad_score = linear_score = r2_score_val = return_score = vol_score = 0
                 trend_direction = 'Unknown'
+                coef_ratio = 0
+                ratio_type = 'Unknown'
 
             # 5. Return complete results
             return {
@@ -307,10 +354,14 @@ class AnalysisService:
                     'rating': rating,
                     'components': {
                         'trend': {
-                            'score': float(trend_score),
+                            'score': float(final_trend_score),
                             'quad': float(quad_score),
                             'linear': float(linear_score),
-                            'direction': trend_direction
+                            'direction': trend_direction,
+                            'ratio_analysis': {
+                                'ratio': float(coef_ratio),
+                                'type': ratio_type
+                            }
                         },
                         'r2': float(r2_score_val),
                         'return': float(return_score),
@@ -343,14 +394,22 @@ class AnalysisService:
                     'score': 0,
                     'rating': 'Error',
                     'components': {
-                        'trend': {'score': 0, 'quad': 0, 'linear': 0, 'direction': 'Unknown'},
+                        'trend': {
+                            'score': 0,
+                            'quad': 0,
+                            'linear': 0,
+                            'direction': 'Unknown',
+                            'ratio_analysis': {
+                                'ratio': 0,
+                                'type': 'Unknown'
+                            }
+                        },
                         'r2': 0,
                         'return': 0,
                         'volatility': 0
-                    }
-                }
-            }
-
+                    }  # Close components
+                }  # Close total_score
+            }  # Close return dictionary
 
     @staticmethod
     def calculate_growth_rates(df):
