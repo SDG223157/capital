@@ -11,6 +11,7 @@ from sqlalchemy import create_engine, inspect, text
 import os
 import logging
 import re
+from app.utils.visualization.visualization_service import is_stock
 
 class DataService:
     def __init__(self):
@@ -213,7 +214,9 @@ class DataService:
         
         try:
             # First try to get data from database
-            if "^" in ticker or "-" in ticker or "=" in ticker:
+            # if "^" in ticker or "-" in ticker or "=" in ticker:
+            #     return None
+            if not is_stock(ticker):
                 return None
             # if company_name:
             # # Check for excluded terms using regex (case insensitive)
