@@ -6,8 +6,37 @@ import numpy as np
 from datetime import datetime, timedelta
 from app.utils.config.layout_config import LAYOUT_CONFIG, CHART_STYLE, TABLE_STYLE
 
+def is_stock(symbol: str) -> bool:
+    """
+    Determine if a ticker represents a stock or not.
+    """
+    symbol = symbol.upper()
+    
+    # Non-stock patterns
+    if (symbol.startswith('^') or          # Indices
+        symbol.endswith('=F') or           # Futures
+        symbol.endswith('-USD') or         # Crypto
+        symbol.endswith('=X') or           # Forex
+        symbol in ['USD', 'EUR', 'GBP', 'JPY', 'CNH', 'HKD', 'CAD', 'AUD'] or  # Major currencies
+        any(suffix in symbol for suffix in ['-P', '-C', '-IV', '-UV'])):  # Options, ETF variations
+        return False
+    
+    return True
+
 class VisualizationService:
     """Service class for creating and managing stock analysis visualizations."""
+
+    @staticmethod
+    def _get_config(symbol: str):
+        """Get the appropriate configuration based on symbol type"""
+        layout_type = 'stock' if is_stock(symbol) else 'non_stock'
+        return {
+            'layout': layout_type,
+            'chart_area': LAYOUT_CONFIG['chart_area'][layout_type],
+            'tables': LAYOUT_CONFIG['tables'][layout_type],
+            'annotations': LAYOUT_CONFIG['annotations'][layout_type],
+            'table_style': TABLE_STYLE[layout_type]
+        }
 
     @staticmethod
     def format_number(x):
@@ -48,9 +77,9 @@ class VisualizationService:
         return formatted_values
 
     @staticmethod
-    def create_financial_metrics_table(df):
-        """Create financial metrics tables"""
-        if df is None or df.empty:
+    def create_financial_metrics_table(df, config):
+        """Create financial metrics tables using provided configuration"""
+        if df is None or df.empty or config['layout'] == 'non_stock':
             return None, None
 
         formatted_df = df.copy()
@@ -64,19 +93,19 @@ class VisualizationService:
 
         metrics_table = go.Table(
             domain=dict(
-                x=LAYOUT_CONFIG['tables']['metrics']['x'],
-                y=LAYOUT_CONFIG['tables']['metrics']['y']
+                x=config['tables']['metrics']['x'],
+                y=config['tables']['metrics']['y']
             ),
             header=dict(
                 values=['<b>Metric</b>'] + [f'<b>{col}</b>' for col in df.columns],
-                **TABLE_STYLE['header']
+                **config['table_style']['header']
             ),
             cells=dict(
                 values=[
                     formatted_df.index.tolist(),
                     *[formatted_df[col].tolist() for col in formatted_df.columns]
                 ],
-                **TABLE_STYLE['cells']
+                **config['table_style']['cells']
             )
         )
         
@@ -109,17 +138,17 @@ class VisualizationService:
                 if formatted_values:
                     growth_table = go.Table(
                         domain=dict(
-                            x=LAYOUT_CONFIG['tables']['growth']['x'],
-                            y=LAYOUT_CONFIG['tables']['growth']['y']
+                            x=config['tables']['growth']['x'],
+                            y=config['tables']['growth']['y']
                         ),
                         header=dict(
                             values=['<b>Metric</b>'] + [f'<b>{year_columns[i]}</b>' 
                                 for i in range(1, len(year_columns))],
-                            **TABLE_STYLE['header']
+                            **config['table_style']['header']
                         ),
                         cells=dict(
                             values=formatted_values,
-                            **TABLE_STYLE['cells']
+                            **config['table_style']['cells']
                         )
                     )
         
@@ -127,7 +156,9 @@ class VisualizationService:
 
     @staticmethod
     def _create_analysis_summary_table(days, end_price, annual_return, 
-                                    daily_volatility, annualized_volatility, r2, regression_formula, final_score):
+                                    daily_volatility, annualized_volatility, r2, 
+                                    regression_formula, final_score, table_style,
+                                    table_domain):
         """Create the analysis summary table with colored formula and R²"""
         try:
             equation_parts = regression_formula.split('=')
@@ -147,20 +178,19 @@ class VisualizationService:
             
         r2_color = 'green' if r2 > 0.7 else 'black'
         
-        # Use Plotly's native font color formatting
         return go.Table(
             domain=dict(
-                x=LAYOUT_CONFIG['tables']['analysis_summary']['x'],
-                y=LAYOUT_CONFIG['tables']['analysis_summary']['y']
+                x=table_domain['x'],
+                y=table_domain['y']
             ),
             header=dict(
                 values=['<b>Metric</b>', '<b>Value</b>'],
-                **TABLE_STYLE['header']
+                **table_style['header']
             ),
             cells=dict(
                 values=[
-                    ["Score",'Regression Formula', 'Regression R²', 'Current Price', 'Annualized Return', 
-                    'Annual Volatility'],
+                    ["Score",'Regression Formula', 'Regression R²', 'Current Price', 
+                     'Annualized Return', 'Annual Volatility'],
                     [
                         f"{final_score:.1f}",
                         regression_formula,
@@ -168,35 +198,34 @@ class VisualizationService:
                         f"${end_price:.2f}",
                         f"{annual_return:.2f}%",
                         f"{annualized_volatility:.3f}"
-                        
                     ]
                 ],
                 font=dict(
                     color=[
-                        ['black', 'black', 'black', 'black', 'black', 'black'],  # Colors for first column
-                        [ 'black',formula_color, r2_color, 'black', 'black']  # Colors for second column
+                        ['black'] * 6,  # Colors for first column
+                        ['black', formula_color, r2_color, 'black', 'black', 'black']  # Colors for second column
                     ]
                 ),
-                **{k: v for k, v in TABLE_STYLE['cells'].items() if k != 'font'}  # Exclude font from TABLE_STYLE
+                **{k: v for k, v in table_style['cells'].items() if k != 'font'}
             )
         )
-        
+
     @staticmethod
-    def _create_trading_signal_table(signal_returns):
+    def _create_trading_signal_table(signal_returns, table_style, table_domain):
         """Create the trading signal analysis table"""
         if not signal_returns:
             return go.Table(
                 domain=dict(
-                    x=LAYOUT_CONFIG['tables']['trading_signals']['x'],
-                    y=LAYOUT_CONFIG['tables']['trading_signals']['y']
+                    x=table_domain['x'],
+                    y=table_domain['y']
                 ),
                 header=dict(
                     values=['<b>Notice</b>'],
-                    **TABLE_STYLE['header']
+                    **table_style['header']
                 ),
                 cells=dict(
                     values=[['No trading signals found in the analysis period']],
-                    **TABLE_STYLE['cells']
+                    **table_style['cells']
                 )
             )
 
@@ -227,13 +256,13 @@ class VisualizationService:
 
         return go.Table(
             domain=dict(
-                x=LAYOUT_CONFIG['tables']['trading_signals']['x'],
-                y=LAYOUT_CONFIG['tables']['trading_signals']['y']
+                x=table_domain['x'],
+                y=table_domain['y']
             ),
             header=dict(
                 values=['<b>Entry Date</b>', '<b>Entry Price</b>', '<b>Exit Date</b>', 
                        '<b>Exit Price</b>', '<b>Return</b>', '<b>Status</b>'],
-                **TABLE_STYLE['header']
+                **table_style['header']
             ),
             cells=dict(
                 values=[
@@ -244,74 +273,30 @@ class VisualizationService:
                     [f"{t['Return']:.2f}%" for t in trades],
                     [t['Status'] for t in trades]
                 ],
-                **TABLE_STYLE['cells']
+                **table_style['cells']
             )
         )
 
     @staticmethod
-    def _create_chart_annotations(start_price, end_price, annual_return, daily_volatility,
-                                annualized_volatility, regression_results, total_return, 
-                                signal_returns, metrics_df):
+    def _create_chart_annotations(config, metrics_df=None):
         """Create chart annotations"""
         annotations = []
-        config = LAYOUT_CONFIG['annotations']
         
-        # Stats annotations
-        # stats_info = [
-        #     {
-        #         'pos': config['stats']['price'],
-        #         'text': f'<b>Price Analysis</b><br>' + 
-        #                f'Start: ${start_price:.2f}<br>' +
-        #                f'Current: ${end_price:.2f}<br>' 
-        #     },
-        #     {
-        #         'pos': config['stats']['regression'],
-        #         'text': f'<b>Regression Analysis</b><br>' +
-        #                f'{regression_results["equation"]}<br>' +
-        #                f'R² = {regression_results["r2"]:.4f}'
-        #     },
-        #     {
-        #         'pos': config['stats']['volatility'],
-        #         'text': f'<b>Volatility Analysis</b><br>' +
-        #                f'Daily: {daily_volatility:.3f}<br>' +
-        #                f'Annual: {annualized_volatility:.3f}'
-        #     },
-        #     {
-        #         'pos': config['stats']['signals'],
-        #         'text': f'<b>Signal Analysis</b><br>' +
-        #                f'Total Return: {total_return:.2f}%<br>' +
-        #                f'Trades: {len([s for s in signal_returns if s["Signal"] == "Buy"])}'
-        #     }
-        # ]
-
-        # # Add stats annotations
-        # for info in stats_info:
-        #     annotations.append(dict(
-        #         x=info['pos']['x'],
-        #         y=info['pos']['y'],
-        #         xref='paper',
-        #         yref='paper',
-        #         text=info['text'],
-        #         showarrow=False,
-        #         font=dict(size=12),
-        #         bgcolor='rgba(255, 255, 255, 0.8)',
-        #         bordercolor='rgba(0, 0, 0, 0.2)',
-        #         borderwidth=1,
-        #         align='left'
-        #     ))
-
         # Add table headers
-        # Add table headers conditionally
         table_headers = {
-            'analysis_summary': ('Analysis Summary', True),  # Analysis summary always shows
-            'trading_signals': ('Trading Signal Analysis', bool(signal_returns)),
-            'metrics': ('Financial Metrics', metrics_df is not None and not metrics_df.empty),
-            'growth': ('Growth Analysis', metrics_df is not None and not metrics_df.empty)
+            'analysis_summary': ('Analysis Summary', True),
+            'trading_signals': ('Trading Signal Analysis', True)
         }
+        
+        if config['layout'] == 'stock' and metrics_df is not None:
+            table_headers.update({
+                'metrics': ('Financial Metrics', True),
+                'growth': ('Growth Analysis', True)
+            })
 
         for section, (title, should_show) in table_headers.items():
-            if should_show:  # Only add header if content exists
-                header_pos = config['headers'][section]
+            if should_show and section in config['annotations']['headers']:
+                header_pos = config['annotations']['headers'][section]
                 annotations.append(dict(
                     x=header_pos['x'],
                     y=header_pos['y'],
@@ -319,11 +304,12 @@ class VisualizationService:
                     yref='paper',
                     text=f'<b>{title}</b>',
                     showarrow=False,
-                    font=dict(size=14),
+                    font=dict(size=header_pos.get('font_size', 14)),
                     align='left'
                 ))
 
         return annotations
+
 
     @staticmethod
     def create_stock_analysis_chart(symbol, data, analysis_dates, ratios, prices, 
@@ -331,6 +317,12 @@ class VisualizationService:
                                   crossover_data, signal_returns, 
                                   metrics_df, total_height=LAYOUT_CONFIG['total_height']):
         """Create the complete stock analysis chart with all components"""
+        config = VisualizationService._get_config(symbol)
+        
+        # Adjust total height for non-stocks
+        if config['layout'] == 'non_stock':
+            total_height *= 0.7  # Reduce total height for non-stocks since we have fewer tables
+
         fig = go.Figure()
 
         # Add price line
@@ -477,8 +469,9 @@ class VisualizationService:
         # Add metrics tables
         metrics_table = None
         growth_table = None
-        if metrics_df is not None and not metrics_df.empty:
-            metrics_table, growth_table = VisualizationService.create_financial_metrics_table(metrics_df)
+        
+        if config['layout'] == 'stock':
+            metrics_table, growth_table = VisualizationService.create_financial_metrics_table(metrics_df, config)
             if metrics_table:
                 fig.add_trace(metrics_table)
             if growth_table:
@@ -491,20 +484,27 @@ class VisualizationService:
         #         fig.add_trace(growth_table)
 
         # Add analysis summary table
+         # Add analysis summary and trading signals tables with appropriate styling
         analysis_table = VisualizationService._create_analysis_summary_table(
-            days=days,
-            end_price=end_price,
-            annual_return=annual_return,
-            daily_volatility=daily_volatility,
-            annualized_volatility=annualized_volatility,
+            days=(data.index[-1] - data.index[0]).days,
+            end_price=data['Close'].iloc[-1],
+            annual_return=((data['Close'].iloc[-1] / data['Close'].iloc[0]) ** (365 / (data.index[-1] - data.index[0]).days) - 1) * 100,
+            daily_volatility=data['Close'].pct_change().std(),
+            annualized_volatility=data['Close'].pct_change().std() * np.sqrt(252),
             r2=regression_results['r2'],
             regression_formula=regression_results['equation'],
-            final_score=regression_results['total_score']['score']
+            final_score=regression_results['total_score']['score'],
+            table_style=config['table_style'],
+            table_domain=config['tables']['analysis_summary']
         )
         fig.add_trace(analysis_table)
 
         # Add trading signals table
-        trading_table = VisualizationService._create_trading_signal_table(signal_returns)
+        trading_table = VisualizationService._create_trading_signal_table(
+            signal_returns,
+            table_style=config['table_style'],
+            table_domain=config['tables']['trading_signals']
+        )
         fig.add_trace(trading_table)
 
         # Create and add annotations
@@ -536,7 +536,7 @@ class VisualizationService:
                 spikesnap='cursor',
                 spikemode='across',
                 spikethickness=1,
-                domain=LAYOUT_CONFIG['chart_area']['domain']['x']
+                domain=config['chart_area']['domain']['x']
             ),
             yaxis=dict(
                 title="Ratio and Position (%)",
@@ -549,7 +549,7 @@ class VisualizationService:
                 spikesnap='cursor',
                 spikemode='across',
                 spikethickness=1,
-                domain=LAYOUT_CONFIG['chart_area']['domain']['y']
+                domain=config['chart_area']['domain']['y']
             ),
             yaxis2=dict(
                 title="Price (Log Scale)",
@@ -561,15 +561,15 @@ class VisualizationService:
                 spikesnap='cursor',
                 spikemode='across',
                 spikethickness=1,
-                domain=LAYOUT_CONFIG['chart_area']['domain']['y']
+                domain=config['chart_area']['domain']['y']
             ),
             plot_bgcolor='white',
             paper_bgcolor='white',
             margin=dict(
                 l=50, 
                 r=100, 
-                t=LAYOUT_CONFIG['spacing']['margin']['top'] * total_height,
-                b=LAYOUT_CONFIG['spacing']['margin']['bottom'] * total_height
+                t=config['spacing']['margin']['top'] * total_height,
+                b=config['spacing']['margin']['bottom'] * total_height
             ),
             legend=dict(
                 yanchor="top",

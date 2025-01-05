@@ -6,39 +6,59 @@ LAYOUT_CONFIG = {
     'total_height': 1200,
     'lookback_days_ratio': 0.6,
     'chart_area': {
-        'domain': {'x': [0.05, 0.95], 'y': [0.65, 0.95]},  # Main chart top 40%
+        'stock': {
+            'domain': {'x': [0.05, 0.95], 'y': [0.65, 0.95]}  # Main chart top 40%
+        },
+        'non_stock': {
+            'domain': {'x': [0.05, 0.95], 'y': [0.55, 0.95]}  # Main chart top 50%
+        }
     },
     'tables': {
-        'analysis_summary': {
-            'x': [0.05, 0.48],
-            'y': [0.42, 0.55]
+        'stock': {
+            'analysis_summary': {
+                'x': [0.05, 0.48],
+                'y': [0.42, 0.55]
+            },
+            'trading_signals': {
+                'x': [0.52, 0.95],
+                'y': [0.42, 0.55]
+            },
+            'metrics': {
+                'x': [0.05, 0.95],
+                'y': [0.22, 0.35]
+            },
+            'growth': {
+                'x': [0.05, 0.95],
+                'y': [0.02, 0.15]
+            }
         },
-        'trading_signals': {
-            'x': [0.52, 0.95],
-            'y': [0.42, 0.55]
-        },
-        'metrics': {
-            'x': [0.05, 0.95],
-            'y': [0.22, 0.35]
-        },
-        'growth': {
-            'x': [0.05, 0.95],
-            'y': [0.02, 0.15]
+        'non_stock': {
+            'analysis_summary': {
+                'x': [0.05, 0.48],
+                'y': [0.32, 0.45]
+            },
+            'trading_signals': {
+                'x': [0.52, 0.95],
+                'y': [0.32, 0.45]
+            }
         }
     },
     'annotations': {
-        'headers': {
-            'chart': {'x': 0.05, 'y': 0.97},
-            'analysis_summary': {'x': 0.05, 'y': 0.56},
-            'trading_signals': {'x': 0.56, 'y': 0.56},
-            'metrics': {'x': 0.05, 'y': 0.36},
-            'growth': {'x': 0.05, 'y': 0.15}
+        'stock': {
+            'headers': {
+                'chart': {'x': 0.05, 'y': 0.97},
+                'analysis_summary': {'x': 0.05, 'y': 0.56},
+                'trading_signals': {'x': 0.56, 'y': 0.56},
+                'metrics': {'x': 0.05, 'y': 0.36},
+                'growth': {'x': 0.05, 'y': 0.15}
+            }
         },
-        'stats': {
-            'price': {'x': 0.07, 'y': 0.95},
-            'regression': {'x': 0.30, 'y': 0.95},
-            'volatility': {'x': 0.53, 'y': 0.95},
-            'signals': {'x': 0.76, 'y': 0.95}
+        'non_stock': {
+            'headers': {
+                'chart': {'x': 0.05, 'y': 0.97},
+                'analysis_summary': {'x': 0.05, 'y': 0.46},
+                'trading_signals': {'x': 0.56, 'y': 0.46}
+            }
         }
     },
     'spacing': {
@@ -50,6 +70,36 @@ LAYOUT_CONFIG = {
             'bottom': 0.05,
             'left': 0.05,
             'right': 0.05
+        }
+    }
+}
+
+# Table style configuration
+TABLE_STYLE = {
+    'stock': {
+        'header': {
+            'fill_color': 'lightgrey',
+            'font': dict(size=12),
+            'align': 'left',
+            'height': 30
+        },
+        'cells': {
+            'font': dict(size=11),
+            'align': 'left',
+            'height': 30
+        }
+    },
+    'non_stock': {
+        'header': {
+            'fill_color': 'lightgrey',
+            'font': dict(size=12),
+            'align': 'left',
+            'height': 60  # Double height for non-stocks
+        },
+        'cells': {
+            'font': dict(size=11),
+            'align': 'left',
+            'height': 60  # Double height for non-stocks
         }
     }
 }
@@ -78,20 +128,5 @@ CHART_STYLE = {
             size=12,
             line=dict(width=1)
         )
-    }
-}
-
-# Table style configuration
-TABLE_STYLE = {
-    'header': {
-        'fill_color': 'lightgrey',
-        'font': dict(size=12),
-        'align': 'left',
-        'height': 30
-    },
-    'cells': {
-        'font': dict(size=11),
-        'align': 'left',
-        'height': 30
     }
 }
