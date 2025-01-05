@@ -565,8 +565,8 @@ class VisualizationService:
             margin=dict(
                 l=50, 
                 r=100, 
-                t=config['spacing']['margin']['top'] * total_height,
-                b=config['spacing']['margin']['bottom'] * total_height
+                t=0.05* total_height,
+                b=0.05* total_height
             ),
             legend=dict(
                 yanchor="top",
