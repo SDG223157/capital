@@ -35,11 +35,11 @@ LAYOUT_CONFIG = {
         'non_stock': {
             'analysis_summary': {
                 'x': [0.05, 0.48],
-                'y': [0.32, 0.57]
+                'y': [0.22, 0.45]
             },
             'trading_signals': {
                 'x': [0.52, 0.95],
-                'y': [0.32, 0.57]
+                'y': [0.22, 0.45]
             }
         }
     },
@@ -47,8 +47,8 @@ LAYOUT_CONFIG = {
         'stock': {
             'headers': {
                 'chart': {'x': 0.05, 'y': 0.97},
-                'analysis_summary': {'x': 0.05, 'y': 0.56},
-                'trading_signals': {'x': 0.56, 'y': 0.56},
+                'analysis_summary': {'x': 0.05, 'y': 0.50},
+                'trading_signals': {'x': 0.56, 'y': 0.50},
                 'metrics': {'x': 0.05, 'y': 0.36},
                 'growth': {'x': 0.05, 'y': 0.15}
             }
@@ -56,8 +56,8 @@ LAYOUT_CONFIG = {
         'non_stock': {
             'headers': {
                 'chart': {'x': 0.05, 'y': 0.97},
-                'analysis_summary': {'x': 0.05, 'y': 0.56},
-                'trading_signals': {'x': 0.56, 'y': 0.56}
+                'analysis_summary': {'x': 0.05, 'y': 0.45},
+                'trading_signals': {'x': 0.56, 'y': 0.45}
             }
         }
     },
