@@ -61,11 +61,9 @@ class AnalysisService:
         equation = "ln(y) = " + " ".join(terms)
         return equation
 
-
-    
     @staticmethod
     def perform_polynomial_regression(data, future_days=180):
-        """Perform polynomial regression analysis with coefficient ratio analysis"""
+        """Perform polynomial regression analysis with granular scoring"""
         try:
             # 1. Input validation
             if data is None or data.empty:
@@ -86,17 +84,11 @@ class AnalysisService:
                         'components': {
                             'trend': {
                                 'score': 0,
-                                'quad': 0,
-                                'linear': 0,
-                                'direction': 'Unknown',
-                                'ratio_analysis': {
-                                    'ratio': 0,
-                                    'type': 'Unknown'
-                                }
+                                'type': 'Unknown',
+                                'details': {}
                             },
-                            'r2': 0,
-                            'return': 0,
-                            'volatility': 0
+                            'return': {'score': 0},
+                            'volatility': {'score': 0}
                         }
                     }
                 }
@@ -110,7 +102,6 @@ class AnalysisService:
                 sp500_data = data_service.get_historical_data('^GSPC', start_date, end_date)
                 
                 if sp500_data is not None and not sp500_data.empty:
-                    # Calculate S&P 500 regression
                     sp500_data['Log_Close'] = np.log(sp500_data['Close'])
                     X_sp = (sp500_data.index - sp500_data.index[0]).days.values.reshape(-1, 1)
                     y_sp = sp500_data['Log_Close'].values
@@ -133,7 +124,6 @@ class AnalysisService:
                         'annual_return': sp500_annual_return,
                         'annual_volatility': sp500_annual_volatility
                     }
-                    print("Using real S&P 500 parameters:", sp500_params)
                 else:
                     sp500_params = {
                         'quad_coef': -0.1134,
@@ -205,119 +195,168 @@ class AnalysisService:
                         'components': {
                             'trend': {
                                 'score': 0,
-                                'quad': 0,
-                                'linear': 0,
-                                'direction': 'Unknown',
-                                'ratio_analysis': {
-                                    'ratio': 0,
-                                    'type': 'Unknown'
-                                }
+                                'type': 'Unknown',
+                                'details': {}
                             },
-                            'r2': 0,
-                            'return': 0,
-                            'volatility': 0
+                            'return': {'score': 0},
+                            'volatility': {'score': 0}
                         }
                     }
                 }
 
-            # 4. Calculate scoring with ratio analysis
+            # 4. Calculate scoring with granular thresholds
             try:
+                def evaluate_trend(quad_coef, linear_coef, r_squared):
+                    """Evaluate trend with granular scoring (0-100 in steps of 10)"""
+                    # Check credibility levels
+                    if r_squared >= 0.90:
+                        credibility = "Very High"
+                    elif r_squared >= 0.80:
+                        credibility = "High"
+                    elif r_squared >= 0.70:
+                        credibility = "Moderate"
+                    elif r_squared >= 0.60:
+                        credibility = "Low"
+                    else:
+                        credibility = "Very Low"
+
+                    # Calculate ratio for strength
+                    ratio = quad_coef / linear_coef if linear_coef != 0 else float('inf')
+                    abs_ratio = abs(ratio)
+
+                    # Determine trend strength
+                    if abs_ratio > 3:
+                        strength = "Very Strong"
+                    elif abs_ratio > 2:
+                        strength = "Strong"
+                    elif abs_ratio > 1:
+                        strength = "Moderate"
+                    elif abs_ratio > 0.5:
+                        strength = "Weak"
+                    else:
+                        strength = "Very Weak"
+
+                    # Determine trend direction
+                    if quad_coef > 0 and linear_coef > 0:
+                        trend_type = "Up"
+                    elif quad_coef < 0 and linear_coef < 0:
+                        trend_type = "Down"
+                    elif ratio < 0:  # Different signs
+                        if abs_ratio > 2 and quad_coef > 0:
+                            trend_type = "Up"
+                        elif abs_ratio < 0.5 and linear_coef > 0:
+                            trend_type = "Up"
+                        else:
+                            trend_type = "Down"
+                    else:
+                        trend_type = "None"
+
+                    # Score assignment based on scenario
+                    if trend_type == "None" or abs_ratio < 0.1:
+                        score = 50
+                        desc = "No Clear Trend"
+                    elif trend_type == "Up":
+                        if strength == "Very Strong":
+                            if credibility == "Very High": score = 100
+                            elif credibility == "High": score = 90
+                            elif credibility == "Moderate": score = 80
+                            elif credibility == "Low": score = 70
+                            else: score = 60
+                        elif strength == "Strong":
+                            if credibility == "Very High": score = 90
+                            elif credibility == "High": score = 80
+                            elif credibility == "Moderate": score = 70
+                            elif credibility == "Low": score = 60
+                            else: score = 50
+                        elif strength == "Moderate":
+                            if credibility == "Very High": score = 80
+                            elif credibility == "High": score = 70
+                            elif credibility == "Moderate": score = 60
+                            elif credibility == "Low": score = 50
+                            else: score = 40
+                        else:  # Weak or Very Weak
+                            if r_squared >= 0.80: score = 60
+                            else: score = 50
+                        desc = f"{strength} Uptrend ({credibility} Credibility)"
+                    else:  # Down trend
+                        if strength == "Very Strong":
+                            if credibility == "Very High": score = 0
+                            elif credibility == "High": score = 10
+                            elif credibility == "Moderate": score = 20
+                            elif credibility == "Low": score = 30
+                            else: score = 40
+                        elif strength == "Strong":
+                            if credibility == "Very High": score = 10
+                            elif credibility == "High": score = 20
+                            elif credibility == "Moderate": score = 30
+                            elif credibility == "Low": score = 40
+                            else: score = 50
+                        elif strength == "Moderate":
+                            if credibility == "Very High": score = 20
+                            elif credibility == "High": score = 30
+                            elif credibility == "Moderate": score = 40
+                            elif credibility == "Low": score = 50
+                            else: score = 60
+                        else:  # Weak or Very Weak
+                            if r_squared >= 0.80: score = 40
+                            else: score = 50
+                        desc = f"{strength} Downtrend ({credibility} Credibility)"
+
+                    return desc, score, {
+                        'direction': trend_type,
+                        'strength': strength,
+                        'credibility': credibility,
+                        'ratio': abs_ratio,
+                        'r_squared': r_squared
+                    }
+
+                def score_metric(value, benchmark, reverse=False):
+                    """Score metrics with granular thresholds (0-100)"""
+                    ratio = value / benchmark
+                    
+                    if reverse:
+                        # For metrics where lower is better (e.g., volatility)
+                        if ratio <= 0.6: return 100    # 40% or more below benchmark
+                        if ratio <= 0.7: return 90     # 30-40% below benchmark
+                        if ratio <= 0.8: return 80     # 20-30% below benchmark
+                        if ratio <= 0.9: return 70     # 10-20% below benchmark
+                        if ratio <= 1.0: return 60     # 0-10% below benchmark
+                        if ratio <= 1.1: return 50     # 0-10% above benchmark
+                        if ratio <= 1.2: return 40     # 10-20% above benchmark
+                        if ratio <= 1.3: return 30     # 20-30% above benchmark
+                        if ratio <= 1.4: return 20     # 30-40% above benchmark
+                        if ratio <= 1.5: return 10     # 40-50% above benchmark
+                        return 0                       # More than 50% above benchmark
+                    else:
+                        # For metrics where higher is better (e.g., returns)
+                        if ratio >= 1.4: return 100    # 40% or more above benchmark
+                        if ratio >= 1.3: return 90     # 30-40% above benchmark
+                        if ratio >= 1.2: return 80     # 20-30% above benchmark
+                        if ratio >= 1.1: return 70     # 10-20% above benchmark
+                        if ratio >= 1.0: return 60     # 0-10% above benchmark
+                        if ratio >= 0.9: return 50     # 0-10% below benchmark
+                        if ratio >= 0.8: return 40     # 10-20% below benchmark
+                        if ratio >= 0.7: return 30     # 20-30% below benchmark
+                        if ratio >= 0.6: return 20     # 30-40% below benchmark
+                        if ratio >= 0.5: return 10     # 40-50% below benchmark
+                        return 0                       # More than 50% below benchmark
+
+                # Calculate returns and volatility
                 returns = data['Close'].pct_change().dropna()
                 annual_return = returns.mean() * 252
                 annual_volatility = returns.std() * np.sqrt(252)
-
-                def analyze_coefficient_ratio(quad_coef, linear_coef):
-                    """Analyze the ratio between linear and quadratic coefficients."""
-                    try:
-                        ratio = abs(linear_coef / quad_coef) if quad_coef != 0 else float('inf')
-                        
-                        if ratio > 5:
-                            return ratio, "Linear"
-                        elif ratio < 0.2:
-                            return ratio, "Quadratic"
-                        else:
-                            return ratio, "Balanced"
-                    except:
-                        return 0, "Unknown"
-
-                def adjust_trend_score(base_score, ratio_type, is_downtrend):
-                    """Adjust trend score based on coefficient ratio and trend direction."""
-                    if is_downtrend:
-                        if ratio_type == "Linear":
-                            return max(20, base_score - 20)  # Penalize linear downtrend
-                        elif ratio_type == "Quadratic":
-                            return min(100, base_score + 10)  # Slightly favor quadratic downtrend
-                    else:
-                        if ratio_type == "Balanced":
-                            return min(100, base_score + 10)  # Favor balanced uptrend
-                        elif ratio_type == "Linear":
-                            return base_score  # Keep original score
-                        elif ratio_type == "Quadratic":
-                            return max(20, base_score - 10)  # Slightly penalize strong quadratic
-                    
-                    return base_score
-
-                def score_metric(value, benchmark, thresholds, reverse=False, trend_type=None):
-                    """Score metrics with consideration for trend type."""
-                    if trend_type == 'trend':
-                        ratio = abs(value / benchmark)
-                        is_downtrend = (value < 0 and benchmark < 0)
-                        
-                        if is_downtrend:
-                            if ratio >= 1.25: return 20
-                            if ratio >= 1.10: return 40
-                            if ratio >= 0.90: return 60
-                            if ratio >= 0.75: return 80
-                            return 100
-                        else:
-                            if ratio >= 1.25: return 100
-                            if ratio >= 1.10: return 80
-                            if ratio >= 0.90: return 60
-                            if ratio >= 0.75: return 40
-                            return 20
-                    elif isinstance(thresholds, list):
-                        upper, middle, lower = thresholds
-                        if reverse:
-                            if value <= benchmark * upper: return 100
-                            if value <= benchmark: return 80
-                            if value <= benchmark * middle: return 60
-                            if value <= benchmark * lower: return 40
-                            return 20
-                        else:
-                            if value >= benchmark * upper: return 100
-                            if value >= benchmark: return 80
-                            if value >= benchmark * middle: return 60
-                            if value >= benchmark * lower: return 40
-                            return 20
-
-                # Analyze trend direction and coefficient ratio
-                is_downtrend = (coef[2] < 0 and coef[1] < 0)
-                trend_direction = "Down" if is_downtrend else "Up"
-                coef_ratio, ratio_type = analyze_coefficient_ratio(coef[2], coef[1])
                 
-                # Calculate initial scores
-                quad_score = score_metric(coef[2], sp500_params['quad_coef'], 1.25, trend_type='trend')
-                linear_score = score_metric(coef[1], sp500_params['linear_coef'], 1.25, trend_type='trend')
+                # Get trend evaluation
+                trend_type, trend_score, trend_details = evaluate_trend(coef[2], coef[1], r2)
                 
-                # Calculate base trend score
-                if is_downtrend:
-                    base_trend_score = min(quad_score, linear_score)
-                else:
-                    base_trend_score = quad_score * 0.4 + linear_score * 0.6
-                
-                # Adjust trend score based on ratio analysis
-                final_trend_score = adjust_trend_score(base_trend_score, ratio_type, is_downtrend)
-                
-                # Calculate other metrics
-                r2_score_val = score_metric(r2, sp500_params['r_squared'], [1.2, 0.8, 0.6])
-                return_score = score_metric(annual_return, sp500_params['annual_return'], [1.2, 0.8, 0.6])
-                vol_score = score_metric(annual_volatility, sp500_params['annual_volatility'], [0.8, 1.2, 1.4], True)
+                # Calculate other component scores
+                return_score = score_metric(annual_return, sp500_params['annual_return'])
+                vol_score = score_metric(annual_volatility, sp500_params['annual_volatility'], reverse=True)
 
-                # Calculate final score
-                weights = {'trend': 0.35, 'r2': 0.20, 'return': 0.25, 'volatility': 0.20}
+                # Calculate final score with weights
+                weights = {'trend': 0.45, 'return': 0.30, 'volatility': 0.25}
                 final_score = (
-                    final_trend_score * weights['trend'] +
-                    r2_score_val * weights['r2'] +
+                    trend_score * weights['trend'] +
                     return_score * weights['return'] +
                     vol_score * weights['volatility']
                 )
@@ -331,12 +370,10 @@ class AnalysisService:
 
             except Exception as e:
                 print(f"Error in scoring calculation: {str(e)}")
-                final_score = 0
+                trend_type = "Error"
+                trend_score = return_score = vol_score = final_score = 0
                 rating = 'Error'
-                final_trend_score = quad_score = linear_score = r2_score_val = return_score = vol_score = 0
-                trend_direction = 'Unknown'
-                coef_ratio = 0
-                ratio_type = 'Unknown'
+                trend_details = {}
 
             # 5. Return complete results
             return {
@@ -354,26 +391,26 @@ class AnalysisService:
                     'rating': rating,
                     'components': {
                         'trend': {
-                            'score': float(final_trend_score),
-                            'quad': float(quad_score),
-                            'linear': float(linear_score),
-                            'direction': trend_direction,
-                            'ratio_analysis': {
-                                'ratio': float(coef_ratio),
-                                'type': ratio_type
-                            }
+                            'score': float(trend_score),
+                            'type': trend_type,
+                            'details': trend_details
                         },
-                        'r2': float(r2_score_val),
-                        'return': float(return_score),
-                        'volatility': float(vol_score)
+                        'return': {
+                            'score': float(return_score),
+                            'value': float(annual_return),
+                            'benchmark': float(sp500_params['annual_return'])
+                        },
+                        'volatility': {
+                            'score': float(vol_score),
+                            'value': float(annual_volatility),
+                            'benchmark': float(sp500_params['annual_volatility'])
+                        }
                     },
-                    'benchmark_params': sp500_params,
+                    'weights': weights,
                     'parameters': {
                         'quad_coef': float(coef[2]),
                         'linear_coef': float(coef[1]),
-                        'r_squared': float(r2),
-                        'annual_return': float(annual_return),
-                        'annual_volatility': float(annual_volatility)
+                        'r_squared': float(r2)
                     }
                 }
             }
@@ -396,21 +433,29 @@ class AnalysisService:
                     'components': {
                         'trend': {
                             'score': 0,
-                            'quad': 0,
-                            'linear': 0,
-                            'direction': 'Unknown',
-                            'ratio_analysis': {
-                                'ratio': 0,
-                                'type': 'Unknown'
-                            }
+                            'type': 'Unknown',
+                            'details': {}
                         },
-                        'r2': 0,
-                        'return': 0,
-                        'volatility': 0
-                    }  # Close components
-                }  # Close total_score
-            }  # Close return dictionary
-
+                        'return': {
+                            'score': 0,
+                            'value': 0,
+                            'benchmark': 0
+                        },
+                        'volatility': {
+                            'score': 0,
+                            'value': 0,
+                            'benchmark': 0
+                        }
+                    },
+                    'weights': {'trend': 0.45, 'return': 0.30, 'volatility': 0.25},
+                    'parameters': {
+                        'quad_coef': 0,
+                        'linear_coef': 0,
+                        'r_squared': 0
+                    }
+                }
+            }
+        
     @staticmethod
     def calculate_growth_rates(df):
         """Calculate period-over-period growth rates for financial metrics"""
