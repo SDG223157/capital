@@ -508,10 +508,7 @@ class VisualizationService:
         fig.add_trace(trading_table)
 
         # Create and add annotations
-        annotations = VisualizationService._create_chart_annotations(
-            start_price, end_price, annual_return, daily_volatility,
-            annualized_volatility, regression_results, total_return, signal_returns,metrics_df
-        )
+        annotations = VisualizationService._create_chart_annotations(config)
 
         # Update layout
         fig.update_layout(
