@@ -13,7 +13,8 @@ def is_stock(symbol: str) -> bool:
     symbol = symbol.upper()
     
     # Non-stock patterns
-    if (symbol.startswith('^') or          # Indices
+    if (symbol.startswith('^') or 
+        (symbol.startswith('58') or symbol.startswith('51')) and len(symbol) == 6 or  # Indices
         symbol.endswith('=F') or           # Futures
         symbol.endswith('-USD') or         # Crypto
         symbol.endswith('=X') or           # Forex
