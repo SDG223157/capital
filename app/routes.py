@@ -126,7 +126,9 @@ def normalize_ticker(symbol):
         'IXIC': '^IXIC',   # NASDAQ Composite
         'N225': '^N225',   # Nikkei 225
         'FTSE': '^FTSE', 
-        'VIX':  '^VIX',   # FTSE 100 Index
+        'VIX':  '^VIX',  
+        'US10Y':  '^TNX',  
+        # FTSE 100 Index
     }
     
     # Futures mappings
