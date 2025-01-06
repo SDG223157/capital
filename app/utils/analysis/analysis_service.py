@@ -61,10 +61,9 @@ class AnalysisService:
         equation = "ln(y) = " + " ".join(terms)
         return equation
 
-    
     @staticmethod
     def perform_polynomial_regression(data, future_days=180):
-        """Perform polynomial regression analysis with comprehensive trend analysis and scoring"""
+        """Perform polynomial regression analysis with three-component scoring"""
         try:
             # 1. Input validation
             if data is None or data.empty:
@@ -83,11 +82,7 @@ class AnalysisService:
                         'score': 0,
                         'rating': 'Error',
                         'components': {
-                            'trend': {
-                                'score': 0,
-                                'type': 'Unknown',
-                                'details': {}
-                            },
+                            'trend': {'score': 0, 'type': 'Unknown'},
                             'return': {'score': 0},
                             'volatility': {'score': 0}
                         }
@@ -98,17 +93,16 @@ class AnalysisService:
             try:
                 data_service = DataService()
                 end_date = datetime.now().strftime('%Y-%m-%d')
-                start_date = (datetime.now() - timedelta(days=365*2)).strftime('%Y-%m-%d')
+                start_date = (datetime.now() - timedelta(days=500)).strftime('%Y-%m-%d')
                 
                 sp500_data = data_service.get_historical_data('^GSPC', start_date, end_date)
                 
                 if sp500_data is not None and not sp500_data.empty:
-                    # Calculate using sequential trading days for SP500
                     sp500_data['Log_Close'] = np.log(sp500_data['Close'])
                     X_sp = (sp500_data.index - sp500_data.index[0]).days.values.reshape(-1, 1)
                     y_sp = sp500_data['Log_Close'].values
                     X_sp_scaled = X_sp / (np.max(X_sp) * 1)
-                        
+                    
                     poly_features = PolynomialFeatures(degree=2)
                     X_sp_poly = poly_features.fit_transform(X_sp_scaled)
                     sp500_model = LinearRegression()
@@ -128,20 +122,20 @@ class AnalysisService:
                     }
                 else:
                     sp500_params = {
-                        'quad_coef': 0.1080,
-                        'linear_coef': 0.9646,
-                        'r_squared': 0.9404,
-                        'annual_return': 0.1127,
-                        'annual_volatility': 0.178
+                        'quad_coef': -0.1134,
+                        'linear_coef': 0.4700,
+                        'r_squared': 0.9505,
+                        'annual_return': 0.2384,
+                        'annual_volatility': 0.125
                     }
             except Exception as sp_error:
                 print(f"Error calculating S&P 500 parameters: {str(sp_error)}")
                 sp500_params = {
-                    'quad_coef': 0.1080,
-                    'linear_coef': 0.9646,
-                    'r_squared': 0.9404,
-                    'annual_return': 0.1127,
-                    'annual_volatility': 0.178
+                    'quad_coef': -0.1134,
+                    'linear_coef': 0.4700,
+                    'r_squared': 0.9505,
+                    'annual_return': 0.2384,
+                    'annual_volatility': 0.125
                 }
 
             # 3. Perform regression analysis
@@ -156,9 +150,14 @@ class AnalysisService:
                 model = LinearRegression()
                 model.fit(X_poly, y)
                 
+                coef = model.coef_
+                intercept = model.intercept_
+                max_x = np.max(X)
+                
                 # Calculate predictions
                 X_future = np.arange(len(data) + future_days).reshape(-1, 1)
-                X_future_poly = poly_features.transform(X_future)
+                X_future_scaled = X_future / np.max(X) * 1
+                X_future_poly = poly_features.transform(X_future_scaled)
                 y_pred_log = model.predict(X_future_poly)
                 y_pred = np.exp(y_pred_log)
                 
@@ -172,9 +171,6 @@ class AnalysisService:
                 r2 = r2_score(y, model.predict(X_poly))
                 
                 # Format equation
-                coef = model.coef_
-                intercept = model.intercept_
-                max_x = len(data) - 1
                 equation = AnalysisService.format_regression_equation(coef, intercept, max_x)
                 
             except Exception as e:
