@@ -103,12 +103,12 @@ class AnalysisService:
                 
                 if sp500_data is not None and not sp500_data.empty:
                     sp500_data['Log_Close'] = np.log(sp500_data['Close'])
-                    X_sp = np.arange(len(sp500_data)).reshape(-1, 1)
-                    # X_sp = (sp500_data.index - sp500_data.index[0]).days.values.reshape(-1, 1)
+                    # X_sp = np.arange(len(sp500_data)).reshape(-1, 1)
+                    X_sp = (sp500_data.index - sp500_data.index[0]).days.values.reshape(-1, 1)
                     y_sp = sp500_data['Log_Close'].values
-                    X_sp_scaled = X_sp / (len(sp500_data) - 1)  # Scale by number of trading days
+                    # X_sp_scaled = X_sp / (len(sp500_data) - 1)  # Scale by number of trading days
     
-                    # X_sp_scaled = X_sp / (np.max(X_sp) * 1)
+                    X_sp_scaled = X_sp / (np.max(X_sp) * 1)
                     
                     poly_features = PolynomialFeatures(degree=2)
                     X_sp_poly = poly_features.fit_transform(X_sp_scaled)
@@ -148,11 +148,11 @@ class AnalysisService:
             # 3. Perform regression analysis
             try:
                 data['Log_Close'] = np.log(data['Close'])
-                X = np.arange(len(data)).reshape(-1, 1)  # Sequential trading days
-                # X = (data.index - data.index[0]).days.values.reshape(-1, 1)
+                # X = np.arange(len(data)).reshape(-1, 1)  # Sequential trading days
+                X = (data.index - data.index[0]).days.values.reshape(-1, 1)
                 y = data['Log_Close'].values
-                X_scaled = X / (len(data) - 1)  # Scale by number of trading days
-                # X_scaled = X / (np.max(X) * 1)
+                # X_scaled = X / (len(data) - 1)  # Scale by number of trading days
+                X_scaled = X / (np.max(X) * 1)
                 
                 poly_features = PolynomialFeatures(degree=2)
                 X_poly = poly_features.fit_transform(X_scaled)
