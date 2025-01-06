@@ -297,8 +297,20 @@ class AnalysisService:
                     vol_score * weights['volatility']
                 )
 
-                # Calculate scaling factor to make SP500 = 70
-                sp500_raw_score = 69  # SP500's raw score from its own parameters
+                # Calculate SP500's raw score
+                sp500_trend_score, _, _ = evaluate_trend_score(
+                    sp500_params['quad_coef'], 
+                    sp500_params['linear_coef'],
+                    sp500_params['r_squared']
+                )
+                sp500_return_score = score_metric(sp500_params['annual_return'], sp500_params['annual_return'])
+                sp500_vol_score = score_metric(sp500_params['annual_volatility'], sp500_params['annual_volatility'], reverse=True)
+
+                sp500_raw_score = (
+                    sp500_trend_score * weights['trend'] +
+                    sp500_return_score * weights['return'] +
+                    sp500_vol_score * weights['volatility']
+                )
                 scaling_factor = 70 / sp500_raw_score
 
                 # Calculate final scaled score
