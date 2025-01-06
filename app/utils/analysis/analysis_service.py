@@ -313,7 +313,7 @@ class AnalysisService:
                     sp500_return_score * weights['return'] +
                     sp500_vol_score * weights['volatility']
                 )
-                scaling_factor =  70/ sp500_raw_score
+                scaling_factor =  60/ sp500_raw_score
 
                 # Calculate final scaled score
                 final_score = min(98, raw_score * scaling_factor)
