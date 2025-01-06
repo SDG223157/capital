@@ -125,7 +125,8 @@ def normalize_ticker(symbol):
         'DJI': '^DJI',     # Dow Jones Industrial Average
         'IXIC': '^IXIC',   # NASDAQ Composite
         'N225': '^N225',   # Nikkei 225
-        'FTSE': '^FTSE',   # FTSE 100 Index
+        'FTSE': '^FTSE', 
+        'VIX':  '^VIX',   # FTSE 100 Index
     }
     
     # Futures mappings
