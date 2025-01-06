@@ -367,7 +367,7 @@ class AnalysisService:
                 # )
 
                 # First calculate SP500's own raw score using the benchmark parameters
-                sp500_trend_type, sp500_trend_score, sp500_trend_details = evaluate_trend(
+                _, sp500_trend_score, _ = evaluate_trend(
                     sp500_params['quad_coef'], 
                     sp500_params['linear_coef'], 
                     sp500_params['r_squared']
@@ -376,7 +376,7 @@ class AnalysisService:
                 sp500_vol_score = score_metric(sp500_params['annual_volatility'], sp500_params['annual_volatility'], reverse=True)  # Should be 60
 
                 # Calculate SP500's raw score
-                weights = {'trend': 0.45, 'return': 0.30, 'volatility': 0.25}
+                weights = {'trend': 0.45, 'return': 0.35, 'volatility': 0.20}
                 sp500_raw_score = (
                     sp500_trend_score * weights['trend'] +
                     sp500_return_score * weights['return'] +
