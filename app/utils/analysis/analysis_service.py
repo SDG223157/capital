@@ -226,13 +226,13 @@ class AnalysisService:
                         credibility = "Very Low"
 
                     # Calculate ratio for strength
-                    ratio = quad_coef / linear_coef if linear_coef != 0 else float('inf')
+                    ratio =  linear_coef/quad_coef if quad_coef != 0 else float('inf')
                     abs_ratio = abs(ratio)
 
                     # Determine trend strength
-                    if abs_ratio > 3:
+                    if abs_ratio > 5:
                         strength = "Very Strong"
-                    elif abs_ratio > 2:
+                    elif abs_ratio > 3:
                         strength = "Strong"
                     elif abs_ratio > 1:
                         strength = "Moderate"
@@ -247,7 +247,7 @@ class AnalysisService:
                     elif quad_coef < 0 and linear_coef < 0:
                         trend_type = "Down"
                     elif ratio < 0:  # Different signs
-                        if abs_ratio > 2 and quad_coef > 0:
+                        if abs_ratio > 2 and quad_coef < 0:
                             trend_type = "Up"
                         elif abs_ratio < 0.5 and linear_coef > 0:
                             trend_type = "Up"
@@ -258,7 +258,7 @@ class AnalysisService:
 
                     # Score assignment based on scenario
                     if trend_type == "None" or abs_ratio < 0.1:
-                        score = 50
+                        score = 20
                         desc = "No Clear Trend"
                     elif trend_type == "Up":
                         if strength == "Very Strong":
@@ -280,8 +280,8 @@ class AnalysisService:
                             elif credibility == "Low": score = 50
                             else: score = 40
                         else:  # Weak or Very Weak
-                            if r_squared >= 0.80: score = 60
-                            else: score = 50
+                            if r_squared >= 0.80: score = 30
+                            else: score = 20
                         desc = f"{strength} Uptrend ({credibility} Credibility)"
                     else:  # Down trend
                         if strength == "Very Strong":
@@ -293,18 +293,18 @@ class AnalysisService:
                         elif strength == "Strong":
                             if credibility == "Very High": score = 10
                             elif credibility == "High": score = 20
-                            elif credibility == "Moderate": score = 30
-                            elif credibility == "Low": score = 40
-                            else: score = 50
+                            elif credibility == "Moderate": score = 20
+                            elif credibility == "Low": score = 20
+                            else: score = 20
                         elif strength == "Moderate":
                             if credibility == "Very High": score = 20
-                            elif credibility == "High": score = 30
-                            elif credibility == "Moderate": score = 40
-                            elif credibility == "Low": score = 50
-                            else: score = 60
+                            elif credibility == "High": score = 20
+                            elif credibility == "Moderate": score = 20
+                            elif credibility == "Low": score = 20
+                            else: score = 20
                         else:  # Weak or Very Weak
-                            if r_squared >= 0.80: score = 40
-                            else: score = 50
+                            if r_squared >= 0.80: score = 30
+                            else: score = 20
                         desc = f"{strength} Downtrend ({credibility} Credibility)"
 
                     return desc, score, {
@@ -359,7 +359,7 @@ class AnalysisService:
                 vol_score = score_metric(annual_volatility, sp500_params['annual_volatility'], reverse=True)
 
                 # Calculate final score with weights
-                weights = {'trend': 0.50, 'return': 0.35, 'volatility': 0.15}
+                weights = {'trend': 0.40, 'return': 0.40, 'volatility': 0.20}
                 final_score = (
                     trend_score * weights['trend'] +
                     return_score * weights['return'] +
