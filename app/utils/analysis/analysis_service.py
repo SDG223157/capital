@@ -249,7 +249,7 @@ class AnalysisService:
                     elif ratio < 0:  # Different signs
                         if abs_ratio > 2 and quad_coef < 0:
                             trend_type = "Up"
-                        elif abs_ratio < 0.5 and linear_coef > 0:
+                        elif abs_ratio < 0.5 and quad_coef > 0:
                             trend_type = "Up"
                         else:
                             trend_type = "Down"
@@ -280,18 +280,18 @@ class AnalysisService:
                             elif credibility == "Low": score = 50
                             else: score = 40
                         else:  # Weak or Very Weak
-                            if r_squared >= 0.80: score = 30
+                            if r_squared >= 0.80: score = 20
                             else: score = 20
                         desc = f"{strength} Uptrend ({credibility} Credibility)"
                     else:  # Down trend
                         if strength == "Very Strong":
-                            if credibility == "Very High": score = 0
-                            elif credibility == "High": score = 10
+                            if credibility == "Very High": score = 20
+                            elif credibility == "High": score = 20
                             elif credibility == "Moderate": score = 20
-                            elif credibility == "Low": score = 30
-                            else: score = 40
+                            elif credibility == "Low": score = 20
+                            else: score = 20
                         elif strength == "Strong":
-                            if credibility == "Very High": score = 10
+                            if credibility == "Very High": score = 20
                             elif credibility == "High": score = 20
                             elif credibility == "Moderate": score = 20
                             elif credibility == "Low": score = 20
@@ -303,7 +303,7 @@ class AnalysisService:
                             elif credibility == "Low": score = 20
                             else: score = 20
                         else:  # Weak or Very Weak
-                            if r_squared >= 0.80: score = 30
+                            if r_squared >= 0.80: score = 20
                             else: score = 20
                         desc = f"{strength} Downtrend ({credibility} Credibility)"
 
