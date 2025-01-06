@@ -92,8 +92,10 @@ class AnalysisService:
             # 2. Get S&P 500 benchmark parameters
             try:
                 data_service = DataService()
-                end_date = datetime.now().strftime('%Y-%m-%d')
-                start_date = (datetime.now() - timedelta(days=500)).strftime('%Y-%m-%d')
+                # end_date = datetime.now().strftime('%Y-%m-%d')
+                end_date = data.index[-1].strftime('%Y-%m-%d')
+                start_date = data.index[0].strftime('%Y-%m-%d')
+                # start_date = (datetime.now() - timedelta(days=500)).strftime('%Y-%m-%d')
                 
                 sp500_data = data_service.get_historical_data('^GSPC', start_date, end_date)
                 
