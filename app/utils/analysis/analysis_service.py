@@ -359,13 +359,40 @@ class AnalysisService:
                 vol_score = score_metric(annual_volatility, sp500_params['annual_volatility'], reverse=True)
 
                 # Calculate final score with weights
-                weights = {'trend': 0.40, 'return': 0.40, 'volatility': 0.20}
+                # weights = {'trend': 0.40, 'return': 0.40, 'volatility': 0.20}
+                # final_score = (
+                #     trend_score * weights['trend'] +
+                #     return_score * weights['return'] +
+                #     vol_score * weights['volatility']
+                # )
+
+                # First calculate SP500's own raw score using the benchmark parameters
+                sp500_trend_type, sp500_trend_score, sp500_trend_details = evaluate_trend(
+                    sp500_params['quad_coef'], 
+                    sp500_params['linear_coef'], 
+                    sp500_params['r_squared']
+                )
+                sp500_return_score = score_metric(sp500_params['annual_return'], sp500_params['annual_return'])  # Should be 60
+                sp500_vol_score = score_metric(sp500_params['annual_volatility'], sp500_params['annual_volatility'], reverse=True)  # Should be 60
+
+                # Calculate SP500's raw score
+                weights = {'trend': 0.45, 'return': 0.30, 'volatility': 0.25}
+                sp500_raw_score = (
+                    sp500_trend_score * weights['trend'] +
+                    sp500_return_score * weights['return'] +
+                    sp500_vol_score * weights['volatility']
+                )
+
+                # Calculate scaling factor to make SP500 score 70
+                sp500_target_score = 70
+                scaling_factor = sp500_target_score / sp500_raw_score
+
+# Then use this scaling factor for the asset's score
                 final_score = (
                     trend_score * weights['trend'] +
                     return_score * weights['return'] +
                     vol_score * weights['volatility']
-                )
-
+                ) * scaling_factor
                 # Determine rating
                 if final_score >= 90: rating = 'Excellent'
                 elif final_score >= 75: rating = 'Very Good'
