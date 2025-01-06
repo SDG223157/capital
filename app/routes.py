@@ -240,7 +240,8 @@ def normalize_ticker(symbol):
         'FTSE': ['ISF.L', '^FTSE'],   # FTSE 100 ETF and Index
         'BTC': ['BTC-USD', 'BTC'],    # Bitcoin price and BTC Trust
         'ETH': ['ETH-USD', 'ETHE'],   # Ethereum and its ETF
-        'GOLD': ['GC=F', 'GLD'],      # Gold Futures and Gold ETF
+        'GOLD': ['GC=F', 'GLD'], 
+        'DXY':  ['DX-Y.NYB','US Dollar Index']
     }
     
     # Convert to uppercase for consistent matching
