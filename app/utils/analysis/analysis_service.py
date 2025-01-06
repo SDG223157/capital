@@ -267,16 +267,16 @@ class AnalysisService:
                         if ratio <= 1.5: return 10
                         return 0
                     else:
-                        if ratio >= 1.4: return 100
-                        if ratio >= 1.3: return 90
-                        if ratio >= 1.2: return 80
-                        if ratio >= 1.1: return 70
-                        if ratio >= 1.0: return 60
-                        if ratio >= 0.9: return 50
-                        if ratio >= 0.8: return 40
-                        if ratio >= 0.7: return 30
-                        if ratio >= 0.6: return 20
-                        if ratio >= 0.5: return 10
+                        if ratio >= 3: return 100
+                        if ratio >= 2.5: return 90
+                        if ratio >= 2.0: return 80
+                        if ratio >= 1.5: return 70
+                        if ratio >= 1.2: return 60
+                        if ratio >= 1.0: return 50
+                        if ratio >= 0.9: return 40
+                        if ratio >= 0.8: return 30
+                        if ratio >= 0.7: return 20
+                        if ratio >= 0.6: return 10
                         return 0
 
                 # Calculate returns and volatility
