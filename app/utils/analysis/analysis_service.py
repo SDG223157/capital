@@ -324,8 +324,8 @@ class AnalysisService:
                         if ratio <= 0.6: return 100    # 40% or more below benchmark
                         if ratio <= 0.7: return 90     # 30-40% below benchmark
                         if ratio <= 0.8: return 80     # 20-30% below benchmark
-                        if ratio <= 0.9: return 70     # 10-20% below benchmark
-                        if ratio <= 1.0: return 60     # 0-10% below benchmark
+                        if ratio <= 0.9: return 75     # 10-20% below benchmark
+                        if ratio <= 1.0: return 70     # 0-10% below benchmark
                         if ratio <= 1.1: return 50     # 0-10% above benchmark
                         if ratio <= 1.2: return 40     # 10-20% above benchmark
                         if ratio <= 1.3: return 30     # 20-30% above benchmark
@@ -337,8 +337,8 @@ class AnalysisService:
                         if ratio >= 1.4: return 100    # 40% or more above benchmark
                         if ratio >= 1.3: return 90     # 30-40% above benchmark
                         if ratio >= 1.2: return 80     # 20-30% above benchmark
-                        if ratio >= 1.1: return 70     # 10-20% above benchmark
-                        if ratio >= 1.0: return 60     # 0-10% above benchmark
+                        if ratio >= 1.1: return 75     # 10-20% above benchmark
+                        if ratio >= 1.0: return 70     # 0-10% above benchmark
                         if ratio >= 0.9: return 50     # 0-10% below benchmark
                         if ratio >= 0.8: return 40     # 10-20% below benchmark
                         if ratio >= 0.7: return 30     # 20-30% below benchmark
@@ -359,7 +359,7 @@ class AnalysisService:
                 vol_score = score_metric(annual_volatility, sp500_params['annual_volatility'], reverse=True)
 
                 # Calculate final score with weights
-                weights = {'trend': 0.45, 'return': 0.30, 'volatility': 0.25}
+                weights = {'trend': 0.50, 'return': 0.35, 'volatility': 0.15}
                 final_score = (
                     trend_score * weights['trend'] +
                     return_score * weights['return'] +
