@@ -229,7 +229,7 @@ class AnalysisService:
                             else:  # Balanced uptrend
                                 base_score = 70
                         else:  # quad > 0, linear < 0
-                            if ratio > 2:  # Quadratic dominates
+                            if ratio > 1:  # Quadratic dominates
                                 base_score = 85  # Good score if quadratic overcomes negative linear
                             else:
                                 base_score = 50
