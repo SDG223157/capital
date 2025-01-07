@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from app.utils.config.layout_config import LAYOUT_CONFIG, CHART_STYLE, TABLE_STYLE
+from app.utils.analyzer.stock_analyzer import analyze_signals
 
 def is_stock(symbol: str) -> bool:
     """
@@ -157,10 +158,14 @@ class VisualizationService:
 
     @staticmethod
     def _create_analysis_summary_table(days, end_price, annual_return, 
-                                    daily_volatility, annualized_volatility, r2, 
-                                    regression_formula, final_score, table_style,
-                                    table_domain):
+                                     daily_volatility, annualized_volatility, r2, 
+                                     regression_formula, final_score, table_style,
+                                     table_domain, signal_returns=None):
         """Create the analysis summary table with colored formula and R²"""
+        
+        # Get signal metrics from analyze_signals function
+        signal_metrics = analyze_signals(signal_returns)
+        
         try:
             equation_parts = regression_formula.split('=')
             if len(equation_parts) > 1:
@@ -190,21 +195,23 @@ class VisualizationService:
             ),
             cells=dict(
                 values=[
-                    ["Score",'Regression Formula', 'Regression R²', 'Current Price', 
-                     'Annualized Return', 'Annual Volatility'],
+                    ["Score", 'Regression Formula', 'Regression R²', 'Current Price', 
+                     'Annualized Return', 'Annual Volatility', 'Win Rate', 'Average Trade Return'],
                     [
                         f"{final_score:.1f}",
                         regression_formula,
                         f"{r2:.4f}",
                         f"${end_price:.2f}",
                         f"{annual_return:.2f}%",
-                        f"{annualized_volatility:.3f}"
+                        f"{annualized_volatility:.3f}",
+                        f"{signal_metrics['win_rate']:.1f}%",
+                        f"{signal_metrics['average_return']:.2f}%"
                     ]
                 ],
                 font=dict(
                     color=[
-                        ['black'] * 6,  # Colors for first column
-                        ['black', formula_color, r2_color, 'black', 'black', 'black']  # Colors for second column
+                        ['black'] * 8,  # Colors for first column
+                        ['black', formula_color, r2_color, 'black', 'black', 'black', 'black', 'black']  # Colors for second column
                     ]
                 ),
                 **{k: v for k, v in table_style['cells'].items() if k != 'font'}
@@ -496,7 +503,8 @@ class VisualizationService:
             regression_formula=regression_results['equation'],
             final_score=regression_results['total_score']['score'],
             table_style=config['table_style'],
-            table_domain=config['tables']['analysis_summary']
+            table_domain=config['tables']['analysis_summary'],
+            signal_returns=signal_returns  # Add this parameter
         )
         fig.add_trace(analysis_table)
 
