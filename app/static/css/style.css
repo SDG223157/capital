@@ -433,7 +433,7 @@ footer p {
 @media (max-width: 768px) {
     .top-nav {
         position: absolute;
-        top: 25px !important;  /* Added !important to override other styles */
+        top: 45px !important;  /* Added !important to override other styles */
         right: 20px;
     }
     
