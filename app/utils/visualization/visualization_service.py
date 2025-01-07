@@ -166,6 +166,7 @@ class VisualizationService:
         try:
             if not signal_returns:
                 return {
+                    'total_trades': 0,
                     'win_rate': 0,
                     'average_return': 0
                 }
@@ -177,6 +178,7 @@ class VisualizationService:
 
             if not trades:
                 return {
+                    'total_trades': 0,
                     'win_rate': 0,
                     'average_return': 0
                 }
@@ -184,6 +186,7 @@ class VisualizationService:
             winning_trades = len([t for t in trades if t > 0])
             
             return {
+                'total_trades': len(trades),
                 'win_rate': (winning_trades / len(trades)) * 100 if trades else 0,
                 'average_return': sum(trades) / len(trades) if trades else 0
             }
@@ -191,6 +194,7 @@ class VisualizationService:
         except Exception as e:
             print(f"Error analyzing signals: {str(e)}")
             return {
+                'total_trades': 0,
                 'win_rate': 0,
                 'average_return': 0
             }
@@ -234,7 +238,7 @@ class VisualizationService:
             cells=dict(
                 values=[
                     ["Score", 'Regression Formula', 'Regression R²', 'Current Price', 
-                     'Annualized Return', 'Annual Volatility', 'Win Rate', 'Average Trade Return'],
+                     'Annualized Return', 'Annual Volatility', 'Total Trades', 'Win Rate', 'Average Trade Return'],
                     [
                         f"{final_score:.1f}",
                         regression_formula,
@@ -242,14 +246,15 @@ class VisualizationService:
                         f"${end_price:.2f}",
                         f"{annual_return:.2f}%",
                         f"{annualized_volatility:.3f}",
+                        f"{signal_metrics['total_trades']}",
                         f"{signal_metrics['win_rate']:.1f}%",
                         f"{signal_metrics['average_return']:.2f}%"
                     ]
                 ],
                 font=dict(
                     color=[
-                        ['black'] * 8,  # Colors for first column
-                        ['black', formula_color, r2_color, 'black', 'black', 'black', 'black', 'black']  # Colors for second column
+                        ['black'] * 9,  # Colors for first column (updated for new row)
+                        ['black', formula_color, r2_color, 'black', 'black', 'black', 'black', 'black', 'black']  # Colors for second column
                     ]
                 ),
                 **{k: v for k, v in table_style['cells'].items() if k != 'font'}
