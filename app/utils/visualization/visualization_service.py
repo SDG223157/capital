@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from app.utils.config.layout_config import LAYOUT_CONFIG, CHART_STYLE, TABLE_STYLE
-from app.utils.analyzer.stock_analyzer import analyze_signals
+
 
 def is_stock(symbol: str) -> bool:
     """
@@ -156,15 +156,53 @@ class VisualizationService:
         
         return metrics_table, growth_table
 
+    
+    
+    @staticmethod
+    def _analyze_signals(signal_returns):
+        """
+        Analyze trading signals and calculate performance metrics
+        """
+        try:
+            if not signal_returns:
+                return {
+                    'win_rate': 0,
+                    'average_return': 0
+                }
+
+            trades = []
+            for signal in signal_returns:
+                if 'Trade Return' in signal:
+                    trades.append(signal['Trade Return'])
+
+            if not trades:
+                return {
+                    'win_rate': 0,
+                    'average_return': 0
+                }
+
+            winning_trades = len([t for t in trades if t > 0])
+            
+            return {
+                'win_rate': (winning_trades / len(trades)) * 100 if trades else 0,
+                'average_return': sum(trades) / len(trades) if trades else 0
+            }
+        
+        except Exception as e:
+            print(f"Error analyzing signals: {str(e)}")
+            return {
+                'win_rate': 0,
+                'average_return': 0
+            }
+
     @staticmethod
     def _create_analysis_summary_table(days, end_price, annual_return, 
                                      daily_volatility, annualized_volatility, r2, 
                                      regression_formula, final_score, table_style,
                                      table_domain, signal_returns=None):
         """Create the analysis summary table with colored formula and R²"""
-        
-        # Get signal metrics from analyze_signals function
-        signal_metrics = analyze_signals(signal_returns)
+        # Get signal metrics using local analysis method
+        signal_metrics = VisualizationService._analyze_signals(signal_returns)
         
         try:
             equation_parts = regression_formula.split('=')
