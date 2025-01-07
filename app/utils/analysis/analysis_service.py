@@ -273,10 +273,14 @@ class AnalysisService:
                         diff = (value - benchmark) * 100  # Convert to percentage points
                         
                         # Score based on 5% steps from -30% to +30%
-                        if diff >= 30: return 100    # ≥30% better than benchmark
-                        if diff >= 25: return 90
-                        if diff >= 20: return 80
-                        if diff >= 15: return 70
+                        if diff >= 50: return 100
+                        if diff >= 45: return 95   # ≥30% better than benchmark
+                        if diff >= 40: return 90
+                        if diff >= 35: return 85
+                        if diff >= 30: return 80    # ≥30% better than benchmark
+                        if diff >= 25: return 75
+                        if diff >= 20: return 70
+                        if diff >= 15: return 65
                         if diff >= 10: return 60
                         if diff >= 5:  return 55
                         if diff >= 0:  return 50     # Meeting benchmark
