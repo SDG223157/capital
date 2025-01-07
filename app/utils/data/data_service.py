@@ -288,27 +288,32 @@ class DataService:
                     actual_years = set(filtered_df['fiscal_year'].values)
                     missing_years = requested_years - actual_years
                     
-                    # if len(missing_years) == 0:
-                    if len(missing_years) <= MAX_MISSING_YEARS_TOLERANCE:
-                        return pd.Series(
+                    return pd.Series(
                             filtered_df[metric_field].values,
                             index=filtered_df['fiscal_year'],
                             name=metric_description
                         )
-                    else:
-                        print(f"Incomplete data for {ticker}, fetching from API")
-                        # If data is incomplete, fetch all data and update database
-                        success = self.store_financial_data(ticker, start_year, end_year)
-                        if success:
-                            df = pd.read_sql_table(table_name, self.engine)
-                            df['fiscal_year'] = df['fiscal_year'].astype(int)
-                            mask = (df['fiscal_year'] >= int(start_year)) & (df['fiscal_year'] <= int(end_year))
-                            filtered_df = df[mask]
-                            return pd.Series(
-                                filtered_df[metric_field].values,
-                                index=filtered_df['fiscal_year'],
-                                name=metric_description
-                            )
+                    # if len(missing_years) == 0:
+                    # if len(missing_years) <= MAX_MISSING_YEARS_TOLERANCE:
+                    #     return pd.Series(
+                    #         filtered_df[metric_field].values,
+                    #         index=filtered_df['fiscal_year'],
+                    #         name=metric_description
+                    #     )
+                    # else:
+                    #     print(f"Incomplete data for {ticker}, fetching from API")
+                    #     # If data is incomplete, fetch all data and update database
+                    #     success = self.store_financial_data(ticker, start_year, end_year)
+                    #     if success:
+                    #         df = pd.read_sql_table(table_name, self.engine)
+                    #         df['fiscal_year'] = df['fiscal_year'].astype(int)
+                    #         mask = (df['fiscal_year'] >= int(start_year)) & (df['fiscal_year'] <= int(end_year))
+                    #         filtered_df = df[mask]
+                    #         return pd.Series(
+                    #             filtered_df[metric_field].values,
+                    #             index=filtered_df['fiscal_year'],
+                    #             name=metric_description
+                    #         )
 
             # If not in database, store it first
             print(f"Data not found in database for {ticker}, fetching from API")
