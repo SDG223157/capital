@@ -429,6 +429,15 @@ footer p {
     .suggestions {
         max-height: 250px;
     }
+    .top-nav {
+        position: absolute;
+        top: 45px !important;  /* Added !important to override other styles */
+        right: 20px;
+    }
+    
+    .nav-link {
+        margin-top: 3rem !important;  /* Added !important to override other styles */
+    }
 }
 
 
