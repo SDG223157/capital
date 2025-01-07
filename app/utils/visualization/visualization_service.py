@@ -198,6 +198,19 @@ class VisualizationService:
                 'win_rate': 0,
                 'average_return': 0
             }
+    @staticmethod
+    def _get_score_stars(score):
+        """Get star rating based on score value"""
+        if 90 <= score <= 100:
+            return "★★★★★"
+        elif 80 <= score < 90:
+            return "★★★★"
+        elif 60 <= score < 80:
+            return "★★★"
+        elif 40 <= score < 60:
+            return "★★"
+        else:
+            return "★"
 
     @staticmethod
     def _create_analysis_summary_table(days, end_price, annual_return, 
@@ -207,6 +220,10 @@ class VisualizationService:
         """Create the analysis summary table with colored formula and R²"""
         # Get signal metrics using local analysis method
         signal_metrics = VisualizationService._analyze_signals(signal_returns)
+        
+        # Get star rating for score
+        stars = VisualizationService._get_score_stars(final_score)
+        score_display = f"{final_score:.1f} ({stars})"
         
         try:
             equation_parts = regression_formula.split('=')
@@ -240,7 +257,7 @@ class VisualizationService:
                     ["Score", 'Regression Formula', 'Regression R²', 'Current Price', 
                      'Annualized Return', 'Annual Volatility', 'Total Trades', 'Win Rate', 'Average Trade Return'],
                     [
-                        f"{final_score:.1f}",
+                        score_display,  # Updated score display with stars
                         regression_formula,
                         f"{r2:.4f}",
                         f"${end_price:.2f}",
@@ -253,7 +270,7 @@ class VisualizationService:
                 ],
                 font=dict(
                     color=[
-                        ['black'] * 9,  # Colors for first column (updated for new row)
+                        ['black'] * 9,  # Colors for first column
                         ['black', formula_color, r2_color, 'black', 'black', 'black', 'black', 'black', 'black']  # Colors for second column
                     ]
                 ),
