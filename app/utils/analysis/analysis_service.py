@@ -230,7 +230,7 @@ class AnalysisService:
                                 base_score = 70
                         else:  # quad > 0, linear < 0
                             if ratio > 1:  # Quadratic dominates
-                                base_score = 85  # Good score if quadratic overcomes negative linear
+                                base_score = 90  # Good score if quadratic overcomes negative linear
                             else:
                                 base_score = 50
                     else:  # Downward trends
