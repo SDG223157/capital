@@ -223,6 +223,8 @@ class AnalysisService:
                             if ratio > 2:  # Strong quadratic uptrend
                                 base_score = 100  # Best score for strong quadratic uptrend
                             elif ratio > 1:  # Moderate quadratic uptrend
+                                base_score = 95
+                            elif ratio > 0.5:  # Moderate linear uptrend
                                 base_score = 90
                             elif ratio < 0.5:  # Strong linear uptrend
                                 base_score = 80
