@@ -200,6 +200,7 @@ class AnalysisService:
 
             # 4. Calculate scoring
             try:
+                
                 def evaluate_trend_score(quad_coef, linear_coef, r_squared):
                     """Calculate trend score based on trend direction, strength, and credibility"""
                     ratio = abs(quad_coef / linear_coef) if linear_coef != 0 else float('inf')
@@ -217,20 +218,22 @@ class AnalysisService:
                         credibility_level = 1  # Very Low
 
                     # Determine base trend score
-                    if quad_coef > 0:
+                    if quad_coef > 0:  # Upward trends
                         if linear_coef > 0:  # Both positive
-                            if ratio < 0.5:  # Strong linear uptrend
+                            if ratio > 2:  # Strong quadratic uptrend
+                                base_score = 100  # Best score for strong quadratic uptrend
+                            elif ratio > 1:  # Moderate quadratic uptrend
                                 base_score = 90
-                            elif ratio < 2:  # Balanced uptrend
+                            elif ratio < 0.5:  # Strong linear uptrend
                                 base_score = 80
-                            else:  # Strong quadratic uptrend
+                            else:  # Balanced uptrend
                                 base_score = 70
                         else:  # quad > 0, linear < 0
                             if ratio > 2:  # Quadratic dominates
-                                base_score = 65
+                                base_score = 85  # Good score if quadratic overcomes negative linear
                             else:
                                 base_score = 50
-                    else:  # quad < 0
+                    else:  # Downward trends
                         if linear_coef < 0:  # Both negative
                             if ratio < 0.5:  # Strong linear downtrend
                                 base_score = 30
@@ -250,35 +253,53 @@ class AnalysisService:
 
                     return final_score, ratio, credibility_level
 
-                def score_metric(value, benchmark, reverse=False):
-                    """Score metrics with granular thresholds"""
-                    ratio = value / benchmark
+                def score_metric(value, benchmark, metric_type='return'):
+                    """
+                    Score metrics based on type:
+                    - Returns: Use difference in percentage points (5% steps)
+                    - Volatility: Use ratio comparison
                     
-                    if reverse:
-                        if ratio <= 0.6: return 100
+                    Parameters:
+                    value: actual value
+                    benchmark: benchmark value
+                    metric_type: 'return' or 'volatility'
+                    """
+                    if metric_type == 'return':
+                        # For returns, use absolute difference in percentage points
+                        diff = (value - benchmark) * 100  # Convert to percentage points
+                        
+                        # Score based on 5% steps from -30% to +30%
+                        if diff >= 30: return 100    # ≥30% better than benchmark
+                        if diff >= 25: return 90
+                        if diff >= 20: return 80
+                        if diff >= 15: return 70
+                        if diff >= 10: return 60
+                        if diff >= 5:  return 55
+                        if diff >= 0:  return 50     # Meeting benchmark
+                        if diff >= -5: return 45
+                        if diff >= -10: return 40
+                        if diff >= -15: return 30
+                        if diff >= -20: return 20
+                        if diff >= -25: return 10
+                        return 0                     # >25% worse than benchmark
+                        
+                    else:  # volatility
+                        # For volatility, use ratio (lower is better)
+                        ratio = value / benchmark
+                        
+                        if ratio <= 0.6: return 100    # 40% or less volatility
                         if ratio <= 0.7: return 90
                         if ratio <= 0.8: return 80
                         if ratio <= 0.9: return 70
-                        if ratio <= 1.0: return 60
+                        if ratio <= 1.0: return 60     # Equal to benchmark
                         if ratio <= 1.1: return 50
                         if ratio <= 1.2: return 40
                         if ratio <= 1.3: return 30
                         if ratio <= 1.4: return 20
                         if ratio <= 1.5: return 10
-                        return 0
-                    else:
-                        if ratio >= 3: return 100
-                        if ratio >= 2.5: return 90
-                        if ratio >= 2.0: return 80
-                        if ratio >= 1.5: return 70
-                        if ratio >= 1.2: return 60
-                        if ratio >= 1.0: return 50
-                        if ratio >= 0.9: return 40
-                        if ratio >= 0.8: return 30
-                        if ratio >= 0.7: return 20
-                        if ratio >= 0.6: return 10
-                        return 0
+                        return 0                       # >50% more volatile
 
+               
                 # Calculate returns and volatility
                 returns = data['Close'].pct_change().dropna()
                 annual_return = returns.mean() * 252
@@ -288,9 +309,10 @@ class AnalysisService:
                 trend_score, ratio, credibility_level = evaluate_trend_score(coef[2], coef[1], r2)
                 
                 # Calculate other scores
-                return_score = score_metric(annual_return, sp500_params['annual_return'])
-                vol_score = score_metric(annual_volatility, sp500_params['annual_volatility'], reverse=True)
-
+                 # Usage in scoring section:
+                return_score = score_metric(annual_return, sp500_params['annual_return'], 'return')
+                vol_score = score_metric(annual_volatility, sp500_params['annual_volatility'], 'volatility')
+                
                 # Calculate raw score
                 weights = {'trend': 0.35, 'return': 0.50, 'volatility': 0.15}
                 raw_score = (
@@ -305,8 +327,8 @@ class AnalysisService:
                     sp500_params['linear_coef'],
                     sp500_params['r_squared']
                 )
-                sp500_return_score = score_metric(sp500_params['annual_return'], sp500_params['annual_return'])
-                sp500_vol_score = score_metric(sp500_params['annual_volatility'], sp500_params['annual_volatility'], reverse=True)
+                sp500_return_score = score_metric(sp500_params['annual_return'], sp500_params['annual_return'], 'return')
+                sp500_vol_score = score_metric(sp500_params['annual_volatility'], sp500_params['annual_volatility'], 'volatility')
 
                 sp500_raw_score = (
                     sp500_trend_score * weights['trend'] +
