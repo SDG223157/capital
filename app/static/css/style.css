@@ -71,7 +71,7 @@ header {
     font-size: 14px;
     padding: 0.5rem 0.25rem;    /* Last override */
     margin-left: 0.25rem;       /* Last override */
-    margin-top: 2.0rem;           /* Last override */
+    margin-top: 3.0rem;           /* Last override */
     transition: opacity 0.3s ease;
 }
 
