@@ -80,11 +80,12 @@ class DataService:
             cleaned = 'unknown'
         return cleaned
     
+    
+    
     def get_historical_data(self, ticker: str, start_date: str, end_date: str) -> pd.DataFrame:
         """
-        Get historical data from MySQL database or yfinance if not exists.
+        Get historical data from MySQL database or yfinance.
         Updates database with new data if requested end date is beyond max date.
-        Removes last 10 days of data and refetches it to ensure data completeness.
         
         Parameters:
         -----------
@@ -113,15 +114,15 @@ class DataService:
             # Adjust end_date if it's beyond latest trading day
             end_date = min(pd.to_datetime(end_date), pd.to_datetime(latest_trading_day)).strftime('%Y-%m-%d')
             
-            # First try to get data from database
+            # Check if table exists in database
             if self.table_exists(table_name):
                 logging.info(f"Getting historical data for {ticker} from database")
                 
                 # Get table's date range
-                date_range_query = text("""
+                date_range_query = text(f"""
                     SELECT MIN(Date) as min_date, MAX(Date) as max_date 
-                    FROM {}
-                """.format(table_name))
+                    FROM {table_name}
+                """)
                 date_range = pd.read_sql_query(date_range_query, self.engine)
                 
                 # Check for None in date_range values
@@ -139,17 +140,33 @@ class DataService:
                     df.set_index('Date', inplace=True)
                     return df[(df.index >= start_date) & (df.index <= end_date)]
                 
+                # Convert dates for comparison
                 db_start = pd.to_datetime(min_date).strftime('%Y-%m-%d')
-            
-                logging.info(f"Database start date: {db_start}")
-                logging.info(f"Requested start date: {start_date}")
+                db_end = pd.to_datetime(max_date).strftime('%Y-%m-%d')
+                current_date = pd.Timestamp.now().strftime('%Y-%m-%d')
                 
-                # If requested start date is before database start date
+                # Calculate default 10-year period
+                default_start = (pd.Timestamp.now() - pd.DateOffset(years=10)).strftime('%Y-%m-%d')
+                
+                # If requested start date is before both database start and default period
+                if (start_date < db_start) and (start_date < default_start):
+                    logging.info(f"Requested start date {start_date} is before database range and default period")
+                    logging.info("Fetching data directly from yfinance...")
+                    
+                    # Fetch data directly for the requested period
+                    ticker_obj = yf.Ticker(ticker)
+                    df = ticker_obj.history(start=start_date, end=end_date)
+                    if df.empty:
+                        raise ValueError(f"No data found for {ticker} in requested date range")
+                    df.index = df.index.tz_localize(None)
+                    return df
+
+                # If requested start date is before database start but within default period
                 if start_date < db_start:
                     logging.info(f"Requested start date {start_date} is before database start date {db_start}")
                     logging.info("Fetching additional historical data from yfinance...")
                     
-                    # Fetch additional historical data from yfinance
+                    # Fetch additional historical data
                     ticker_obj = yf.Ticker(ticker)
                     new_data = ticker_obj.history(start=start_date, end=db_start)
                     new_data.index = new_data.index.tz_localize(None)
@@ -158,74 +175,66 @@ class DataService:
                     existing_data = pd.read_sql_table(table_name, self.engine)
                     existing_data.set_index('Date', inplace=True)
                     
-                    # Combine the datasets
+                    # Combine datasets
                     combined_data = pd.concat([new_data, existing_data])
-                    
-                    # Handle duplicates with explicit rules
                     combined_data = combined_data[~combined_data.index.duplicated(keep='last')]
-                    
-                    # Sort index
                     combined_data.sort_index(inplace=True)
                     
-                    # Update database with combined data
+                    # Update database
                     success = self.store_dataframe(combined_data, table_name)
                     if not success:
                         raise ValueError(f"Failed to update data for {ticker}")
                     
-                    # Return the filtered data for the requested range
                     return combined_data[(combined_data.index >= start_date) & (combined_data.index <= end_date)]
                 
-                # If data is within database range
-                df = pd.read_sql_table(table_name, self.engine)
-                df.set_index('Date', inplace=True)
-                
-                # Convert dates for comparison
-                db_end = pd.to_datetime(max_date).strftime('%Y-%m-%d')
-                current_date = pd.Timestamp.now().strftime('%Y-%m-%d')
-                
-                # Check if data is more than 10 days old
+                # Check if data needs updating (more than 10 days old)
                 days_difference = (pd.to_datetime(current_date) - pd.to_datetime(db_end)).days
-                
                 if days_difference > 10:
                     logging.info(f"Data is {days_difference} days old. Updating from yfinance...")
                     
-                    # Fetch new data from yfinance
-                    ticker_obj = yf.Ticker(ticker)
+                    # Delete the last 10 days of data
+                    cutoff_date = pd.to_datetime(db_end) - pd.Timedelta(days=10)
                     
                     # Read existing data
                     existing_data = pd.read_sql_table(table_name, self.engine)
                     existing_data.set_index('Date', inplace=True)
-                    
-                    # Delete the last 10 days of data
-                    cutoff_date = pd.to_datetime(db_end) - pd.Timedelta(days=10)
-                    logging.info(f"Removing last 10 days of data (from {cutoff_date} to {db_end})")
                     existing_data = existing_data[existing_data.index < cutoff_date]
                     
-                    # Fetch new data starting from the cutoff date
-                    new_data = ticker_obj.history(start=cutoff_date.strftime('%Y-%m-%d'), end=current_date)
+                    # Fetch new data
+                    ticker_obj = yf.Ticker(ticker)
+                    new_data = ticker_obj.history(start=cutoff_date.strftime('%Y-%m-%d'))
                     new_data.index = new_data.index.tz_localize(None)
                     
-                    # Combine the datasets
+                    # Combine datasets
                     combined_data = pd.concat([existing_data, new_data])
-                    
-                    # Handle duplicates with explicit rules
                     combined_data = combined_data[~combined_data.index.duplicated(keep='last')]
-                    
-                    # Sort index
                     combined_data.sort_index(inplace=True)
                     
-                    # Update database with combined data
+                    # Update database
                     success = self.store_dataframe(combined_data, table_name)
                     if not success:
                         raise ValueError(f"Failed to update data for {ticker}")
                     
-                    # Return the filtered data for the requested range
-                    return combined_data[(combined_data.index >= start_date) & (df.index <= end_date)]
+                    return combined_data[(combined_data.index >= start_date) & (combined_data.index <= end_date)]
                 
-                # If data is current enough, return filtered data
+                # If data is current enough, return filtered data from database
+                df = pd.read_sql_table(table_name, self.engine)
+                df.set_index('Date', inplace=True)
                 return df[(df.index >= start_date) & (df.index <= end_date)]
             
-            # If table doesn't exist, store all historical data first
+            # If table doesn't exist, check if beyond default period
+            default_start = (pd.Timestamp.now() - pd.DateOffset(years=10)).strftime('%Y-%m-%d')
+            if start_date < default_start:
+                logging.info(f"Requested start date {start_date} is beyond default period and no existing data")
+                # Fetch data directly from yfinance for the specific period
+                ticker_obj = yf.Ticker(ticker)
+                df = ticker_obj.history(start=start_date, end=end_date)
+                if df.empty:
+                    raise ValueError(f"No data found for {ticker} in requested date range")
+                df.index = df.index.tz_localize(None)
+                return df
+            
+            # If within default period, store all historical data first
             logging.info(f"Data not found in database for {ticker}, fetching data")
             success = self.store_historical_data(ticker)
             if not success:
@@ -237,9 +246,8 @@ class DataService:
         except Exception as e:
             logging.error(f"Error in get_historical_data for {ticker}: {str(e)}")
             raise
-    
-    
-    
+        
+        
     def get_financial_data(self, ticker: str, metric_description: str, 
                         start_year: str, end_year: str) -> pd.Series:
         """
@@ -322,20 +330,44 @@ class DataService:
         except Exception as e:
             print(f"Error in get_financial_data for {ticker}: {str(e)}")
             return None
+    
     def store_historical_data(self, ticker: str, start_date: str = None, end_date: str = None) -> bool:
         """
-        Fetch and store historical price data from yfinance (max 30 years)
+        Fetch and store historical price data from yfinance.
+        Uses custom date range if provided, otherwise defaults to 10 years of data.
+        
+        Parameters:
+        -----------
+        ticker : str
+            Stock ticker symbol
+        start_date : str, optional
+            Start date in YYYY-MM-DD format
+        end_date : str, optional
+            End date in YYYY-MM-DD format
+        
+        Returns:
+        --------
+        bool
+            Success status of the operation
         """
         try:
             print(f"Fetching historical data for {ticker} from yfinance")
             ticker_obj = yf.Ticker(ticker)
             
-            # Calculate 30 years ago from now
-            end_dt = pd.Timestamp.now()
-            start_dt = end_dt - pd.DateOffset(years=10)
-            
-            # Fetch data for max period
-            df = ticker_obj.history(start=start_dt.strftime('%Y-%m-%d'))
+            # Get the latest trading day (last Friday if weekend)
+            latest_trading_day = pd.Timestamp.now()
+            while latest_trading_day.weekday() > 4:  # 5 = Saturday, 6 = Sunday
+                latest_trading_day -= pd.Timedelta(days=1)
+                
+            # If no dates specified, use default 10 year range
+            if start_date is None or end_date is None:
+                end_date = latest_trading_day.strftime('%Y-%m-%d')
+                start_date = (latest_trading_day - pd.DateOffset(years=10)).strftime('%Y-%m-%d')
+                df = ticker_obj.history(start=start_date)
+            else:
+                # Use specified date range but ensure end_date isn't beyond latest trading day
+                end_date = min(pd.to_datetime(end_date), latest_trading_day).strftime('%Y-%m-%d')
+                df = ticker_obj.history(start=start_date, end=end_date)
             
             if df.empty:
                 print(f"No historical data found for {ticker}")
@@ -348,11 +380,11 @@ class DataService:
             
             # Store in database
             return self.store_dataframe(df, table_name)
-                
+                    
         except Exception as e:
             print(f"Error storing historical data for {ticker}: {e}")
             return False
-
+    
     def store_financial_data(self, ticker: str, start_year: str = None, end_year: str = None) -> bool:
         """Fetch and store financial data from ROIC API"""
         try:
