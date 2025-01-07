@@ -250,7 +250,7 @@ class AnalysisService:
                                 base_score = 40
 
                     # Adjust score based on credibility
-                    credibility_adjustment = (credibility_level - 3) * 5
+                    credibility_adjustment = (credibility_level - 3) * 10
                     final_score = min(100, max(0, base_score + credibility_adjustment))
 
                     return final_score, ratio, credibility_level
