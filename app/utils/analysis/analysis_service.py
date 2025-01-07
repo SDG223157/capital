@@ -220,30 +220,34 @@ class AnalysisService:
                     # Determine base trend score
                     if quad_coef > 0:  # Upward trends
                         if linear_coef > 0:  # Both positive
-                            if ratio > 2:  # Strong quadratic uptrend
+                            if ratio > 10:  # Strong quadratic uptrend
                                 base_score = 100  # Best score for strong quadratic uptrend
-                            elif ratio > 1:  # Moderate quadratic uptrend
+                            elif ratio > 5:  # Moderate quadratic uptrend
                                 base_score = 90
-                            elif ratio < 0.5:  # Strong linear uptrend
-                                base_score = 80
+                            elif ratio < 0.1:  # Strong linear uptrend
+                                base_score = 85
                             else:  # Balanced uptrend
                                 base_score = 70
                         else:  # quad > 0, linear < 0
-                            if ratio > 2:  # Quadratic dominates
+                            if ratio > 10:  # Quadratic dominates
                                 base_score = 85  # Good score if quadratic overcomes negative linear
                             else:
                                 base_score = 50
                     else:  # Downward trends
                         if linear_coef < 0:  # Both negative
-                            if ratio < 0.5:  # Strong linear downtrend
+                            if ratio < 0.1:  # Strong linear downtrend
                                 base_score = 30
-                            elif ratio < 2:  # Balanced downtrend
+                            elif ratio < 5:  # Balanced downtrend
                                 base_score = 20
                             else:  # Strong quadratic downtrend
                                 base_score = 10
                         else:  # quad < 0, linear > 0
-                            if ratio > 2:  # Quadratic dominates
-                                base_score = 25
+                            if ratio > 10:  # Quadratic dominates
+                                base_score = 20
+                            elif ratio < 0.1:
+                                base_score = 85
+                            elif ratio < 2 and ratio > 1:
+                                base_score = 30
                             else:
                                 base_score = 40
 
