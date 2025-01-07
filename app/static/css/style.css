@@ -430,17 +430,7 @@ footer p {
         max-height: 250px;
     }
 }
-@media (max-width: 768px) {
-    .top-nav {
-        position: absolute;
-        top: 45px ;  /* Added !important to override other styles */
-        right: 20px;
-    }
-    
-    .nav-link {
-        margin-top: 3rem ;  /* Added !important to override other styles */
-    }
-}
+
 
 /* -------------------------------------- */
 /* 9. Error States */
