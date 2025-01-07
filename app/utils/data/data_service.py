@@ -139,6 +139,46 @@ class DataService:
                     df.set_index('Date', inplace=True)
                     return df[(df.index >= start_date) & (df.index <= end_date)]
                 
+                db_start = pd.to_datetime(min_date).strftime('%Y-%m-%d')
+            
+                logging.info(f"Database start date: {db_start}")
+                logging.info(f"Requested start date: {start_date}")
+                
+                # If requested start date is before database start date
+                if start_date < db_start:
+                    logging.info(f"Requested start date {start_date} is before database start date {db_start}")
+                    logging.info("Fetching additional historical data from yfinance...")
+                    
+                    # Fetch additional historical data from yfinance
+                    ticker_obj = yf.Ticker(ticker)
+                    new_data = ticker_obj.history(start=start_date, end=db_start)
+                    new_data.index = new_data.index.tz_localize(None)
+                    
+                    # Read existing data
+                    existing_data = pd.read_sql_table(table_name, self.engine)
+                    existing_data.set_index('Date', inplace=True)
+                    
+                    # Combine the datasets
+                    combined_data = pd.concat([new_data, existing_data])
+                    
+                    # Handle duplicates with explicit rules
+                    combined_data = combined_data[~combined_data.index.duplicated(keep='last')]
+                    
+                    # Sort index
+                    combined_data.sort_index(inplace=True)
+                    
+                    # Update database with combined data
+                    success = self.store_dataframe(combined_data, table_name)
+                    if not success:
+                        raise ValueError(f"Failed to update data for {ticker}")
+                    
+                    # Return the filtered data for the requested range
+                    return combined_data[(combined_data.index >= start_date) & (combined_data.index <= end_date)]
+                
+                # If data is within database range
+                df = pd.read_sql_table(table_name, self.engine)
+                df.set_index('Date', inplace=True)
+                
                 # Convert dates for comparison
                 db_end = pd.to_datetime(max_date).strftime('%Y-%m-%d')
                 current_date = pd.Timestamp.now().strftime('%Y-%m-%d')
@@ -180,11 +220,9 @@ class DataService:
                         raise ValueError(f"Failed to update data for {ticker}")
                     
                     # Return the filtered data for the requested range
-                    return combined_data[(combined_data.index >= start_date) & (combined_data.index <= end_date)]
+                    return combined_data[(combined_data.index >= start_date) & (df.index <= end_date)]
                 
-                # If data is current enough, return filtered data from database
-                df = pd.read_sql_table(table_name, self.engine)
-                df.set_index('Date', inplace=True)
+                # If data is current enough, return filtered data
                 return df[(df.index >= start_date) & (df.index <= end_date)]
             
             # If table doesn't exist, store all historical data first
