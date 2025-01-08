@@ -274,17 +274,16 @@ class AnalysisService:
                         diff = (value - benchmark) * 100  # Convert to percentage points
                         
                         # Score based on 5% steps from -30% to +30%
-                        if diff >= 50: return 100
-                        if diff >= 45: return 95   # ≥30% better than benchmark
-                        if diff >= 40: return 90
-                        if diff >= 35: return 85
-                        if diff >= 30: return 80    # ≥30% better than benchmark
-                        if diff >= 25: return 75
-                        if diff >= 20: return 70
-                        if diff >= 15: return 65
-                        if diff >= 10: return 60
-                        if diff >= 5:  return 55
-                        if diff >= 0:  return 50     # Meeting benchmark
+                        
+                        if diff >= 40: return 100
+                        if diff >= 35: return 95
+                        if diff >= 30: return 90    # ≥30% better than benchmark
+                        if diff >= 25: return 85
+                        if diff >= 20: return 80
+                        if diff >= 15: return 75
+                        if diff >= 10: return 70
+                        if diff >= 5:  return 65
+                        if diff >= 0:  return 60     # Meeting benchmark
                         if diff >= -5: return 45
                         if diff >= -10: return 40
                         if diff >= -15: return 30
@@ -323,7 +322,7 @@ class AnalysisService:
                 vol_score = score_metric(annual_volatility, sp500_params['annual_volatility'], 'volatility')
                 
                 # Calculate raw score
-                weights = {'trend': 0.45, 'return': 0.4, 'volatility': 0.15}
+                weights = {'trend': 0.3, 'return': 0.55, 'volatility': 0.15}
                 raw_score = (
                     trend_score * weights['trend'] +
                     return_score * weights['return'] +
