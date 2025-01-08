@@ -289,7 +289,7 @@ class AnalysisService:
                         if diff >= -15: return 30
                         if diff >= -20: return 20
                         if diff >= -25: return 10
-                        return 0                     # >25% worse than benchmark
+                        return 5                     # >25% worse than benchmark
                         
                     else:  # volatility
                         # For volatility, use ratio (lower is better)
@@ -297,15 +297,15 @@ class AnalysisService:
                         
                         if ratio <= 0.6: return 100    # 40% or less volatility
                         if ratio <= 0.7: return 90
-                        if ratio <= 0.8: return 80
-                        if ratio <= 0.9: return 70
-                        if ratio <= 1.0: return 60     # Equal to benchmark
-                        if ratio <= 1.1: return 50
-                        if ratio <= 1.2: return 40
-                        if ratio <= 1.3: return 30
-                        if ratio <= 1.4: return 20
-                        if ratio <= 1.5: return 10
-                        return 0                       # >50% more volatile
+                        if ratio <= 0.8: return 85
+                        if ratio <= 0.9: return 80
+                        if ratio <= 1.0: return 75     # Equal to benchmark
+                        if ratio <= 1.1: return 70
+                        if ratio <= 1.2: return 65
+                        if ratio <= 1.3: return 60
+                        if ratio <= 1.4: return 55
+                        if ratio <= 1.5: return 50
+                        return 40                       # >50% more volatile
 
                
                 # Calculate returns and volatility
