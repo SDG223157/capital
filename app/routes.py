@@ -427,7 +427,7 @@ def quick_analyze():
         fig = create_stock_visualization(
             ticker_input,
             end_date=None,  # Use current date
-            lookback_days=730,  # Default lookback
+            lookback_days=365,  # Default lookback
             crossover_days=365  # Default crossover
         )
         
