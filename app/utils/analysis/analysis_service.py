@@ -202,60 +202,61 @@ class AnalysisService:
             try:
                 
                 def evaluate_trend_score(quad_coef, linear_coef, r_squared):
-                    """Calculate trend score based on trend direction, strength, and credibility"""
-                    ratio = abs(quad_coef / linear_coef) if linear_coef != 0 else float('inf')
-                    
-                    # Check credibility
-                    if r_squared >= 0.90:
-                        credibility_level = 5  # Very High
-                    elif r_squared >= 0.80:
-                        credibility_level = 4  # High
-                    elif r_squared >= 0.70:
-                        credibility_level = 3  # Moderate
-                    elif r_squared >= 0.60:
-                        credibility_level = 2  # Low
-                    else:
-                        credibility_level = 1  # Very Low
-
-                     # Determine base trend score
-                    if quad_coef > 0:  # Upward trends
-                        if linear_coef > 0:  # Both positive
-                            if ratio > 2:  # Strong quadratic uptrend
-                                base_score = 100  # Best score for strong quadratic uptrend
-                            elif ratio > 1:  # Moderate quadratic uptrend
-                                base_score = 95
-                            elif ratio > 0.5:  # Moderate linear uptrend
-                                base_score = 90
-                            elif ratio < 0.5:  # Strong linear uptrend
-                                base_score = 80
-                            else:  # Balanced uptrend
-                                base_score = 70
-                        else:  # quad > 0, linear < 0
-                            if ratio > 1:  # Quadratic dominates
-                                base_score = 90  # Good score if quadratic overcomes negative linear
-                            else:
-                                base_score = 60
-                    else:  # Downward trends
-                        if linear_coef < 0:  # Both negative
-                            if ratio < 0.5:  # Strong linear downtrend
-                                base_score = 30
-                            elif ratio < 2:  # Balanced downtrend
-                                base_score = 20
-                            else:  # Strong quadratic downtrend
-                                base_score = 10
-                        else:  # quad < 0, linear > 0
-                            if ratio > 2:  # Quadratic dominates
-                                base_score = 25
-                            elif ratio < 0.1:
-                                base_score = 85
-                            else:
-                                base_score = 40
-
-                    # Adjust score based on credibility
-                    credibility_adjustment = (credibility_level - 3) * 10
-                    final_score = min(100, max(0, base_score + credibility_adjustment))
-
-                    return final_score, ratio, credibility_level
+                    """
+                    Calculate trend score ranging from 0 (most bearish) to 100 (most bullish)
+                    based on trend direction, strength, and credibility
+                    """
+                    try:
+                        # 1. Calculate asset's own volatility for benchmarks
+                        returns = data['Close'].pct_change().dropna()
+                        annual_vol = returns.std() * np.sqrt(252)
+                        period_days = len(data)
+                        period_years = period_days / 252
+                        
+                        # Calculate benchmarks using asset's own volatility
+                        vol_linear = annual_vol * np.sqrt(period_years)  
+                        vol_quad = annual_vol / np.sqrt(period_days)
+                        
+                        # 2. Calculate base trend score (50 is neutral)
+                        trend_score = 50
+                        
+                        # Linear component contribution (±25 points)
+                        linear_impact = linear_coef / vol_linear
+                        trend_score += 25 * min(1, max(-1, linear_impact))
+                        
+                        # Quadratic component contribution (±15 points)
+                        quad_impact = quad_coef / vol_quad
+                        if (quad_coef > 0 and linear_coef > 0) or (quad_coef < 0 and linear_coef < 0):
+                            # Reinforcing trend
+                            trend_score += 15 * min(1, max(-1, quad_impact))
+                        else:
+                            # Counteracting trend
+                            trend_score -= 15 * min(1, max(-1, abs(quad_impact)))
+                            
+                        # 3. Apply strength multiplier based on R-squared
+                        strength_multiplier = 0.5 + (0.5 * r_squared)  # Range: 0.5-1.0
+                        
+                        # 4. Calculate final score
+                        final_score = trend_score * strength_multiplier
+                        
+                        # 5. Normalize to 0-100 range
+                        final_score = min(100, max(0, final_score))
+                        
+                        # Calculate ratio for compatibility with existing code
+                        ratio = abs(quad_coef / linear_coef) if linear_coef != 0 else float('inf')
+                        
+                        # Determine credibility level for compatibility
+                        if r_squared >= 0.90: credibility_level = 5  # Very High
+                        elif r_squared >= 0.80: credibility_level = 4  # High
+                        elif r_squared >= 0.70: credibility_level = 3  # Moderate
+                        elif r_squared >= 0.60: credibility_level = 2  # Low
+                        else: credibility_level = 1  # Very Low
+                        
+                        return final_score, ratio, credibility_level
+                        
+                    except Exception as e:
+                        print(f"Error in trend score calculation: {str(e)}")
+                        return 50, 0, 1  # Return neutral score on error
 
                 def score_metric(value, benchmark, metric_type='return'):
                     """
