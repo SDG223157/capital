@@ -508,6 +508,7 @@ class VisualizationService:
                         x=[date],
                         y=[value],
                         mode='markers',
+                        showlegend=False,
                         name=detailed_name,
                         marker=dict(
                             color=color,
