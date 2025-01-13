@@ -435,6 +435,38 @@ class DataService:
     
     # In data_service.py
     # In data_service.py
+    def calculate_roic(self, income_stmt, balance_sheet, date):
+        """Calculate ROIC = (Operating Income - Tax) / (Total Assets - Total Current Liabilities)"""
+        try:
+            operating_income = 0
+            if 'Operating Income' in income_stmt.index:
+                operating_income = float(income_stmt.loc['Operating Income', date] or 0)
+            
+            income_tax = 0
+            if 'Income Tax Expense' in income_stmt.index:
+                income_tax = float(income_stmt.loc['Income Tax Expense', date] or 0)
+            
+            total_assets = 0
+            total_current_liabilities = 0
+            
+            if date in balance_sheet.columns:
+                if 'Total Assets' in balance_sheet.index:
+                    total_assets = float(balance_sheet.loc['Total Assets', date] or 0)
+                if 'Total Current Liabilities' in balance_sheet.index:
+                    total_current_liabilities = float(balance_sheet.loc['Total Current Liabilities', date] or 0)
+            
+            numerator = operating_income - income_tax
+            denominator = total_assets - total_current_liabilities
+            
+            if denominator and denominator != 0:
+                roic = (numerator / denominator) * 100
+                return float(f"{roic:.15f}")
+            return 0.0
+            
+        except Exception as e:
+            logger.error(f"Error calculating ROIC: {str(e)}")
+            return 0.0
+
     def store_financial_data(self, ticker: str, start_year: str = None, end_year: str = None) -> bool:
         """Fetch and store financial data, first try ROIC API then fallback to yfinance"""
         try:
@@ -463,7 +495,7 @@ class DataService:
                         df = df.drop(0).reset_index(drop=True)
                         all_metrics_data.append(df)
                         logger.info(f"Got {metric_description} from ROIC for {ticker}")
-                    sleep(1)  # Rate limiting
+                    sleep(1)
 
                 if all_metrics_data:
                     combined_df = pd.concat(all_metrics_data, axis=1)
@@ -483,16 +515,19 @@ class DataService:
                 logger.warning(f"ROIC API failed for {ticker}: {str(e)}, trying yfinance")
                 success = False
 
-            # If ROIC failed, try yfinance
+            # Try yfinance if ROIC failed
             try:
                 logger.info(f"Getting data from yfinance for {ticker}")
                 yf_ticker = yf.Ticker(ticker)
                 
                 financial_data = []
                 
-                # Get income statement data
-                if yf_ticker.income_stmt is not None and not yf_ticker.income_stmt.empty:
-                    income_stmt = yf_ticker.income_stmt
+                # Get all required financial statements
+                income_stmt = yf_ticker.income_stmt
+                balance_sheet = yf_ticker.balance_sheet
+                cash_flow = yf_ticker.cash_flow
+                
+                if income_stmt is not None and not income_stmt.empty:
                     dates = income_stmt.columns
                     
                     for date in dates:
@@ -517,7 +552,7 @@ class DataService:
                             eps = float(income_stmt.loc['Basic EPS', date] or 0)
                             year_data['eps'] = float(f"{eps:.15f}")
                         
-                        # Operating Margin (oper_margin)
+                        # Operating Margin
                         if 'Operating Income' in income_stmt.index and 'Total Revenue' in income_stmt.index:
                             revenue = float(income_stmt.loc['Total Revenue', date] or 0)
                             operating_income = float(income_stmt.loc['Operating Income', date] or 0)
@@ -526,7 +561,10 @@ class DataService:
                             else:
                                 year_data['oper_margin'] = 0.0
                         
-                        # Diluted Shares (is_sh_for_diluted_eps)
+                        # Calculate ROIC
+                        year_data['return_on_inv_capital'] = self.calculate_roic(income_stmt, balance_sheet, date)
+                        
+                        # Diluted Shares
                         if 'Diluted Average Shares' in income_stmt.index:
                             shares = float(income_stmt.loc['Diluted Average Shares', date] or 0)
                             year_data['is_sh_for_diluted_eps'] = shares
@@ -534,9 +572,7 @@ class DataService:
                         financial_data.append(year_data)
                         
                 # Get cash flow data
-                if yf_ticker.cash_flow is not None and not yf_ticker.cash_flow.empty:
-                    cash_flow = yf_ticker.cash_flow
-                    
+                if cash_flow is not None and not cash_flow.empty:
                     for data in financial_data:
                         date = pd.Timestamp(data['period_end_date'])
                         if date in cash_flow.columns:
@@ -556,9 +592,6 @@ class DataService:
                 
                 # Convert to DataFrame
                 df = pd.DataFrame(financial_data)
-                
-                # Add return_on_inv_capital (empty for now)
-                df['return_on_inv_capital'] = 0.0
                 
                 # Ensure all required columns exist
                 required_columns = [
@@ -603,9 +636,8 @@ class DataService:
         except Exception as e:
             logger.error(f"Error storing financial data for {ticker}: {str(e)}")
             return False
-        # In data_service.py
 
-    
+        
     def get_analysis_dates(self, end_date: str, lookback_type: str, 
                             lookback_value: int) -> str:
             """
