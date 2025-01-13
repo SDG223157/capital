@@ -223,7 +223,7 @@ class DataService:
                 return df[(df.index >= start_date) & (df.index <= end_date)]
             
             # If table doesn't exist, check if beyond default period
-            default_start = (pd.Timestamp.now() - pd.DateOffset(years=10)).strftime('%Y-%m-%d')
+            default_start = (pd.Timestamp.now() - pd.DateOffset(years=20)).strftime('%Y-%m-%d')
             if start_date < default_start:
                 logging.info(f"Requested start date {start_date} is beyond default period and no existing data")
                 # Fetch data directly from yfinance for the specific period
