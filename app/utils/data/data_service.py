@@ -503,6 +503,9 @@ class DataService:
                 if all_metrics_data:
                     combined_df = pd.concat(all_metrics_data, axis=1)
                     combined_df = combined_df.loc[:,~combined_df.columns.duplicated()]
+                    # Sort by fiscal year in descending order
+                    combined_df['fiscal_year'] = pd.to_numeric(combined_df['fiscal_year'])
+                    combined_df = combined_df.sort_values('fiscal_year', ascending=False).reset_index(drop=True)
                     logger.info(f"Successfully got all ROIC data for {ticker}")
                     
                     cleaned_ticker = self.clean_ticker_for_table_name(ticker)
@@ -523,15 +526,15 @@ class DataService:
                 logger.info(f"Getting data from yfinance for {ticker}")
                 yf_ticker = yf.Ticker(ticker)
                 
-                financial_data = []
-                
-                # Get all required financial statements
+                # Get all financial statements first
                 income_stmt = yf_ticker.income_stmt
                 balance_sheet = yf_ticker.balance_sheet
                 cash_flow = yf_ticker.cash_flow
                 
+                financial_data = []
+                
                 if income_stmt is not None and not income_stmt.empty:
-                    # Get dates sorted in descending order (newest first)
+                    # Sort dates in descending order to get most recent first
                     dates = sorted(income_stmt.columns, reverse=True)
                     
                     for date in dates:
@@ -574,8 +577,8 @@ class DataService:
                             year_data['is_sh_for_diluted_eps'] = shares
                         
                         financial_data.append(year_data)
-                
-                # Get cash flow data (maintaining the same order)
+                        
+                # Get cash flow data
                 if cash_flow is not None and not cash_flow.empty:
                     for data in financial_data:
                         date = pd.Timestamp(data['period_end_date'])
@@ -594,8 +597,11 @@ class DataService:
                     logger.warning(f"No financial data found in yfinance for {ticker}")
                     return False
                 
-                # Convert to DataFrame
+                # Convert to DataFrame and ensure correct order
                 df = pd.DataFrame(financial_data)
+                
+                # Convert fiscal_year to numeric for proper sorting
+                df['fiscal_year'] = pd.to_numeric(df['fiscal_year'])
                 
                 # Ensure all required columns exist
                 required_columns = [
@@ -618,8 +624,8 @@ class DataService:
                             continue
                         df[col] = 0.0
                 
-                # Ensure index is in correct order
-                df = df.reset_index(drop=True)
+                # Sort by fiscal year in descending order and reset index
+                df = df.sort_values('fiscal_year', ascending=False).reset_index(drop=True)
                 
                 # Reorder columns to match required format
                 df = df[required_columns]
@@ -640,7 +646,9 @@ class DataService:
         except Exception as e:
             logger.error(f"Error storing financial data for {ticker}: {str(e)}")
             return False
-                                        
+        
+        
+    
     def get_analysis_dates(self, end_date: str, lookback_type: str, 
                             lookback_value: int) -> str:
             """
