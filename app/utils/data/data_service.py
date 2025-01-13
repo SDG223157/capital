@@ -85,7 +85,7 @@ class DataService:
         """Store DataFrame in database with correct ordering"""
         try:
             # Ensure index is reset and ordered correctly
-            df = df.reset_index(drop=True)
+            # df = df.reset_index(drop=True)
             
             # Store DataFrame without the index
             df.to_sql(
