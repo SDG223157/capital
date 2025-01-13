@@ -367,7 +367,7 @@ class DataService:
             # If no dates specified, use default 10 year range
             if start_date is None or end_date is None:
                 end_date = latest_trading_day.strftime('%Y-%m-%d')
-                start_date = (latest_trading_day - pd.DateOffset(years=10)).strftime('%Y-%m-%d')
+                start_date = (latest_trading_day - pd.DateOffset(years=20)).strftime('%Y-%m-%d')
                 df = ticker_obj.history(start=start_date)
             else:
                 # Use specified date range but ensure end_date isn't beyond latest trading day
