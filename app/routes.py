@@ -1151,7 +1151,7 @@ def create_all_financial():
                     logger.info(msg)
                     send_progress_update(current, total, msg)
                     sleep(BATCH_DELAY)
-            
+                sleep(random.uniform(0.1, 0.3))
             # Send final summary
             final_msg = []
             if created_count > 0:
@@ -1165,7 +1165,7 @@ def create_all_financial():
                 logger.error(f'Failed tickers: {error_examples}')
             
             send_progress_update(total, total, ' | '.join(final_msg))
-            sleep(random.uniform(0.1, 0.3))
+            
         
         # Start processing in background thread
         thread = threading.Thread(target=process_tickers)
