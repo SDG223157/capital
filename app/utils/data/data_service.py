@@ -439,134 +439,49 @@ class DataService:
     # In data_service.py
 
     def store_financial_data(self, ticker: str, start_year: str = None, end_year: str = None) -> bool:
-        """Fetch and store financial data from ROIC API with improved error handling"""
+        """Fetch and store financial data from ROIC API"""
         try:
-            logger.info(f"Fetching financial data for {ticker}")
+            print(f"Fetching financial data for {ticker} from ROIC API")
             
-            # Default to 10 years of data if not specified
+            # If no years specified, use last 5 years
             if not start_year or not end_year:
                 current_year = datetime.now().year
                 end_year = str(current_year)
                 start_year = str(current_year - 10)
 
-            # Try simple API test first
-            test_metric = list(self.METRICS.values())[0]  # Get first metric
-            test_query = f"get({test_metric}(fa_period_reference=range('{start_year}', '{end_year}'))) for('{ticker}')"
-            test_url = f"{self.BASE_URL}?query={test_query}&apikey={self.API_KEY}"
-            
-            try:
-                response = requests.get(test_url, timeout=10)
-                if response.status_code != 200:
-                    logger.error(f"API test failed for {ticker}: Status {response.status_code}")
-                    return False
-                    
-                # Test if we get valid JSON data
-                test_data = response.json()
-                if not test_data or len(test_data) < 2:  # Need at least header + 1 data row
-                    logger.error(f"No valid data returned for {ticker} in test query")
-                    return False
-                    
-            except Exception as test_error:
-                logger.error(f"API test failed for {ticker}: {str(test_error)}")
-                return False
-
-            # If test passed, proceed with full data collection
             all_metrics_data = []
-            metrics_processed = 0
             
-            for metric_description, metric_field in self.METRICS.items():
-                try:
-                    query = f"get({metric_field}(fa_period_reference=range('{start_year}', '{end_year}'))) for('{ticker}')"
-                    url = f"{self.BASE_URL}?query={query}&apikey={self.API_KEY}"
+            # Fetch data for each metric
+            for metric_description in self.METRICS:
+                metric_field = self.METRICS[metric_description]
+                query = f"get({metric_field}(fa_period_reference=range('{start_year}', '{end_year}'))) for('{ticker}')"
+                url = f"{self.BASE_URL}?query={query}&apikey={self.API_KEY}"
 
-                    # Add delay between requests
-                    sleep(1.5)
-                    
-                    response = requests.get(url, timeout=10)
-                    
-                    # Handle rate limiting
-                    if response.status_code == 429:
-                        logger.warning(f"Rate limit hit for {ticker}, waiting 60 seconds...")
-                        sleep(60)
-                        response = requests.get(url, timeout=10)
-                    
-                    if response.status_code != 200:
-                        logger.error(f"Failed to fetch {metric_description} for {ticker}: Status {response.status_code}")
-                        continue
-                    
-                    data = response.json()
-                    if not data:
-                        logger.warning(f"Empty response for {metric_description} - {ticker}")
-                        continue
-                        
-                    df = pd.DataFrame(data)
-                    if len(df) < 2:  # Need at least header + 1 data row
-                        logger.warning(f"Insufficient data for {metric_description} - {ticker}")
-                        continue
-                        
-                    # Process the DataFrame
+                response = requests.get(url)
+                response.raise_for_status()
+                
+                df = pd.DataFrame(response.json())
+                if not df.empty:
                     df.columns = df.iloc[0]
                     df = df.drop(0).reset_index(drop=True)
-                    
-                    # Verify we have fiscal_year column
-                    if 'fiscal_year' not in df.columns:
-                        logger.warning(f"No fiscal_year column in {metric_description} - {ticker}")
-                        continue
-                    
                     all_metrics_data.append(df)
-                    metrics_processed += 1
-                    logger.info(f"Successfully processed {metric_description} for {ticker}")
-                    
-                except Exception as metric_error:
-                    logger.error(f"Error processing {metric_description} for {ticker}: {str(metric_error)}")
-                    continue
 
-            # Check if we got enough data
             if not all_metrics_data:
-                logger.error(f"No valid financial data collected for {ticker}")
-                return False
-                
-            if metrics_processed < len(self.METRICS) / 2:
-                logger.error(f"Too few metrics processed for {ticker}: {metrics_processed}/{len(self.METRICS)}")
+                print(f"No financial data found for {ticker}")
                 return False
 
-            try:
-                # Combine data and handle duplicates
-                combined_df = pd.concat(all_metrics_data, axis=1)
-                combined_df = combined_df.loc[:,~combined_df.columns.duplicated()]
+            # Combine all metrics data
+            combined_df = pd.concat(all_metrics_data, axis=1)
+            combined_df = combined_df.loc[:,~combined_df.columns.duplicated()]
+            # print(combined_df)
+            
+            # Store in database
+            cleaned_ticker = self.clean_ticker_for_table_name(ticker)
+            table_name = f"roic_{cleaned_ticker}"
+            return self.store_dataframe(combined_df, table_name)
                 
-                # Ensure required columns exist
-                required_columns = ['fiscal_year']
-                if not all(col in combined_df.columns for col in required_columns):
-                    logger.error(f"Missing required columns for {ticker}")
-                    return False
-                
-                # Clean and convert data types
-                combined_df['fiscal_year'] = pd.to_numeric(combined_df['fiscal_year'], errors='coerce')
-                combined_df = combined_df.dropna(subset=['fiscal_year'])
-                
-                if combined_df.empty:
-                    logger.error(f"No valid rows after cleaning for {ticker}")
-                    return False
-                
-                # Store in database
-                cleaned_ticker = self.clean_ticker_for_table_name(ticker)
-                table_name = f"roic_{cleaned_ticker}"
-                
-                success = self.store_dataframe(combined_df, table_name)
-                if success:
-                    logger.info(f"Successfully stored financial data for {ticker}")
-                    return True
-                else:
-                    logger.error(f"Failed to store data in database for {ticker}")
-                    return False
-                    
-            except Exception as process_error:
-                logger.error(f"Error processing combined data for {ticker}: {str(process_error)}")
-                return False
-                    
         except Exception as e:
-            logger.error(f"Unexpected error storing financial data for {ticker}: {str(e)}")
+            print(f"Error storing financial data for {ticker}: {e}")
             return False
         
     def get_analysis_dates(self, end_date: str, lookback_type: str, 
