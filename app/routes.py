@@ -1055,7 +1055,8 @@ def create_all_financial():
             })
             
         # Process missing tickers
-        # In create_all_financial() route, replace the process_tickers function with this:
+        # In create_all_financial() route, replace the process_tickers f
+        # Start processing in background thread
         def process_tickers():
             created_count = 0
             errors = []
@@ -1065,16 +1066,19 @@ def create_all_financial():
             end_year = str(datetime.now().year)
             start_year = str(int(end_year) - 10)
             
-            # Configure delays and batches
-            BATCH_SIZE = 10  # Process 10 tickers at a time
-            BATCH_DELAY = 60  # 60 second pause between batches
+            # Configure batch processing
+            BATCH_SIZE = 5  # Reduced batch size
+            BATCH_DELAY = 90  # Longer delay between batches
+            MAX_ERRORS_PER_BATCH = 3  # Maximum errors before taking a longer break
+            LONG_BREAK = 180  # 3 minutes
             
             batch_tickers = []
             for i in range(0, len(missing_tickers), BATCH_SIZE):
                 batch_tickers.append(missing_tickers[i:i + BATCH_SIZE])
             
             for batch_num, batch in enumerate(batch_tickers, 1):
-                msg = f"Processing batch {batch_num} of {len(batch_tickers)}..."
+                batch_errors = 0
+                msg = f"Starting batch {batch_num} of {len(batch_tickers)}..."
                 logger.info(msg)
                 send_progress_update(current, total, msg)
                 
@@ -1087,8 +1091,20 @@ def create_all_financial():
                         logger.info(msg)
                         send_progress_update(current, total, msg)
                         
-                        # Use the retry version instead
-                        success = data_service.store_financial_data_with_retry(
+                        # Skip certain types of tickers
+                        if '.' in ticker:  # Skip non-US stocks
+                            msg = f'Skipping non-US stock: {ticker}'
+                            logger.info(msg)
+                            send_progress_update(current, total, msg)
+                            continue
+                            
+                        if any(x in ticker for x in ['^', '/', '\\']):  # Skip invalid symbols
+                            msg = f'Skipping invalid symbol: {ticker}'
+                            logger.info(msg)
+                            send_progress_update(current, total, msg)
+                            continue
+                        
+                        success = data_service.store_financial_data(
                             ticker,
                             start_year=start_year,
                             end_year=end_year
@@ -1099,22 +1115,40 @@ def create_all_financial():
                             msg = f'✓ Created financial table for {ticker}'
                             logger.info(msg)
                         else:
+                            batch_errors += 1
                             msg = f'✗ Failed to create table for {ticker}'
                             logger.error(msg)
                             errors.append(f"Failed: {ticker}")
                         
                         send_progress_update(current, total, msg)
-                        sleep(2)  # Small delay between tickers
+                        
+                        # Take longer break if too many errors in this batch
+                        if batch_errors >= MAX_ERRORS_PER_BATCH:
+                            msg = f'Too many errors in batch {batch_num}, taking a longer break ({LONG_BREAK}s)...'
+                            logger.warning(msg)
+                            send_progress_update(current, total, msg)
+                            sleep(LONG_BREAK)
+                            batch_errors = 0  # Reset error count
+                        else:
+                            sleep(2)  # Normal delay between tickers
                         
                     except Exception as ticker_error:
+                        batch_errors += 1
                         error_msg = f"Error processing {ticker}: {str(ticker_error)}"
                         logger.error(f"{error_msg}\n{traceback.format_exc()}")
                         errors.append(f"Error: {ticker}")
                         send_progress_update(current, total, f'✗ {error_msg}')
+                        
+                        if batch_errors >= MAX_ERRORS_PER_BATCH:
+                            msg = f'Too many errors in batch {batch_num}, taking a longer break ({LONG_BREAK}s)...'
+                            logger.warning(msg)
+                            send_progress_update(current, total, msg)
+                            sleep(LONG_BREAK)
+                            batch_errors = 0
                 
-                # After each batch, take a longer pause
+                # After each batch, take a pause
                 if batch_num < len(batch_tickers):
-                    msg = f'Completed batch {batch_num}. Pausing for {BATCH_DELAY} seconds to respect API limits...'
+                    msg = f'Completed batch {batch_num}. Pausing for {BATCH_DELAY} seconds...'
                     logger.info(msg)
                     send_progress_update(current, total, msg)
                     sleep(BATCH_DELAY)
@@ -1132,7 +1166,6 @@ def create_all_financial():
                 logger.error(f'Failed tickers: {error_examples}')
             
             send_progress_update(total, total, ' | '.join(final_msg))
-        # Start processing in background thread
         thread = threading.Thread(target=process_tickers)
         thread.start()
         
