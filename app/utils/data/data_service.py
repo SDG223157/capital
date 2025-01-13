@@ -592,47 +592,56 @@ class DataService:
                     logger.warning(f"No financial data found in yfinance for {ticker}")
                     return False
                 
-                # Update the end of store_financial_data method where we store the DataFrame:
+                # Convert to DataFrame and ensure correct order
+                df = pd.DataFrame(financial_data)
 
-        # Convert to DataFrame and ensure correct order
-        df = pd.DataFrame(financial_data)
+                # Ensure all required columns exist
+                required_columns = [
+                    'fiscal_year',
+                    'period_label',
+                    'period_end_date',
+                    'is_sales_and_services_revenues',
+                    'cf_cash_from_oper',
+                    'is_net_income',
+                    'eps',
+                    'oper_margin',
+                    'cf_cap_expenditures',
+                    'return_on_inv_capital',
+                    'is_sh_for_diluted_eps'
+                ]
 
-        # Ensure all required columns exist
-        required_columns = [
-            'fiscal_year',
-            'period_label',
-            'period_end_date',
-            'is_sales_and_services_revenues',
-            'cf_cash_from_oper',
-            'is_net_income',
-            'eps',
-            'oper_margin',
-            'cf_cap_expenditures',
-            'return_on_inv_capital',
-            'is_sh_for_diluted_eps'
-        ]
+                for col in required_columns:
+                    if col not in df.columns:
+                        if col in ['fiscal_year', 'period_label', 'period_end_date']:
+                            continue
+                        df[col] = 0.0
 
-        for col in required_columns:
-            if col not in df.columns:
-                if col in ['fiscal_year', 'period_label', 'period_end_date']:
-                    continue
-                df[col] = 0.0
+                # Sort by fiscal year in descending order (latest year first)
+                df = df.sort_values('fiscal_year', ascending=False)
 
-        # Sort by fiscal year in descending order (latest year first)
-        df = df.sort_values('fiscal_year', ascending=False)
+                # Reset index to ensure the index is in order
+                df = df.reset_index(drop=True)
 
-        # Reset index to ensure the index is in order
-        df = df.reset_index(drop=True)
+                # Reorder columns to match required format
+                df = df[required_columns]
 
-        # Reorder columns to match required format
-        df = df[required_columns]
+                # Store in database without index
+                cleaned_ticker = self.clean_ticker_for_table_name(ticker)
+                table_name = f"roic_{cleaned_ticker}"
 
-        # Store in database without index
-        cleaned_ticker = self.clean_ticker_for_table_name(ticker)
-        table_name = f"roic_{cleaned_ticker}"
-
-        success = self.store_dataframe(df.copy(), table_name)
-                        
+                success = self.store_dataframe(df.copy(), table_name)
+                if success:
+                    logger.info(f"Successfully stored yfinance data for {ticker}")
+                    return success
+                
+            except Exception as e:
+                logger.error(f"Both ROIC and yfinance failed for {ticker}: {str(e)}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error storing financial data for {ticker}: {str(e)}")
+            return False
+                                
     def get_analysis_dates(self, end_date: str, lookback_type: str, 
                             lookback_value: int) -> str:
             """
