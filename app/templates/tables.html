@@ -106,11 +106,22 @@
             padding: 8px 16px;
             border-radius: 4px;
             cursor: pointer;
-            float: right;
             margin-bottom: 10px;
         }
         .delete-all-btn:hover {
             background-color: #c82333;
+        }
+        .create-all-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .create-all-btn:hover {
+            background-color: #218838;
         }
         .confirm-modal {
             display: none;
@@ -196,9 +207,14 @@
                         (Daily stock price data)
                     </span>
                 </div>
-                <button class="delete-all-btn" onclick="showDeleteAllConfirm()">
-                    Delete All Historical Data
-                </button>
+                <div style="display: flex; gap: 10px;">
+                    <button class="create-all-btn" onclick="showCreateAllHistoricalConfirm()">
+                        Create All Historical Data
+                    </button>
+                    <button class="delete-all-btn" onclick="showDeleteAllConfirm()">
+                        Delete All Historical Data
+                    </button>
+                </div>
             </div>
             {% for table in historical_tables %}
             <div class="tree-item" data-table="{{ table.name }}">
@@ -224,9 +240,14 @@
                         (Company financial metrics)
                     </span>
                 </div>
-                <button class="delete-all-btn" onclick="showDeleteAllFinancialConfirm()">
-                    Delete All Financial Data
-                </button>
+                <div style="display: flex; gap: 10px;">
+                    <button class="create-all-btn" onclick="showCreateAllFinancialConfirm()">
+                        Create All Financial Data
+                    </button>
+                    <button class="delete-all-btn" onclick="showDeleteAllFinancialConfirm()">
+                        Delete All Financial Data
+                    </button>
+                </div>
             </div>
             {% for table in financial_tables %}
             <div class="tree-item" data-table="{{ table.name }}">
@@ -302,6 +323,30 @@
         </div>
     </div>
 
+    <!-- Create All Historical Confirmation Modal -->
+    <div id="confirmCreateAllHistoricalModal" class="confirm-modal">
+        <div class="modal-content">
+            <h3>Create All Historical Data</h3>
+            <p>This will create historical data tables for all tickers. This may take a while. Do you want to continue?</p>
+            <div class="modal-buttons">
+                <button onclick="closeCreateAllHistoricalModal()" style="background-color: #6c757d; color: white;">Cancel</button>
+                <button onclick="confirmCreateAllHistorical()" style="background-color: #28a745; color: white;">Create All</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create All Financial Confirmation Modal -->
+    <div id="confirmCreateAllFinancialModal" class="confirm-modal">
+        <div class="modal-content">
+            <h3>Create All Financial Data</h3>
+            <p>This will create financial data tables for all tickers. This may take a while. Do you want to continue?</p>
+            <div class="modal-buttons">
+                <button onclick="closeCreateAllFinancialModal()" style="background-color: #6c757d; color: white;">Cancel</button>
+                <button onclick="confirmCreateAllFinancial()" style="background-color: #28a745; color: white;">Create All</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let tableToDelete = null;
 
@@ -323,7 +368,31 @@
             document.getElementById('confirmDeleteAllModal').style.display = 'none';
         }
 
-        function confirmDelete() {
+        function showDeleteAllFinancialConfirm() {
+            document.getElementById('confirmDeleteAllFinancialModal').style.display = 'block';
+        }
+
+        function closeDeleteAllFinancialModal() {
+            document.getElementById('confirmDeleteAllFinancialModal').style.display = 'none';
+        }
+
+        function showCreateAllHistoricalConfirm() {
+            document.getElementById('confirmCreateAllHistoricalModal').style.display = 'block';
+        }
+
+        function closeCreateAllHistoricalModal() {
+            document.getElementById('confirmCreateAllHistoricalModal').style.display = 'none';
+        }
+
+        function showCreateAllFinancialConfirm() {
+            document.getElementById('confirmCreateAllFinancialModal').style.display = 'block';
+        }
+
+        function closeCreateAllFinancialModal() {
+            document.getElementById('confirmCreateAllFinancialModal').style.display = 'none';
+        }
+
+        async function confirmDelete() {
             if (!tableToDelete) return;
             
             fetch(`/delete_table/${tableToDelete}`, {
@@ -356,12 +425,28 @@
             });
         }
 
-        function showDeleteAllFinancialConfirm() {
-            document.getElementById('confirmDeleteAllFinancialModal').style.display = 'block';
-        }
-
-        function closeDeleteAllFinancialModal() {
-            document.getElementById('confirmDeleteAllFinancialModal').style.display = 'none';
+        async function confirmDeleteAll() {
+            try {
+                const response = await fetch('/delete_all_historical', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert(data.error || 'Error deleting tables');
+                }
+            } catch (error) {
+                alert('Error deleting tables');
+                console.error('Error:', error);
+            } finally {
+                closeDeleteAllModal();
+            }
         }
 
         async function confirmDeleteAllFinancial() {
@@ -388,9 +473,9 @@
             }
         }
 
-        async function confirmDeleteAll() {
+        async function confirmCreateAllHistorical() {
             try {
-                const response = await fetch('/delete_all_historical', {
+                const response = await fetch('/create_all_historical', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -402,13 +487,37 @@
                     alert(data.message);
                     location.reload();
                 } else {
-                    alert(data.error || 'Error deleting tables');
+                    alert(data.error || 'Error creating tables');
                 }
             } catch (error) {
-                alert('Error deleting tables');
+                alert('Error creating tables');
                 console.error('Error:', error);
             } finally {
-                closeDeleteAllModal();
+                closeCreateAllHistoricalModal();
+            }
+        }
+
+        async function confirmCreateAllFinancial() {
+            try {
+                const response = await fetch('/create_all_financial', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert(data.error || 'Error creating tables');
+                }
+            } catch (error) {
+                alert('Error creating tables');
+                console.error('Error:', error);
+            } finally {
+                closeCreateAllFinancialModal();
             }
         }
     </script>

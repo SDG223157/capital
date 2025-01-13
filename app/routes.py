@@ -16,6 +16,7 @@ import pandas as pd
 import io
 from functools import wraps
 from flask import abort
+from datetime import datetime, timedelta
 # from flask_login import current_user
 
 # Add this decorator function to check for admin privileges
@@ -815,6 +816,142 @@ def delete_all_financial():
             
     except Exception as e:
         error_msg = f"Error deleting financial tables: {str(e)}"
+        logger.error(f"{error_msg}\n{traceback.format_exc()}")
+        return jsonify({
+            'success': False,
+            'error': error_msg
+        }), 500
+
+
+@bp.route('/create_all_historical', methods=['POST'])
+@admin_required
+def create_all_historical():
+    """Create historical data tables for all tickers"""
+    try:
+        logger.info('Attempting to create all historical data tables')
+        
+        # Load tickers
+        tickers, _ = load_tickers()
+        if not tickers:
+            return jsonify({
+                'success': False,
+                'error': 'No tickers found'
+            }), 404
+            
+        # Create historical data for each ticker
+        created_count = 0
+        errors = []
+        from app.utils.data.data_service import DataService
+        data_service = DataService()
+        
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=365*20)  # 20 years of data
+        
+        for ticker_obj in tickers:
+            try:
+                ticker = ticker_obj['symbol']
+                success = data_service.store_historical_data(
+                    ticker,
+                    start_date=start_date.strftime('%Y-%m-%d'),
+                    end_date=end_date.strftime('%Y-%m-%d')
+                )
+                if success:
+                    created_count += 1
+                else:
+                    errors.append(f"Failed to create table for {ticker}")
+            except Exception as ticker_error:
+                error_msg = f"Error creating table for {ticker}: {str(ticker_error)}"
+                logger.error(error_msg)
+                errors.append(error_msg)
+        
+        # Prepare response message
+        if created_count == len(tickers):
+            message = f'Successfully created {created_count} historical tables'
+            logger.info(message)
+            return jsonify({
+                'success': True,
+                'message': message
+            })
+        else:
+            message = f'Partially completed: Created {created_count} out of {len(tickers)} tables'
+            if errors:
+                message += f'. Errors: {"; ".join(errors)}'
+            logger.warning(message)
+            return jsonify({
+                'success': True,
+                'message': message
+            })
+            
+    except Exception as e:
+        error_msg = f"Error creating historical tables: {str(e)}"
+        logger.error(f"{error_msg}\n{traceback.format_exc()}")
+        return jsonify({
+            'success': False,
+            'error': error_msg
+        }), 500
+
+@bp.route('/create_all_financial', methods=['POST'])
+@admin_required
+def create_all_financial():
+    """Create financial data tables for all tickers"""
+    try:
+        logger.info('Attempting to create all financial data tables')
+        
+        # Load tickers
+        tickers, _ = load_tickers()
+        if not tickers:
+            return jsonify({
+                'success': False,
+                'error': 'No tickers found'
+            }), 404
+            
+        # Create financial data for each ticker
+        created_count = 0
+        errors = []
+        from app.utils.data.data_service import DataService
+        data_service = DataService()
+        
+        end_year = str(datetime.now().year)
+        start_year = str(int(end_year) - 10)  # 10 years of financial data
+        
+        for ticker_obj in tickers:
+            try:
+                ticker = ticker_obj['symbol']
+                if '.' not in ticker:  # Skip non-US stocks for financial data
+                    success = data_service.store_financial_data(
+                        ticker,
+                        start_year=start_year,
+                        end_year=end_year
+                    )
+                    if success:
+                        created_count += 1
+                    else:
+                        errors.append(f"Failed to create table for {ticker}")
+            except Exception as ticker_error:
+                error_msg = f"Error creating table for {ticker}: {str(ticker_error)}"
+                logger.error(error_msg)
+                errors.append(error_msg)
+        
+        # Prepare response message
+        if created_count > 0:
+            message = f'Successfully created {created_count} financial tables'
+            logger.info(message)
+            return jsonify({
+                'success': True,
+                'message': message
+            })
+        else:
+            message = f'Failed to create any financial tables'
+            if errors:
+                message += f'. Errors: {"; ".join(errors[:5])}...'  # Show first 5 errors
+            logger.warning(message)
+            return jsonify({
+                'success': False,
+                'message': message
+            })
+            
+    except Exception as e:
+        error_msg = f"Error creating financial tables: {str(e)}"
         logger.error(f"{error_msg}\n{traceback.format_exc()}")
         return jsonify({
             'success': False,
