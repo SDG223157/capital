@@ -1076,10 +1076,9 @@ def create_all_financial():
         missing_tickers = []
         for ticker_obj in tickers:
             ticker = ticker_obj['symbol']
-            if '.' not in ticker:  # Only US stocks
-                cleaned_ticker = data_service.clean_ticker_for_table_name(ticker)
-                table_name = f"roic_{cleaned_ticker}"
-                if table_name not in existing_tables:
+            cleaned_ticker = data_service.clean_ticker_for_table_name(ticker)
+            table_name = f"roic_{cleaned_ticker}"
+            if table_name not in existing_tables:
                     missing_tickers.append(ticker_obj)
                     
         logger.info(f'Found {len(missing_tickers)} missing financial tables to create')
