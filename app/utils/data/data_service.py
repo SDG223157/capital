@@ -433,82 +433,80 @@ class DataService:
             return False
     
     
+    # In data_service.py
+
     def store_financial_data(self, ticker: str, start_year: str = None, end_year: str = None) -> bool:
-        """Fetch and store financial data from ROIC API with rate limit handling"""
+        """Fetch and store financial data from ROIC API"""
         try:
-            logger.info(f"Fetching financial data for {ticker} from ROIC API")
+            print(f"Fetching financial data for {ticker} from ROIC API")
             
-            # If no years specified, use last 5 years
+            # If no years specified, use last 10 years
             if not start_year or not end_year:
                 current_year = datetime.now().year
                 end_year = str(current_year)
                 start_year = str(current_year - 10)
 
             all_metrics_data = []
-            retries = 3
-            retry_delay = 5  # seconds
             
             # Fetch data for each metric
             for metric_description in self.METRICS:
-                metric_field = self.METRICS[metric_description]
-                
-                for attempt in range(retries):
-                    try:
-                        query = f"get({metric_field}(fa_period_reference=range('{start_year}', '{end_year}'))) for('{ticker}')"
-                        url = f"{self.BASE_URL}?query={query}&apikey={self.API_KEY}"
+                try:
+                    metric_field = self.METRICS[metric_description]
+                    query = f"get({metric_field}(fa_period_reference=range('{start_year}', '{end_year}'))) for('{ticker}')"
+                    url = f"{self.BASE_URL}?query={query}&apikey={self.API_KEY}"
 
-                        response = requests.get(url)
-                        
-                        # Check for rate limit response
-                        if response.status_code == 429:  # Too Many Requests
-                            if attempt < retries - 1:  # If we have retries left
-                                logger.warning(f"Rate limit hit for {ticker}, waiting {retry_delay} seconds...")
-                                sleep(retry_delay)
-                                retry_delay *= 2  # Double the delay for next retry
-                                continue
-                            else:
-                                logger.error(f"Rate limit hit for {ticker}, max retries exceeded")
-                                return False
-                        
-                        response.raise_for_status()
-                        
-                        df = pd.DataFrame(response.json())
-                        if not df.empty:
-                            df.columns = df.iloc[0]
-                            df = df.drop(0).reset_index(drop=True)
-                            all_metrics_data.append(df)
-                        
-                        # Add small delay between metric requests
-                        sleep(1)
-                        break  # Success, exit retry loop
-                        
-                    except requests.exceptions.RequestException as e:
-                        if attempt < retries - 1:  # If we have retries left
-                            logger.warning(f"Request failed for {ticker}, retrying... ({str(e)})")
-                            sleep(retry_delay)
-                            retry_delay *= 2  # Double the delay for next retry
-                        else:
-                            logger.error(f"Request failed for {ticker} after {retries} attempts: {str(e)}")
-                            return False
+                    # Add delay between requests
+                    sleep(1.5)  # 1.5 seconds between requests
+                    
+                    response = requests.get(url)
+                    
+                    # Handle rate limiting
+                    if response.status_code == 429:  # Too Many Requests
+                        print(f"Rate limit hit for {ticker}, waiting 60 seconds...")
+                        sleep(60)  # Wait 60 seconds if rate limited
+                        response = requests.get(url)  # Try again
+                    
+                    response.raise_for_status()
+                    
+                    df = pd.DataFrame(response.json())
+                    if not df.empty:
+                        df.columns = df.iloc[0]
+                        df = df.drop(0).reset_index(drop=True)
+                        all_metrics_data.append(df)
+                    
+                except Exception as metric_error:
+                    print(f"Error fetching {metric_description} for {ticker}: {str(metric_error)}")
+                    continue  # Continue with next metric if one fails
 
             if not all_metrics_data:
-                logger.warning(f"No financial data found for {ticker}")
+                print(f"No financial data found for {ticker}")
                 return False
 
             # Combine all metrics data
-            combined_df = pd.concat(all_metrics_data, axis=1)
-            combined_df = combined_df.loc[:,~combined_df.columns.duplicated()]
-            
-            # Store in database
-            cleaned_ticker = self.clean_ticker_for_table_name(ticker)
-            table_name = f"roic_{cleaned_ticker}"
-            return self.store_dataframe(combined_df, table_name)
+            try:
+                combined_df = pd.concat(all_metrics_data, axis=1)
+                combined_df = combined_df.loc[:,~combined_df.columns.duplicated()]
+                
+                # Store in database
+                cleaned_ticker = self.clean_ticker_for_table_name(ticker)
+                table_name = f"roic_{cleaned_ticker}"
+                
+                # Convert DataFrame columns that should be numeric
+                numeric_columns = ['fiscal_year']  # Add other numeric columns as needed
+                for col in numeric_columns:
+                    if col in combined_df.columns:
+                        combined_df[col] = pd.to_numeric(combined_df[col], errors='coerce')
+                
+                return self.store_dataframe(combined_df, table_name)
+                
+            except Exception as combine_error:
+                print(f"Error combining data for {ticker}: {str(combine_error)}")
+                return False
                     
         except Exception as e:
-            logger.error(f"Error storing financial data for {ticker}: {e}")
-            logger.error(traceback.format_exc())
+            print(f"Error storing financial data for {ticker}: {e}")
             return False
-        
+            
     def get_analysis_dates(self, end_date: str, lookback_type: str, 
                             lookback_value: int) -> str:
             """
@@ -649,3 +647,9 @@ class DataService:
         rate_limiter = RateLimiter(calls_per_second=2)
         rate_limiter.wait()
         return self.store_historical_data(ticker, start_date, end_date)
+    @retry_with_backoff(retries=3)
+    def store_financial_data_with_retry(self, ticker: str, start_year: str = None, end_year: str = None) -> bool:
+        """Store financial data with retry mechanism"""
+        rate_limiter = RateLimiter(calls_per_second=1)  # Limit to 1 call per second
+        rate_limiter.wait()
+        return self.store_financial_data(ticker, start_year, end_year)

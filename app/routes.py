@@ -1087,7 +1087,8 @@ def create_all_financial():
                         logger.info(msg)
                         send_progress_update(current, total, msg)
                         
-                        success = data_service.store_financial_data(
+                        # Use the retry version instead
+                        success = data_service.store_financial_data_with_retry(
                             ticker,
                             start_year=start_year,
                             end_year=end_year
@@ -1131,7 +1132,6 @@ def create_all_financial():
                 logger.error(f'Failed tickers: {error_examples}')
             
             send_progress_update(total, total, ' | '.join(final_msg))
-        
         # Start processing in background thread
         thread = threading.Thread(target=process_tickers)
         thread.start()
