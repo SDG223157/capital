@@ -475,51 +475,134 @@
 
         async function confirmCreateAllHistorical() {
             try {
+                // Show progress modal
+                document.getElementById('progressModal').style.display = 'block';
+                document.getElementById('progressFill').style.width = '0%';
+                document.getElementById('progressStatus').textContent = 'Starting...';
+                document.getElementById('progressDetails').innerHTML = '';
+                
                 const response = await fetch('/create_all_historical', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     }
                 });
-                const data = await response.json();
+        
+                // Setup event source for progress updates
+                const eventSource = new EventSource('/create_progress');
                 
-                if (data.success) {
-                    alert(data.message);
-                    location.reload();
-                } else {
-                    alert(data.error || 'Error creating tables');
+                eventSource.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    
+                    // Update progress bar
+                    const percent = (data.current / data.total * 100).toFixed(1);
+                    document.getElementById('progressFill').style.width = percent + '%';
+                    
+                    // Update status text
+                    document.getElementById('progressStatus').textContent = 
+                        `Processing: ${data.current} of ${data.total} (${percent}%)`;
+                    
+                    // Add details
+                    if (data.message) {
+                        const div = document.createElement('div');
+                        div.textContent = data.message;
+                        document.getElementById('progressDetails').appendChild(div);
+                        div.scrollIntoView({ behavior: 'smooth' });
+                    }
+                    
+                    // Close connection when done
+                    if (data.current >= data.total) {
+                        eventSource.close();
+                        // Wait a moment before closing the modal
+                        setTimeout(() => {
+                            document.getElementById('progressModal').style.display = 'none';
+                            location.reload();
+                        }, 2000);
+                    }
+                };
+                
+                const data = await response.json();
+                if (!data.success) {
+                    throw new Error(data.error || 'Error creating tables');
                 }
+                
             } catch (error) {
-                alert('Error creating tables');
+                document.getElementById('progressStatus').textContent = 'Error: ' + error.message;
+                document.getElementById('progressFill').style.backgroundColor = '#dc3545';
                 console.error('Error:', error);
             } finally {
                 closeCreateAllHistoricalModal();
             }
         }
-
+        
         async function confirmCreateAllFinancial() {
+            // Similar implementation as confirmCreateAllHistorical
+            // but using /create_all_financial endpoint
             try {
+                document.getElementById('progressModal').style.display = 'block';
+                document.getElementById('progressFill').style.width = '0%';
+                document.getElementById('progressStatus').textContent = 'Starting...';
+                document.getElementById('progressDetails').innerHTML = '';
+                
                 const response = await fetch('/create_all_financial', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     }
                 });
-                const data = await response.json();
+        
+                const eventSource = new EventSource('/create_progress');
                 
-                if (data.success) {
-                    alert(data.message);
-                    location.reload();
-                } else {
-                    alert(data.error || 'Error creating tables');
+                eventSource.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    const percent = (data.current / data.total * 100).toFixed(1);
+                    document.getElementById('progressFill').style.width = percent + '%';
+                    document.getElementById('progressStatus').textContent = 
+                        `Processing: ${data.current} of ${data.total} (${percent}%)`;
+                    
+                    if (data.message) {
+                        const div = document.createElement('div');
+                        div.textContent = data.message;
+                        document.getElementById('progressDetails').appendChild(div);
+                        div.scrollIntoView({ behavior: 'smooth' });
+                    }
+                    
+                    if (data.current >= data.total) {
+                        eventSource.close();
+                        setTimeout(() => {
+                            document.getElementById('progressModal').style.display = 'none';
+                            location.reload();
+                        }, 2000);
+                    }
+                };
+                
+                const data = await response.json();
+                if (!data.success) {
+                    throw new Error(data.error || 'Error creating tables');
                 }
+                
             } catch (error) {
-                alert('Error creating tables');
+                document.getElementById('progressStatus').textContent = 'Error: ' + error.message;
+                document.getElementById('progressFill').style.backgroundColor = '#dc3545';
                 console.error('Error:', error);
             } finally {
                 closeCreateAllFinancialModal();
             }
         }
     </script>
+    <!-- Add the new progress modal here -->
+    <div id="progressModal" class="progress-modal">
+        <div class="progress-content">
+            <h3>Creating Tables</h3>
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill"></div>
+            </div>
+            <div id="progressStatus" class="progress-status">
+                Processing: 0 of 0
+            </div>
+            <div id="progressDetails" class="progress-details">
+            </div>
+        </div>
+    </div>
 </body>
 </html>

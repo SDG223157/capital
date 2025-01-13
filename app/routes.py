@@ -823,14 +823,41 @@ def delete_all_financial():
         }), 500
 
 
+from flask import Response
+import json
+import queue
+import threading
+
+# Create a queue for progress updates
+progress_queue = queue.Queue()
+
+def send_progress_update(current, total, message=None):
+    progress_queue.put({
+        'current': current,
+        'total': total,
+        'message': message
+    })
+
+@bp.route('/create_progress')
+def progress():
+    def generate():
+        while True:
+            try:
+                progress_data = progress_queue.get(timeout=60)  # 60 second timeout
+                yield f"data: {json.dumps(progress_data)}\n\n"
+            except queue.Empty:
+                # If no updates for 60 seconds, end the stream
+                break
+    return Response(generate(), mimetype='text/event-stream')
+
 @bp.route('/create_all_historical', methods=['POST'])
 @admin_required
 def create_all_historical():
-    """Create historical data tables for all tickers"""
+    """Create historical data tables for all tickers with progress reporting"""
     try:
         logger.info('Attempting to create all historical data tables')
         
-        # Load tickers with better error handling
+        # Load tickers
         try:
             tickers, _ = load_tickers()
             logger.info(f'Successfully loaded {len(tickers)} tickers')
@@ -848,81 +875,73 @@ def create_all_historical():
                 'error': 'No tickers found in tickers.ts'
             }), 404
             
-        # Create historical data for each ticker
-        created_count = 0
-        errors = []
-        skipped = []
-        
-        try:
-            from app.utils.data.data_service import DataService
-            data_service = DataService()
-        except Exception as e:
-            logger.error(f'Error initializing DataService: {str(e)}')
-            return jsonify({
-                'success': False,
-                'error': f'Failed to initialize data service: {str(e)}'
-            }), 500
-        
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=365*10)  # Reduced to 10 years for initial testing
-        
-        # Process first few tickers for testing
-        test_tickers = tickers[:5]  # Start with just 5 tickers
-        logger.info(f'Starting with test batch of {len(test_tickers)} tickers')
-        
-        for ticker_obj in test_tickers:
+        # Start progress reporting thread
+        def process_tickers():
+            created_count = 0
+            errors = []
+            skipped = []
+            total = len(tickers)
+            
             try:
-                ticker = ticker_obj['symbol']
-                logger.info(f'Processing ticker: {ticker}')
-                
-                # Skip certain types of symbols
-                if any(x in ticker for x in ['^', '/', '\\']):
-                    skipped.append(f"{ticker} (invalid symbol)")
-                    logger.info(f'Skipping invalid symbol: {ticker}')
-                    continue
+                from app.utils.data.data_service import DataService
+                data_service = DataService()
+            except Exception as e:
+                logger.error(f'Error initializing DataService: {str(e)}')
+                send_progress_update(total, total, f'Error: {str(e)}')
+                return
+            
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=365*10)
+            
+            for i, ticker_obj in enumerate(tickers, 1):
+                try:
+                    ticker = ticker_obj['symbol']
+                    send_progress_update(i, total, f'Processing {ticker}...')
                     
-                success = data_service.store_historical_data(
-                    ticker,
-                    start_date=start_date.strftime('%Y-%m-%d'),
-                    end_date=end_date.strftime('%Y-%m-%d')
-                )
-                
-                if success:
-                    created_count += 1
-                    logger.info(f'Successfully created table for {ticker}')
-                else:
-                    error_msg = f"Failed to create table for {ticker}"
+                    # Skip certain types of symbols
+                    if any(x in ticker for x in ['^', '/', '\\']):
+                        skipped.append(f"{ticker} (invalid symbol)")
+                        logger.info(f'Skipping invalid symbol: {ticker}')
+                        continue
+                        
+                    success = data_service.store_historical_data(
+                        ticker,
+                        start_date=start_date.strftime('%Y-%m-%d'),
+                        end_date=end_date.strftime('%Y-%m-%d')
+                    )
+                    
+                    if success:
+                        created_count += 1
+                        send_progress_update(i, total, f'Created table for {ticker}')
+                    else:
+                        errors.append(f"Failed to create table for {ticker}")
+                        send_progress_update(i, total, f'Failed to create table for {ticker}')
+                        
+                except Exception as ticker_error:
+                    error_msg = f"Error processing {ticker}: {str(ticker_error)}"
                     logger.error(error_msg)
                     errors.append(error_msg)
-                    
-            except Exception as ticker_error:
-                error_msg = f"Error processing {ticker}: {str(ticker_error)}"
-                logger.error(error_msg)
-                errors.append(error_msg)
-        
-        # Prepare detailed response message
-        message_parts = []
-        if created_count > 0:
-            message_parts.append(f'Successfully created {created_count} historical tables')
-        if errors:
-            message_parts.append(f'Errors: {"; ".join(errors[:5])}{"..." if len(errors) > 5 else ""}')
-        if skipped:
-            message_parts.append(f'Skipped: {"; ".join(skipped[:5])}{"..." if len(skipped) > 5 else ""}')
+                    send_progress_update(i, total, error_msg)
             
-        message = '. '.join(message_parts)
+            # Send final summary
+            summary = []
+            if created_count > 0:
+                summary.append(f'Successfully created {created_count} tables')
+            if errors:
+                summary.append(f'Encountered {len(errors)} errors')
+            if skipped:
+                summary.append(f'Skipped {len(skipped)} invalid symbols')
+            
+            send_progress_update(total, total, '. '.join(summary))
         
-        if created_count > 0:
-            logger.info(message)
-            return jsonify({
-                'success': True,
-                'message': message
-            })
-        else:
-            logger.error(message)
-            return jsonify({
-                'success': False,
-                'error': message
-            }), 500
+        # Start processing in background thread
+        thread = threading.Thread(target=process_tickers)
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Started creating tables'
+        })
             
     except Exception as e:
         error_msg = f"Error in create_all_historical: {str(e)}\n{traceback.format_exc()}"
@@ -932,70 +951,105 @@ def create_all_historical():
             'error': str(e)
         }), 500
 
+# Similar implementation for create_all_financial route
 @bp.route('/create_all_financial', methods=['POST'])
 @admin_required
 def create_all_financial():
-    """Create financial data tables for all tickers"""
+    """Create financial data tables for all tickers with progress reporting"""
     try:
         logger.info('Attempting to create all financial data tables')
         
         # Load tickers
-        tickers, _ = load_tickers()
-        if not tickers:
+        try:
+            tickers, _ = load_tickers()
+            logger.info(f'Successfully loaded {len(tickers)} tickers')
+        except Exception as e:
+            logger.error(f'Error loading tickers: {str(e)}')
             return jsonify({
                 'success': False,
-                'error': 'No tickers found'
+                'error': f'Failed to load tickers: {str(e)}'
+            }), 500
+
+        if not tickers:
+            logger.error('No tickers found in tickers.ts')
+            return jsonify({
+                'success': False,
+                'error': 'No tickers found in tickers.ts'
             }), 404
             
-        # Create financial data for each ticker
-        created_count = 0
-        errors = []
-        from app.utils.data.data_service import DataService
-        data_service = DataService()
-        
-        end_year = str(datetime.now().year)
-        start_year = str(int(end_year) - 10)  # 10 years of financial data
-        
-        for ticker_obj in tickers:
+        # Define process_tickers function
+        def process_tickers():
+            created_count = 0
+            errors = []
+            skipped = []
+            total = len([t for t in tickers if '.' not in t['symbol']])  # Only US stocks
+            current = 0
+            
             try:
+                from app.utils.data.data_service import DataService
+                data_service = DataService()
+            except Exception as e:
+                logger.error(f'Error initializing DataService: {str(e)}')
+                send_progress_update(total, total, f'Error: {str(e)}')
+                return
+            
+            end_year = str(datetime.now().year)
+            start_year = str(int(end_year) - 10)
+            
+            for ticker_obj in tickers:
                 ticker = ticker_obj['symbol']
-                if '.' not in ticker:  # Skip non-US stocks for financial data
+                
+                # Skip non-US stocks
+                if '.' in ticker:
+                    continue
+                    
+                current += 1
+                send_progress_update(current, total, f'Processing {ticker}...')
+                
+                try:
                     success = data_service.store_financial_data(
                         ticker,
                         start_year=start_year,
                         end_year=end_year
                     )
+                    
                     if success:
                         created_count += 1
+                        send_progress_update(current, total, f'Created table for {ticker}')
                     else:
                         errors.append(f"Failed to create table for {ticker}")
-            except Exception as ticker_error:
-                error_msg = f"Error creating table for {ticker}: {str(ticker_error)}"
-                logger.error(error_msg)
-                errors.append(error_msg)
-        
-        # Prepare response message
-        if created_count > 0:
-            message = f'Successfully created {created_count} financial tables'
-            logger.info(message)
-            return jsonify({
-                'success': True,
-                'message': message
-            })
-        else:
-            message = f'Failed to create any financial tables'
+                        send_progress_update(current, total, f'Failed to create table for {ticker}')
+                        
+                except Exception as ticker_error:
+                    error_msg = f"Error processing {ticker}: {str(ticker_error)}"
+                    logger.error(error_msg)
+                    errors.append(error_msg)
+                    send_progress_update(current, total, error_msg)
+            
+            # Send final summary
+            summary = []
+            if created_count > 0:
+                summary.append(f'Successfully created {created_count} tables')
             if errors:
-                message += f'. Errors: {"; ".join(errors[:5])}...'  # Show first 5 errors
-            logger.warning(message)
-            return jsonify({
-                'success': False,
-                'message': message
-            })
+                summary.append(f'Encountered {len(errors)} errors')
+            if skipped:
+                summary.append(f'Skipped {len(skipped)} invalid symbols')
+            
+            send_progress_update(total, total, '. '.join(summary))
+            
+        # Start processing in background thread
+        thread = threading.Thread(target=process_tickers)
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Started creating financial tables'
+        })
             
     except Exception as e:
-        error_msg = f"Error creating financial tables: {str(e)}"
-        logger.error(f"{error_msg}\n{traceback.format_exc()}")
+        error_msg = f"Error in create_all_financial: {str(e)}\n{traceback.format_exc()}"
+        logger.error(error_msg)
         return jsonify({
             'success': False,
-            'error': error_msg
+            'error': str(e)
         }), 500
