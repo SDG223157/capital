@@ -434,7 +434,6 @@ class DataService:
     
     
     # In data_service.py
-    # In data_service.py
     def calculate_roic(self, income_stmt, balance_sheet, date):
         """Calculate ROIC = (Operating Income - Tax) / (Total Assets - Total Current Liabilities)"""
         try:
@@ -467,7 +466,6 @@ class DataService:
             logger.error(f"Error calculating ROIC: {str(e)}")
             return 0.0
 
-    
     def store_financial_data(self, ticker: str, start_year: str = None, end_year: str = None) -> bool:
         """Fetch and store financial data, first try ROIC API then fallback to yfinance"""
         try:
@@ -501,6 +499,9 @@ class DataService:
                 if all_metrics_data:
                     combined_df = pd.concat(all_metrics_data, axis=1)
                     combined_df = combined_df.loc[:,~combined_df.columns.duplicated()]
+                    # Sort by fiscal year in descending order
+                    combined_df['fiscal_year'] = pd.to_numeric(combined_df['fiscal_year'])
+                    combined_df = combined_df.sort_values('fiscal_year', ascending=False).reset_index(drop=True)
                     logger.info(f"Successfully got all ROIC data for {ticker}")
                     
                     cleaned_ticker = self.clean_ticker_for_table_name(ticker)
@@ -521,12 +522,12 @@ class DataService:
                 logger.info(f"Getting data from yfinance for {ticker}")
                 yf_ticker = yf.Ticker(ticker)
                 
-                financial_data = []
-                
-                # Get financial statements
+                # Get all financial statements first
                 income_stmt = yf_ticker.income_stmt
                 balance_sheet = yf_ticker.balance_sheet
                 cash_flow = yf_ticker.cash_flow
+                
+                financial_data = []
                 
                 if income_stmt is not None and not income_stmt.empty:
                     # Sort dates in descending order to get most recent first
@@ -573,7 +574,7 @@ class DataService:
                         
                         financial_data.append(year_data)
                         
-                # Get cash flow data (maintaining year order)
+                # Get cash flow data
                 if cash_flow is not None and not cash_flow.empty:
                     for data in financial_data:
                         date = pd.Timestamp(data['period_end_date'])
@@ -594,7 +595,10 @@ class DataService:
                 
                 # Convert to DataFrame and ensure correct order
                 df = pd.DataFrame(financial_data)
-
+                
+                # Convert fiscal_year to numeric for proper sorting
+                df['fiscal_year'] = pd.to_numeric(df['fiscal_year'])
+                
                 # Ensure all required columns exist
                 required_columns = [
                     'fiscal_year',
@@ -609,39 +613,37 @@ class DataService:
                     'return_on_inv_capital',
                     'is_sh_for_diluted_eps'
                 ]
-
+                
                 for col in required_columns:
                     if col not in df.columns:
                         if col in ['fiscal_year', 'period_label', 'period_end_date']:
                             continue
                         df[col] = 0.0
-
-                # Sort by fiscal year in descending order (latest year first)
-                df = df.sort_values('fiscal_year', ascending=False)
-
-                # Reset index to ensure the index is in order
-                df = df.reset_index(drop=True)
-
+                
+                # Sort by fiscal year in descending order and reset index
+                df = df.sort_values('fiscal_year', ascending=False).reset_index(drop=True)
+                
                 # Reorder columns to match required format
                 df = df[required_columns]
-
-                # Store in database without index
+                
+                # Store in database
                 cleaned_ticker = self.clean_ticker_for_table_name(ticker)
                 table_name = f"roic_{cleaned_ticker}"
-
-                success = self.store_dataframe(df.copy(), table_name)
+                
+                success = self.store_dataframe(df, table_name)
                 if success:
                     logger.info(f"Successfully stored yfinance data for {ticker}")
-                    return success
+                return success
                 
             except Exception as e:
                 logger.error(f"Both ROIC and yfinance failed for {ticker}: {str(e)}")
                 return False
-                
+                    
         except Exception as e:
             logger.error(f"Error storing financial data for {ticker}: {str(e)}")
-            return False
-                                
+            return False# In data_service.py
+        
+                                    
     def get_analysis_dates(self, end_date: str, lookback_type: str, 
                             lookback_value: int) -> str:
             """
