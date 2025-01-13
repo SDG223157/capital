@@ -1063,79 +1063,72 @@ def create_all_financial():
             current = 0
             
             end_year = str(datetime.now().year)
-            start_year = str(int(end_year) - 10)  # 10 years of financial data
+            start_year = str(int(end_year) - 10)
             
-            # Configure delays
-            MIN_DELAY = 0.5  # Minimum delay between requests in seconds
-            MAX_DELAY = 1.0  # Maximum delay between requests in seconds
-            ERROR_DELAY = 2.0  # Delay after encountering an error
-            BATCH_SIZE = 5  # Process this many before a longer pause
-            BATCH_DELAY = 3.0  # Longer pause after each batch
+            # Configure delays and batches
+            BATCH_SIZE = 10  # Process 10 tickers at a time
+            BATCH_DELAY = 60  # 60 second pause between batches
             
-            for ticker_obj in missing_tickers:
-                current += 1
-                ticker = ticker_obj['symbol']
+            batch_tickers = []
+            for i in range(0, len(missing_tickers), BATCH_SIZE):
+                batch_tickers.append(missing_tickers[i:i + BATCH_SIZE])
+            
+            for batch_num, batch in enumerate(batch_tickers, 1):
+                msg = f"Processing batch {batch_num} of {len(batch_tickers)}..."
+                logger.info(msg)
+                send_progress_update(current, total, msg)
                 
-                try:
-                    # Send progress update
-                    msg = f'Processing {ticker} ({current}/{total})...'
+                for ticker_obj in batch:
+                    current += 1
+                    ticker = ticker_obj['symbol']
+                    
+                    try:
+                        msg = f'Processing {ticker} ({current}/{total})...'
+                        logger.info(msg)
+                        send_progress_update(current, total, msg)
+                        
+                        success = data_service.store_financial_data(
+                            ticker,
+                            start_year=start_year,
+                            end_year=end_year
+                        )
+                        
+                        if success:
+                            created_count += 1
+                            msg = f'✓ Created financial table for {ticker}'
+                            logger.info(msg)
+                        else:
+                            msg = f'✗ Failed to create table for {ticker}'
+                            logger.error(msg)
+                            errors.append(f"Failed: {ticker}")
+                        
+                        send_progress_update(current, total, msg)
+                        sleep(2)  # Small delay between tickers
+                        
+                    except Exception as ticker_error:
+                        error_msg = f"Error processing {ticker}: {str(ticker_error)}"
+                        logger.error(f"{error_msg}\n{traceback.format_exc()}")
+                        errors.append(f"Error: {ticker}")
+                        send_progress_update(current, total, f'✗ {error_msg}')
+                
+                # After each batch, take a longer pause
+                if batch_num < len(batch_tickers):
+                    msg = f'Completed batch {batch_num}. Pausing for {BATCH_DELAY} seconds to respect API limits...'
                     logger.info(msg)
                     send_progress_update(current, total, msg)
-                    
-                    # Process financial data
-                    success = data_service.store_financial_data(
-                        ticker,
-                        start_year=start_year,
-                        end_year=end_year
-                    )
-                    
-                    if success:
-                        created_count += 1
-                        msg = f'✓ Created financial table for {ticker}'
-                        logger.info(msg)
-                        send_progress_update(current, total, msg)
-                    else:
-                        msg = f'✗ Failed to create table for {ticker}'
-                        logger.error(msg)
-                        errors.append(f"Failed: {ticker}")
-                        send_progress_update(current, total, msg)
-                    
-                    # Add random delay between requests using random.uniform correctly
-                    delay = random.uniform(MIN_DELAY, MAX_DELAY)
-                    sleep(delay)
-                    
-                    # Add longer delay after each batch
-                    if current % BATCH_SIZE == 0:
-                        msg = f'Pausing briefly after batch... ({current}/{total})'
-                        logger.info(msg)
-                        send_progress_update(current, total, msg)
-                        sleep(BATCH_DELAY)
-                        
-                except Exception as ticker_error:
-                    error_msg = f"Error processing {ticker}: {str(ticker_error)}"
-                    logger.error(f"{error_msg}\n{traceback.format_exc()}")
-                    errors.append(f"Error: {ticker}")
-                    send_progress_update(current, total, f'✗ {error_msg}')
-                    
-                    # Add longer delay after errors
-                    sleep(ERROR_DELAY)
+                    sleep(BATCH_DELAY)
             
             # Send final summary
-            if created_count > 0:
-                success_msg = f'Successfully created {created_count} financial tables'
-                logger.info(success_msg)
-            
-            if errors:
-                error_msg = f'Failed to create {len(errors)} tables: {", ".join(errors[:5])}'
-                if len(errors) > 5:
-                    error_msg += f' and {len(errors) - 5} more'
-                logger.error(error_msg)
-            
             final_msg = []
             if created_count > 0:
                 final_msg.append(f'✓ Created {created_count} tables')
             if errors:
-                final_msg.append(f'✗ Failed: {len(errors)} tables')
+                error_count = len(errors)
+                error_examples = ', '.join(errors[:5])
+                final_msg.append(f'✗ Failed: {error_count} tables')
+                if error_count > 5:
+                    error_examples += f' and {error_count - 5} more'
+                logger.error(f'Failed tickers: {error_examples}')
             
             send_progress_update(total, total, ' | '.join(final_msg))
         
