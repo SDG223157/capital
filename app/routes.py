@@ -20,6 +20,14 @@ from functools import wraps
 from flask import abort
 from datetime import datetime, timedelta
 from app.utils.data.data_service import DataService, RateLimiter
+ 
+import random  # Make sure this is imported
+from time import sleep
+from datetime import datetime, timedelta
+from sqlalchemy import inspect
+import traceback
+import threading
+import queue
 # from flask_login import current_user
 
 # Add this decorator function to check for admin privileges
@@ -1092,8 +1100,9 @@ def create_all_financial():
                         errors.append(f"Failed: {ticker}")
                         send_progress_update(current, total, msg)
                     
-                    # Add random delay between requests
-                    sleep(random.uniform(MIN_DELAY, MAX_DELAY))
+                    # Add random delay between requests using random.uniform correctly
+                    delay = random.uniform(MIN_DELAY, MAX_DELAY)
+                    sleep(delay)
                     
                     # Add longer delay after each batch
                     if current % BATCH_SIZE == 0:
@@ -1128,15 +1137,7 @@ def create_all_financial():
             if errors:
                 final_msg.append(f'✗ Failed: {len(errors)} tables')
             
-            send_progress_update(total, total, ' | '.join(final_msg))    
-            # Send final summary
-            summary = []
-            if created_count > 0:
-                summary.append(f'Successfully created {created_count} missing tables')
-            if errors:
-                summary.append(f'Encountered {len(errors)} errors')
-            
-            send_progress_update(total, total, '. '.join(summary))
+            send_progress_update(total, total, ' | '.join(final_msg))
         
         # Start processing in background thread
         thread = threading.Thread(target=process_tickers)
