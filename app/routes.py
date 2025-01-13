@@ -1064,8 +1064,8 @@ def create_all_financial():
             start_year = str(int(end_year) - 10)
             
             # Configure batch processing
-            BATCH_SIZE = 5  # Process 5 tickers at a time
-            BATCH_DELAY = 90  # 90 second pause between batches
+            BATCH_SIZE = 5  # Reduced batch size
+            BATCH_DELAY = 90  # Longer delay between batches
             MAX_ERRORS_PER_BATCH = 3  # Maximum errors before taking a longer break
             LONG_BREAK = 180  # 3 minutes
             

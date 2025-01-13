@@ -436,6 +436,8 @@ class DataService:
     # In data_service.py
     # In data_service.py
 
+    # In data_service.py
+
     def store_financial_data(self, ticker: str, start_year: str = None, end_year: str = None) -> bool:
         """Fetch and store financial data from ROIC API with improved error handling"""
         try:
@@ -566,7 +568,7 @@ class DataService:
         except Exception as e:
             logger.error(f"Unexpected error storing financial data for {ticker}: {str(e)}")
             return False
-    
+        
     def get_analysis_dates(self, end_date: str, lookback_type: str, 
                             lookback_value: int) -> str:
             """
