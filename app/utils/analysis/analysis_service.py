@@ -461,10 +461,15 @@ class AnalysisService:
         
         for current_date in data.index:
             year_start = current_date - timedelta(days=crossover_days)
-            mask = (data.index > year_start) & (data.index <= current_date)
+            mask = (data.index <= current_date)  # Include all data up to current date
             period_data = data.loc[mask]
             
-            if len(period_data) < 20:
+            # If we have more than crossover_days of data, limit to the lookback period
+            if (current_date - period_data.index[0]).days > crossover_days:
+                period_data = period_data[period_data.index > year_start]
+            
+            # Only calculate if we have at least some minimum data points
+            if len(period_data) < 2:  # Reduced minimum requirement to 2 points
                 continue
                 
             current_price = period_data['Close'].iloc[-1]
