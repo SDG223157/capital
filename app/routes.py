@@ -1003,7 +1003,7 @@ def create_all_financial():
     try:
         logger.info('Attempting to create missing financial data tables')
         
-        # Load tickers
+        # Load tickers with better error handling
         try:
             tickers, _ = load_tickers()
             logger.info(f'Successfully loaded {len(tickers)} tickers')
@@ -1053,10 +1053,7 @@ def create_all_financial():
                 'success': True,
                 'message': 'All financial tables already exist'
             })
-            
-        # Process missing tickers
-        # In create_all_financial() route, replace the process_tickers f
-        # Start processing in background thread
+        
         def process_tickers():
             created_count = 0
             errors = []
@@ -1067,8 +1064,8 @@ def create_all_financial():
             start_year = str(int(end_year) - 10)
             
             # Configure batch processing
-            BATCH_SIZE = 5  # Reduced batch size
-            BATCH_DELAY = 90  # Longer delay between batches
+            BATCH_SIZE = 5  # Process 5 tickers at a time
+            BATCH_DELAY = 90  # 90 second pause between batches
             MAX_ERRORS_PER_BATCH = 3  # Maximum errors before taking a longer break
             LONG_BREAK = 180  # 3 minutes
             
@@ -1166,6 +1163,8 @@ def create_all_financial():
                 logger.error(f'Failed tickers: {error_examples}')
             
             send_progress_update(total, total, ' | '.join(final_msg))
+        
+        # Start processing in background thread
         thread = threading.Thread(target=process_tickers)
         thread.start()
         
