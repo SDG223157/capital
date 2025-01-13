@@ -1099,7 +1099,7 @@ def create_all_financial():
             start_year = str(int(end_year) - 10)
             
             # Configure delays and batches
-            BATCH_SIZE = 10  # Process 10 tickers at a time
+            BATCH_SIZE = 30  # Process 10 tickers at a time
             BATCH_DELAY = 60  # 60 second pause between batches
             
             batch_tickers = []
