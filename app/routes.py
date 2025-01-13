@@ -1094,13 +1094,13 @@ def create_all_financial():
             errors = []
             total = len(missing_tickers)
             current = 0
-            rate_limiter = RateLimiter(calls_per_second=1)
+            # rate_limiter = RateLimiter(calls_per_second=1)
             
             end_year = str(datetime.now().year)
             start_year = str(int(end_year) - 10)
             
             # Configure delays and batches
-            BATCH_SIZE = 15  # Process 10 tickers at a time
+            BATCH_SIZE = 10  # Process 10 tickers at a time
             BATCH_DELAY = 60  # 60 second pause between batches
             
             batch_tickers = []
@@ -1165,7 +1165,7 @@ def create_all_financial():
                     error_examples += f' and {error_count - 5} more'
                 logger.error(f'Failed tickers: {error_examples}')
             
-            rate_limiter.wait()
+            # rate_limiter.wait()
             send_progress_update(total, total, ' | '.join(final_msg))
             
         
