@@ -82,19 +82,23 @@ class DataService:
             return False
 
     def store_dataframe(self, df: pd.DataFrame, table_name: str) -> bool:
-        """Store DataFrame in database"""
+        """Store DataFrame in database with correct ordering"""
         try:
+            # Ensure index is reset and ordered correctly
+            df = df.reset_index(drop=True)
+            
+            # Store DataFrame without the index
             df.to_sql(
                 name=table_name,
                 con=self.engine,
-                index=True,
+                index=False,  # Don't use DataFrame index
                 if_exists='replace',
                 chunksize=10000
             )
-            print(f"Successfully stored data in table: {table_name}")
+            logger.info(f"Successfully stored data in table: {table_name}")
             return True
         except Exception as e:
-            print(f"Error storing DataFrame in table {table_name}: {e}")
+            logger.error(f"Error storing DataFrame in table {table_name}: {e}")
             return False
     def clean_ticker_for_table_name(self, ticker: str) -> str:
         """
