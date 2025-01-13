@@ -1097,97 +1097,81 @@ def create_all_financial():
             current = 0
             
             end_year = str(datetime.now().year)
-            start_year = str(int(end_year) - 10)  # 10 years of data
+            start_year = str(int(end_year) - 10)  # 10 years of financial data
             
-            # Configure batch processing
-            BATCH_SIZE = 3  # Process 3 tickers at a time
-            BATCH_DELAY = 60  # 1 minute between batches
-            ERROR_DELAY = 30  # 30 seconds after error
+            # Configure delays
+            MIN_DELAY = 0.5  # Minimum delay between requests in seconds
+            MAX_DELAY = 1.0  # Maximum delay between requests in seconds
+            ERROR_DELAY = 2.0  # Delay after encountering an error
+            BATCH_SIZE = 5  # Process this many before a longer pause
+            BATCH_DELAY = 3.0  # Longer pause after each batch
             
-            try:
-                # Initial progress update
-                send_progress_update(0, total, "Starting to process tickers...")
-                logger.info("Starting ticker processing")
+            for ticker_obj in missing_tickers:
+                current += 1
+                ticker = ticker_obj['symbol']
                 
-                # Process tickers in batches
-                for i in range(0, total, BATCH_SIZE):
-                    batch = missing_tickers[i:i + BATCH_SIZE]
-                    batch_num = (i // BATCH_SIZE) + 1
-                    total_batches = (total + BATCH_SIZE - 1) // BATCH_SIZE
-                    
-                    msg = f"Processing batch {batch_num} of {total_batches}..."
+                try:
+                    # Send progress update
+                    msg = f'Processing {ticker} ({current}/{total})...'
                     logger.info(msg)
                     send_progress_update(current, total, msg)
                     
-                    for ticker_obj in batch:
-                        current += 1
-                        ticker = ticker_obj['symbol']
-                        
-                        try:
-                            msg = f'Processing {ticker} ({current}/{total})...'
-                            logger.info(msg)
-                            send_progress_update(current, total, msg)
-                            
-                            # Skip non-US stocks
-                            if '.' in ticker:
-                                msg = f'Skipping non-US stock: {ticker}'
-                                send_progress_update(current, total, msg)
-                                continue
-                            
-                            # Skip invalid symbols
-                            if any(x in ticker for x in ['^', '/', '\\']):
-                                msg = f'Skipping invalid symbol: {ticker}'
-                                send_progress_update(current, total, msg)
-                                continue
-                            
-                            success = data_service.store_financial_data(
-                                ticker,
-                                start_year=start_year,
-                                end_year=end_year
-                            )
-                            
-                            if success:
-                                created_count += 1
-                                msg = f'✓ Created financial table for {ticker}'
-                            else:
-                                msg = f'✗ Failed to create table for {ticker}'
-                                errors.append(ticker)
-                            
-                            logger.info(msg)
-                            send_progress_update(current, total, msg)
-                            
-                            # Clear memory
-                            gc.collect()
-                            sleep(2)  # Short delay between tickers
-                            
-                        except Exception as e:
-                            error_msg = f"Error processing {ticker}: {str(e)}"
-                            logger.error(error_msg)
-                            errors.append(ticker)
-                            send_progress_update(current, total, f'✗ {error_msg}')
-                            sleep(ERROR_DELAY)
+                    # Process financial data
+                    success = data_service.store_financial_data(
+                        ticker,
+                        start_year=start_year,
+                        end_year=end_year
+                    )
                     
-                    # After each batch
-                    if batch_num < total_batches:
-                        msg = f'Completed batch {batch_num}. Pausing for {BATCH_DELAY} seconds...'
+                    if success:
+                        created_count += 1
+                        msg = f'✓ Created financial table for {ticker}'
                         logger.info(msg)
                         send_progress_update(current, total, msg)
-                        gc.collect()  # Clear memory between batches
+                    else:
+                        msg = f'✗ Failed to create table for {ticker}'
+                        logger.error(msg)
+                        errors.append(f"Failed: {ticker}")
+                        send_progress_update(current, total, msg)
+                    
+                    # Add random delay between requests using random.uniform correctly
+                    delay = random.uniform(MIN_DELAY, MAX_DELAY)
+                    sleep(delay)
+                    
+                    # Add longer delay after each batch
+                    if current % BATCH_SIZE == 0:
+                        msg = f'Pausing briefly after batch... ({current}/{total})'
+                        logger.info(msg)
+                        send_progress_update(current, total, msg)
                         sleep(BATCH_DELAY)
-                
-                # Final summary
-                final_msg = []
-                if created_count > 0:
-                    final_msg.append(f'✓ Created {created_count} tables')
-                if errors:
-                    final_msg.append(f'✗ Failed: {len(errors)} tables')
-                
-                send_progress_update(total, total, ' | '.join(final_msg))
-                
-            except Exception as e:
-                error_msg = f"Error in process_tickers: {str(e)}"
+                        
+                except Exception as ticker_error:
+                    error_msg = f"Error processing {ticker}: {str(ticker_error)}"
+                    logger.error(f"{error_msg}\n{traceback.format_exc()}")
+                    errors.append(f"Error: {ticker}")
+                    send_progress_update(current, total, f'✗ {error_msg}')
+                    
+                    # Add longer delay after errors
+                    sleep(ERROR_DELAY)
+            
+            # Send final summary
+            if created_count > 0:
+                success_msg = f'Successfully created {created_count} financial tables'
+                logger.info(success_msg)
+            
+            if errors:
+                error_msg = f'Failed to create {len(errors)} tables: {", ".join(errors[:5])}'
+                if len(errors) > 5:
+                    error_msg += f' and {len(errors) - 5} more'
                 logger.error(error_msg)
-                send_progress_update(current, total, f'Error: {error_msg}')
+            
+            final_msg = []
+            if created_count > 0:
+                final_msg.append(f'✓ Created {created_count} tables')
+            if errors:
+                final_msg.append(f'✗ Failed: {len(errors)} tables')
+            
+            send_progress_update(total, total, ' | '.join(final_msg))
         
         # Start processing in background thread
         thread = threading.Thread(target=process_tickers)
