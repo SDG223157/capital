@@ -471,7 +471,7 @@ class DataService:
             return 0.0
 
     def store_financial_data(self, ticker: str, start_year: str = None, end_year: str = None) -> bool:
-        """Fetch and store financial data, first try ROIC API then fallback to yfinance"""
+        """Fetch financial data from ROIC API and fill missing items from yfinance"""
         try:
             logger.info(f"Fetching financial data for {ticker}")
             
@@ -480,10 +480,12 @@ class DataService:
                 end_year = str(current_year)
                 start_year = str(current_year - 10)
 
-            # Try ROIC API first
+            # Get ROIC API data first
             all_metrics_data = []
+            roic_metrics_found = set()  # Track which metrics we got from ROIC
+            
             try:
-                logger.info(f"Trying ROIC API for {ticker}")
+                logger.info(f"Getting data from ROIC API for {ticker}")
                 for metric_description in self.METRICS:
                     metric_field = self.METRICS[metric_description]
                     query = f"get({metric_field}(fa_period_reference=range('{start_year}', '{end_year}'))) for('{ticker}')"
@@ -497,158 +499,153 @@ class DataService:
                         df.columns = df.iloc[0]
                         df = df.drop(0).reset_index(drop=True)
                         all_metrics_data.append(df)
+                        roic_metrics_found.add(metric_field)
                         logger.info(f"Got {metric_description} from ROIC for {ticker}")
+                    else:
+                        logger.warning(f"Missing {metric_description} from ROIC for {ticker}")
                     sleep(1)
 
-                if all_metrics_data:
-                    combined_df = pd.concat(all_metrics_data, axis=1)
-                    combined_df = combined_df.loc[:,~combined_df.columns.duplicated()]
-                    # Sort by fiscal year in descending order
-                    combined_df['fiscal_year'] = pd.to_numeric(combined_df['fiscal_year'])
-                    combined_df = combined_df.sort_values('fiscal_year', ascending=False).reset_index(drop=True)
-                    logger.info(f"Successfully got all ROIC data for {ticker}")
-                    
-                    cleaned_ticker = self.clean_ticker_for_table_name(ticker)
-                    table_name = f"roic_{cleaned_ticker}"
-                    success = self.store_dataframe(combined_df, table_name)
-                    if success:
-                        logger.info(f"Stored ROIC data for {ticker}")
-                        return True
-                else:
-                    logger.warning(f"No data from ROIC for {ticker}")
-                    
             except Exception as e:
-                logger.warning(f"ROIC API failed for {ticker}: {str(e)}, trying yfinance")
-                success = False
+                logger.warning(f"ROIC API error for {ticker}: {str(e)}")
 
-            # If ROIC fails, try yfinance
+            # Check what metrics we got from ROIC
+            if all_metrics_data:
+                combined_df = pd.concat(all_metrics_data, axis=1)
+                combined_df = combined_df.loc[:,~combined_df.columns.duplicated()]
+                logger.info(f"Got {len(roic_metrics_found)} metrics from ROIC for {ticker}")
+            else:
+                combined_df = pd.DataFrame()
+                logger.warning(f"No data from ROIC for {ticker}")
+
+            # Try to get missing metrics from yfinance
             try:
-                logger.info(f"Getting data from yfinance for {ticker}")
-                yf_ticker = yf.Ticker(ticker)
-                
-                # Get all financial statements first
-                income_stmt = yf_ticker.income_stmt
-                balance_sheet = yf_ticker.balance_sheet
-                cash_flow = yf_ticker.cash_flow
-                
-                financial_data = []
-                
-                if income_stmt is not None and not income_stmt.empty:
-                    # Sort dates in descending order to get most recent first
-                    dates = sorted(income_stmt.columns, reverse=True)
+                if len(roic_metrics_found) < len(self.METRICS):
+                    logger.info(f"Getting missing metrics from yfinance for {ticker}")
+                    yf_ticker = yf.Ticker(ticker)
                     
-                    for date in dates:
-                        year_data = {
-                            'fiscal_year': date.year,
-                            'period_label': 'Q4',
-                            'period_end_date': date.strftime('%Y-%m-%d')
-                        }
+                    income_stmt = yf_ticker.income_stmt
+                    balance_sheet = yf_ticker.balance_sheet
+                    cash_flow = yf_ticker.cash_flow
+                    
+                    if not combined_df.empty:
+                        # Get fiscal years from existing ROIC data
+                        fiscal_years = combined_df['fiscal_year'].astype(int).unique()
+                    else:
+                        # If no ROIC data, get all available years from yfinance
+                        if income_stmt is not None and not income_stmt.empty:
+                            fiscal_years = [date.year for date in income_stmt.columns]
+                            # Create base DataFrame with fiscal years
+                            combined_df = pd.DataFrame({
+                                'fiscal_year': fiscal_years,
+                                'period_label': ['Q4'] * len(fiscal_years),
+                                'period_end_date': [date.strftime('%Y-%m-%d') for date in income_stmt.columns]
+                            })
+
+                    # Fill missing metrics from yfinance for each fiscal year
+                    for year in fiscal_years:
+                        year_data = {}
                         
-                        # Total Revenue
-                        if 'Total Revenue' in income_stmt.index:
+                        # Find matching date in yfinance data
+                        matching_dates = [date for date in income_stmt.columns if date.year == year] if income_stmt is not None else []
+                        if not matching_dates:
+                            continue
+                        date = matching_dates[0]
+                        
+                        # Check and fill missing metrics
+                        if 'is_sales_and_services_revenues' not in roic_metrics_found and 'Total Revenue' in income_stmt.index:
                             revenue = float(income_stmt.loc['Total Revenue', date] or 0)
                             year_data['is_sales_and_services_revenues'] = revenue
                         
-                        # Net Income
-                        if 'Net Income' in income_stmt.index:
+                        if 'is_net_income' not in roic_metrics_found and 'Net Income' in income_stmt.index:
                             net_income = float(income_stmt.loc['Net Income', date] or 0)
                             year_data['is_net_income'] = net_income
                         
-                        # EPS
-                        if 'Basic EPS' in income_stmt.index:
+                        if 'eps' not in roic_metrics_found and 'Basic EPS' in income_stmt.index:
                             eps = float(income_stmt.loc['Basic EPS', date] or 0)
                             year_data['eps'] = float(f"{eps:.15f}")
                         
-                        # Operating Margin
-                        if 'Operating Income' in income_stmt.index and 'Total Revenue' in income_stmt.index:
-                            revenue = float(income_stmt.loc['Total Revenue', date] or 0)
-                            operating_income = float(income_stmt.loc['Operating Income', date] or 0)
-                            if revenue != 0:
-                                year_data['oper_margin'] = float(f"{(operating_income / revenue * 100):.15f}")
-                            else:
-                                year_data['oper_margin'] = 0.0
+                        if 'oper_margin' not in roic_metrics_found:
+                            if 'Operating Income' in income_stmt.index and 'Total Revenue' in income_stmt.index:
+                                revenue = float(income_stmt.loc['Total Revenue', date] or 0)
+                                operating_income = float(income_stmt.loc['Operating Income', date] or 0)
+                                if revenue != 0:
+                                    year_data['oper_margin'] = float(f"{(operating_income / revenue * 100):.15f}")
                         
-                        # Calculate ROIC
-                        year_data['return_on_inv_capital'] = self.calculate_roic(income_stmt, balance_sheet, date)
+                        if 'return_on_inv_capital' not in roic_metrics_found:
+                            year_data['return_on_inv_capital'] = self.calculate_roic(income_stmt, balance_sheet, date)
                         
-                        # Diluted Shares
-                        if 'Diluted Average Shares' in income_stmt.index:
+                        if 'is_sh_for_diluted_eps' not in roic_metrics_found and 'Diluted Average Shares' in income_stmt.index:
                             shares = float(income_stmt.loc['Diluted Average Shares', date] or 0)
                             year_data['is_sh_for_diluted_eps'] = shares
                         
-                        financial_data.append(year_data)
-                        
-                # Get cash flow data
-                if cash_flow is not None and not cash_flow.empty:
-                    for data in financial_data:
-                        date = pd.Timestamp(data['period_end_date'])
-                        if date in cash_flow.columns:
-                            # Operating Cash Flow
-                            if 'Operating Cash Flow' in cash_flow.index:
+                        if 'cf_cash_from_oper' not in roic_metrics_found and cash_flow is not None:
+                            if date in cash_flow.columns and 'Operating Cash Flow' in cash_flow.index:
                                 cf = float(cash_flow.loc['Operating Cash Flow', date] or 0)
-                                data['cf_cash_from_oper'] = cf
-                            
-                            # Capital Expenditures
-                            if 'Capital Expenditure' in cash_flow.index:
+                                year_data['cf_cash_from_oper'] = cf
+                        
+                        if 'cf_cap_expenditures' not in roic_metrics_found and cash_flow is not None:
+                            if date in cash_flow.columns and 'Capital Expenditure' in cash_flow.index:
                                 capex = float(cash_flow.loc['Capital Expenditure', date] or 0)
-                                data['cf_cap_expenditures'] = capex
-                
-                if not financial_data:
-                    logger.warning(f"No financial data found in yfinance for {ticker}")
-                    return False
-                
-                # Convert to DataFrame and ensure correct order
-                df = pd.DataFrame(financial_data)
-                
-                # Convert fiscal_year to numeric for proper sorting
-                df['fiscal_year'] = pd.to_numeric(df['fiscal_year'])
-                
-                # Ensure all required columns exist
-                required_columns = [
-                    'fiscal_year',
-                    'period_label',
-                    'period_end_date',
-                    'is_sales_and_services_revenues',
-                    'cf_cash_from_oper',
-                    'is_net_income',
-                    'eps',
-                    'oper_margin',
-                    'cf_cap_expenditures',
-                    'return_on_inv_capital',
-                    'is_sh_for_diluted_eps'
-                ]
-                
-                for col in required_columns:
-                    if col not in df.columns:
-                        if col in ['fiscal_year', 'period_label', 'period_end_date']:
-                            continue
-                        df[col] = 0.0
-                
-                # Sort by fiscal year in descending order and reset index
-                df = df.sort_values('fiscal_year', ascending=False).reset_index(drop=True)
-                
-                # Reorder columns to match required format
-                df = df[required_columns]
-                
-                # Store in database
-                cleaned_ticker = self.clean_ticker_for_table_name(ticker)
-                table_name = f"roic_{cleaned_ticker}"
-                
-                success = self.store_dataframe(df, table_name)
-                if success:
-                    logger.info(f"Successfully stored yfinance data for {ticker}")
-                return success
-                
-            except Exception as e:
-                logger.error(f"Both ROIC and yfinance failed for {ticker}: {str(e)}")
-                return False
+                                year_data['cf_cap_expenditures'] = capex
+                        
+                        # Update the combined DataFrame with yfinance data
+                        if year_data:
+                            year_mask = combined_df['fiscal_year'].astype(int) == year
+                            for col, value in year_data.items():
+                                if col not in combined_df.columns:
+                                    combined_df[col] = 0.0
+                                combined_df.loc[year_mask, col] = value
                     
+                    logger.info(f"Filled missing metrics from yfinance for {ticker}")
+
+            except Exception as e:
+                logger.error(f"Error getting yfinance data for {ticker}: {str(e)}")
+
+            if combined_df.empty:
+                logger.error(f"No data available from either source for {ticker}")
+                return False
+
+            # Ensure all required columns exist
+            required_columns = [
+                'fiscal_year',
+                'period_label',
+                'period_end_date',
+                'is_sales_and_services_revenues',
+                'cf_cash_from_oper',
+                'is_net_income',
+                'eps',
+                'oper_margin',
+                'cf_cap_expenditures',
+                'return_on_inv_capital',
+                'is_sh_for_diluted_eps'
+            ]
+            
+            for col in required_columns:
+                if col not in combined_df.columns:
+                    if col in ['fiscal_year', 'period_label', 'period_end_date']:
+                        continue
+                    combined_df[col] = 0.0
+
+            # Sort by fiscal year descending
+            combined_df = combined_df.sort_values('fiscal_year', ascending=False)
+            
+            # Reorder columns
+            combined_df = combined_df[required_columns]
+            
+            # Store in database
+            cleaned_ticker = self.clean_ticker_for_table_name(ticker)
+            table_name = f"roic_{cleaned_ticker}"
+            
+            success = self.store_dataframe(combined_df, table_name)
+            if success:
+                logger.info(f"Successfully stored combined data for {ticker}")
+            return success
+                
         except Exception as e:
             logger.error(f"Error storing financial data for {ticker}: {str(e)}")
             return False
+            
         
-        
-    
     def get_analysis_dates(self, end_date: str, lookback_type: str, 
                             lookback_value: int) -> str:
             """
