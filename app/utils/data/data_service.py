@@ -685,7 +685,7 @@ class DataService:
             
             # Convert numbers to match ROIC format (multiply by 1,000,000)
             for col in numeric_columns:
-                df[col] = df[col].astype(float) * 1000000
+                df[col] = df[col].astype(float) 
 
             # Round eps and margins to 15 decimal places to match ROIC format
             df['eps'] = df['eps'].astype(float).round(15)
