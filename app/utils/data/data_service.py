@@ -13,6 +13,44 @@ import logging
 import re
 from app.utils.visualization.visualization_service import is_stock
 
+from time import sleep
+from functools import wraps
+import random
+import time
+
+def retry_with_backoff(retries=3, backoff_in_seconds=1):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            x = 0
+            while True:
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    if x == retries:
+                        raise
+                    sleep_time = (backoff_in_seconds * 2 ** x +
+                                random.uniform(0, 1))
+                    sleep(sleep_time)
+                    x += 1
+        return wrapper
+    return decorator
+
+class RateLimiter:
+    def __init__(self, calls_per_second=2):
+        self.calls_per_second = calls_per_second
+        self.last_call_time = 0
+
+    def wait(self):
+        current_time = time.time()
+        time_since_last_call = current_time - self.last_call_time
+        time_to_wait = (1.0 / self.calls_per_second) - time_since_last_call
+        
+        if time_to_wait > 0:
+            sleep(time_to_wait)
+            
+        self.last_call_time = time.time()
+
 class DataService:
     def __init__(self):
         """Initialize DataService with API and database configuration"""
@@ -570,3 +608,9 @@ class DataService:
         except Exception as e:
             print(f"Error calculating returns: {str(e)}")
             raise
+
+    @retry_with_backoff(retries=3)
+    def store_historical_data_with_retry(self, ticker, start_date, end_date):
+        rate_limiter = RateLimiter(calls_per_second=2)
+        rate_limiter.wait()
+        return self.store_historical_data(ticker, start_date, end_date)
