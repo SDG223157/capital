@@ -830,64 +830,106 @@ def create_all_historical():
     try:
         logger.info('Attempting to create all historical data tables')
         
-        # Load tickers
-        tickers, _ = load_tickers()
-        if not tickers:
+        # Load tickers with better error handling
+        try:
+            tickers, _ = load_tickers()
+            logger.info(f'Successfully loaded {len(tickers)} tickers')
+        except Exception as e:
+            logger.error(f'Error loading tickers: {str(e)}')
             return jsonify({
                 'success': False,
-                'error': 'No tickers found'
+                'error': f'Failed to load tickers: {str(e)}'
+            }), 500
+
+        if not tickers:
+            logger.error('No tickers found in tickers.ts')
+            return jsonify({
+                'success': False,
+                'error': 'No tickers found in tickers.ts'
             }), 404
             
         # Create historical data for each ticker
         created_count = 0
         errors = []
-        from app.utils.data.data_service import DataService
-        data_service = DataService()
+        skipped = []
+        
+        try:
+            from app.utils.data.data_service import DataService
+            data_service = DataService()
+        except Exception as e:
+            logger.error(f'Error initializing DataService: {str(e)}')
+            return jsonify({
+                'success': False,
+                'error': f'Failed to initialize data service: {str(e)}'
+            }), 500
         
         end_date = datetime.now()
-        start_date = end_date - timedelta(days=365*20)  # 20 years of data
+        start_date = end_date - timedelta(days=365*10)  # Reduced to 10 years for initial testing
         
-        for ticker_obj in tickers:
+        # Process first few tickers for testing
+        test_tickers = tickers[:5]  # Start with just 5 tickers
+        logger.info(f'Starting with test batch of {len(test_tickers)} tickers')
+        
+        for ticker_obj in test_tickers:
             try:
                 ticker = ticker_obj['symbol']
+                logger.info(f'Processing ticker: {ticker}')
+                
+                # Skip certain types of symbols
+                if any(x in ticker for x in ['^', '/', '\\']):
+                    skipped.append(f"{ticker} (invalid symbol)")
+                    logger.info(f'Skipping invalid symbol: {ticker}')
+                    continue
+                    
                 success = data_service.store_historical_data(
                     ticker,
                     start_date=start_date.strftime('%Y-%m-%d'),
                     end_date=end_date.strftime('%Y-%m-%d')
                 )
+                
                 if success:
                     created_count += 1
+                    logger.info(f'Successfully created table for {ticker}')
                 else:
-                    errors.append(f"Failed to create table for {ticker}")
+                    error_msg = f"Failed to create table for {ticker}"
+                    logger.error(error_msg)
+                    errors.append(error_msg)
+                    
             except Exception as ticker_error:
-                error_msg = f"Error creating table for {ticker}: {str(ticker_error)}"
+                error_msg = f"Error processing {ticker}: {str(ticker_error)}"
                 logger.error(error_msg)
                 errors.append(error_msg)
         
-        # Prepare response message
-        if created_count == len(tickers):
-            message = f'Successfully created {created_count} historical tables'
+        # Prepare detailed response message
+        message_parts = []
+        if created_count > 0:
+            message_parts.append(f'Successfully created {created_count} historical tables')
+        if errors:
+            message_parts.append(f'Errors: {"; ".join(errors[:5])}{"..." if len(errors) > 5 else ""}')
+        if skipped:
+            message_parts.append(f'Skipped: {"; ".join(skipped[:5])}{"..." if len(skipped) > 5 else ""}')
+            
+        message = '. '.join(message_parts)
+        
+        if created_count > 0:
             logger.info(message)
             return jsonify({
                 'success': True,
                 'message': message
             })
         else:
-            message = f'Partially completed: Created {created_count} out of {len(tickers)} tables'
-            if errors:
-                message += f'. Errors: {"; ".join(errors)}'
-            logger.warning(message)
+            logger.error(message)
             return jsonify({
-                'success': True,
-                'message': message
-            })
+                'success': False,
+                'error': message
+            }), 500
             
     except Exception as e:
-        error_msg = f"Error creating historical tables: {str(e)}"
-        logger.error(f"{error_msg}\n{traceback.format_exc()}")
+        error_msg = f"Error in create_all_historical: {str(e)}\n{traceback.format_exc()}"
+        logger.error(error_msg)
         return jsonify({
             'success': False,
-            'error': error_msg
+            'error': str(e)
         }), 500
 
 @bp.route('/create_all_financial', methods=['POST'])
