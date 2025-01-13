@@ -840,26 +840,38 @@ import queue
 import threading
 
 # Create a queue for progress updates
-progress_queue = queue.Queue()
+# Add/update these routes in routes.py
 
-def send_progress_update(current, total, message=None):
-    progress_queue.put({
-        'current': current,
-        'total': total,
-        'message': message
-    })
+# Create a queue for progress updates
+# progress_queue = queue.Queue()
 
-@bp.route('/create_progress')
-def progress():
-    def generate():
-        while True:
-            try:
-                progress_data = progress_queue.get(timeout=60)  # 60 second timeout
-                yield f"data: {json.dumps(progress_data)}\n\n"
-            except queue.Empty:
-                # If no updates for 60 seconds, end the stream
-                break
-    return Response(generate(), mimetype='text/event-stream')
+# def send_progress_update(current, total, message=None):
+#     """Helper function to send progress updates"""
+#     progress_queue.put({
+#         'current': current,
+#         'total': total,
+#         'message': message
+#     })
+#     logger.debug(f'Progress update queued: {current}/{total} - {message}')  # Debug log
+
+# @bp.route('/create_progress')
+# def progress():
+#     """SSE endpoint for progress updates"""
+#     def generate():
+#         while True:
+#             try:
+#                 # Get progress update from queue with timeout
+#                 progress_data = progress_queue.get(timeout=60)
+#                 logger.debug(f'Sending progress update: {progress_data}')  # Debug log
+#                 yield f"data: {json.dumps(progress_data)}\n\n"
+#             except queue.Empty:
+#                 logger.debug('Progress queue timeout')  # Debug log
+#                 break
+#             except Exception as e:
+#                 logger.error(f'Error in progress generator: {str(e)}')
+#                 break
+                
+#     return Response(generate(), mimetype='text/event-stream')
 
 @bp.route('/create_all_historical', methods=['POST'])
 @admin_required
@@ -932,6 +944,7 @@ def create_all_historical():
 
             for i, ticker_obj in enumerate(missing_tickers, 1):
                 try:
+                    
                     ticker = ticker_obj['symbol']
                     send_progress_update(i, total, f'Processing {ticker}...')
                     
@@ -996,6 +1009,29 @@ def create_all_historical():
             'error': str(e)
         }), 500
 
+# First ensure these imports are at the top of routes.py
+import json
+import queue
+import gc
+import threading
+from datetime import datetime
+from time import sleep
+import traceback
+from flask import jsonify, Response
+from sqlalchemy import inspect
+
+# Progress queue for SSE updates
+progress_queue = queue.Queue()
+
+def send_progress_update(current, total, message=None):
+    """Helper function to send progress updates"""
+    progress_queue.put({
+        'current': current,
+        'total': total,
+        'message': message
+    })
+    logger.debug(f'Progress update: {current}/{total} - {message}')
+
 @bp.route('/create_all_financial', methods=['POST'])
 @admin_required
 def create_all_financial():
@@ -1003,7 +1039,7 @@ def create_all_financial():
     try:
         logger.info('Attempting to create missing financial data tables')
         
-        # Load tickers with better error handling
+        # Load tickers
         try:
             tickers, _ = load_tickers()
             logger.info(f'Successfully loaded {len(tickers)} tickers')
@@ -1021,7 +1057,7 @@ def create_all_financial():
                 'error': 'No tickers found in tickers.ts'
             }), 404
             
-        # Get DataService instance
+        # Initialize DataService
         try:
             from app.utils.data.data_service import DataService
             data_service = DataService()
@@ -1053,7 +1089,7 @@ def create_all_financial():
                 'success': True,
                 'message': 'All financial tables already exist'
             })
-        
+
         def process_tickers():
             created_count = 0
             errors = []
@@ -1061,108 +1097,97 @@ def create_all_financial():
             current = 0
             
             end_year = str(datetime.now().year)
-            start_year = str(int(end_year) - 10)
+            start_year = str(int(end_year) - 10)  # 10 years of data
             
             # Configure batch processing
-            BATCH_SIZE = 5  # Reduced batch size
-            BATCH_DELAY = 90  # Longer delay between batches
-            MAX_ERRORS_PER_BATCH = 3  # Maximum errors before taking a longer break
-            LONG_BREAK = 180  # 3 minutes
+            BATCH_SIZE = 3  # Process 3 tickers at a time
+            BATCH_DELAY = 60  # 1 minute between batches
+            ERROR_DELAY = 30  # 30 seconds after error
             
-            batch_tickers = []
-            for i in range(0, len(missing_tickers), BATCH_SIZE):
-                batch_tickers.append(missing_tickers[i:i + BATCH_SIZE])
-            
-            for batch_num, batch in enumerate(batch_tickers, 1):
-                batch_errors = 0
-                msg = f"Starting batch {batch_num} of {len(batch_tickers)}..."
-                logger.info(msg)
-                send_progress_update(current, total, msg)
+            try:
+                # Initial progress update
+                send_progress_update(0, total, "Starting to process tickers...")
+                logger.info("Starting ticker processing")
                 
-                for ticker_obj in batch:
-                    current += 1
-                    ticker = ticker_obj['symbol']
+                # Process tickers in batches
+                for i in range(0, total, BATCH_SIZE):
+                    batch = missing_tickers[i:i + BATCH_SIZE]
+                    batch_num = (i // BATCH_SIZE) + 1
+                    total_batches = (total + BATCH_SIZE - 1) // BATCH_SIZE
                     
-                    try:
-                        msg = f'Processing {ticker} ({current}/{total})...'
-                        logger.info(msg)
-                        send_progress_update(current, total, msg)
-                        
-                        # Skip certain types of tickers
-                        if '.' in ticker:  # Skip non-US stocks
-                            msg = f'Skipping non-US stock: {ticker}'
-                            logger.info(msg)
-                            send_progress_update(current, total, msg)
-                            continue
-                            
-                        if any(x in ticker for x in ['^', '/', '\\']):  # Skip invalid symbols
-                            msg = f'Skipping invalid symbol: {ticker}'
-                            logger.info(msg)
-                            send_progress_update(current, total, msg)
-                            continue
-                        
-                        success = data_service.store_financial_data(
-                            ticker,
-                            start_year=start_year,
-                            end_year=end_year
-                        )
-                        
-                        if success:
-                            created_count += 1
-                            msg = f'✓ Created financial table for {ticker}'
-                            logger.info(msg)
-                        else:
-                            batch_errors += 1
-                            msg = f'✗ Failed to create table for {ticker}'
-                            logger.error(msg)
-                            errors.append(f"Failed: {ticker}")
-                        
-                        send_progress_update(current, total, msg)
-                        
-                        # Take longer break if too many errors in this batch
-                        if batch_errors >= MAX_ERRORS_PER_BATCH:
-                            msg = f'Too many errors in batch {batch_num}, taking a longer break ({LONG_BREAK}s)...'
-                            logger.warning(msg)
-                            send_progress_update(current, total, msg)
-                            sleep(LONG_BREAK)
-                            batch_errors = 0  # Reset error count
-                        else:
-                            sleep(2)  # Normal delay between tickers
-                        
-                    except Exception as ticker_error:
-                        batch_errors += 1
-                        error_msg = f"Error processing {ticker}: {str(ticker_error)}"
-                        logger.error(f"{error_msg}\n{traceback.format_exc()}")
-                        errors.append(f"Error: {ticker}")
-                        send_progress_update(current, total, f'✗ {error_msg}')
-                        
-                        if batch_errors >= MAX_ERRORS_PER_BATCH:
-                            msg = f'Too many errors in batch {batch_num}, taking a longer break ({LONG_BREAK}s)...'
-                            logger.warning(msg)
-                            send_progress_update(current, total, msg)
-                            sleep(LONG_BREAK)
-                            batch_errors = 0
-                
-                # After each batch, take a pause
-                if batch_num < len(batch_tickers):
-                    msg = f'Completed batch {batch_num}. Pausing for {BATCH_DELAY} seconds...'
+                    msg = f"Processing batch {batch_num} of {total_batches}..."
                     logger.info(msg)
                     send_progress_update(current, total, msg)
-                    sleep(BATCH_DELAY)
-            
-            # Send final summary
-            final_msg = []
-            if created_count > 0:
-                final_msg.append(f'✓ Created {created_count} tables')
-            if errors:
-                error_count = len(errors)
-                error_examples = ', '.join(errors[:5])
-                final_msg.append(f'✗ Failed: {error_count} tables')
-                if error_count > 5:
-                    error_examples += f' and {error_count - 5} more'
-                logger.error(f'Failed tickers: {error_examples}')
-            
-            send_progress_update(total, total, ' | '.join(final_msg))
+                    
+                    for ticker_obj in batch:
+                        current += 1
+                        ticker = ticker_obj['symbol']
+                        
+                        try:
+                            msg = f'Processing {ticker} ({current}/{total})...'
+                            logger.info(msg)
+                            send_progress_update(current, total, msg)
+                            
+                            # Skip non-US stocks
+                            if '.' in ticker:
+                                msg = f'Skipping non-US stock: {ticker}'
+                                send_progress_update(current, total, msg)
+                                continue
+                            
+                            # Skip invalid symbols
+                            if any(x in ticker for x in ['^', '/', '\\']):
+                                msg = f'Skipping invalid symbol: {ticker}'
+                                send_progress_update(current, total, msg)
+                                continue
+                            
+                            success = data_service.store_financial_data(
+                                ticker,
+                                start_year=start_year,
+                                end_year=end_year
+                            )
+                            
+                            if success:
+                                created_count += 1
+                                msg = f'✓ Created financial table for {ticker}'
+                            else:
+                                msg = f'✗ Failed to create table for {ticker}'
+                                errors.append(ticker)
+                            
+                            logger.info(msg)
+                            send_progress_update(current, total, msg)
+                            
+                            # Clear memory
+                            gc.collect()
+                            sleep(2)  # Short delay between tickers
+                            
+                        except Exception as e:
+                            error_msg = f"Error processing {ticker}: {str(e)}"
+                            logger.error(error_msg)
+                            errors.append(ticker)
+                            send_progress_update(current, total, f'✗ {error_msg}')
+                            sleep(ERROR_DELAY)
+                    
+                    # After each batch
+                    if batch_num < total_batches:
+                        msg = f'Completed batch {batch_num}. Pausing for {BATCH_DELAY} seconds...'
+                        logger.info(msg)
+                        send_progress_update(current, total, msg)
+                        gc.collect()  # Clear memory between batches
+                        sleep(BATCH_DELAY)
+                
+                # Final summary
+                final_msg = []
+                if created_count > 0:
+                    final_msg.append(f'✓ Created {created_count} tables')
+                if errors:
+                    final_msg.append(f'✗ Failed: {len(errors)} tables')
+                
+                send_progress_update(total, total, ' | '.join(final_msg))
+                
+            except Exception as e:
+                error_msg = f"Error in process_tickers: {str(e)}"
+                logger.error(error_msg)
+                send_progress_update(current, total, f'Error: {error_msg}')
         
         # Start processing in background thread
         thread = threading.Thread(target=process_tickers)
@@ -1180,3 +1205,22 @@ def create_all_financial():
             'success': False,
             'error': str(e)
         }), 500
+
+@bp.route('/create_progress')
+def progress():
+    """SSE endpoint for progress updates"""
+    def generate():
+        while True:
+            try:
+                # Get progress update from queue with timeout
+                progress_data = progress_queue.get(timeout=60)
+                logger.debug(f'Sending progress update: {progress_data}')
+                yield f"data: {json.dumps(progress_data)}\n\n"
+            except queue.Empty:
+                logger.debug('Progress queue timeout')
+                break
+            except Exception as e:
+                logger.error(f'Error in progress generator: {str(e)}')
+                break
+                
+    return Response(generate(), mimetype='text/event-stream')
