@@ -450,7 +450,7 @@ class AnalysisService:
         return growth_rates
 
     @staticmethod
-    def analyze_stock_data(data, lookback_days=180):
+    def analyze_stock_data(data, crossover_days=365):
         """Perform comprehensive stock analysis"""
         analysis_dates = []
         ratios = []
@@ -460,7 +460,7 @@ class AnalysisService:
         appreciation_pcts = []
         
         for current_date in data.index:
-            year_start = current_date - timedelta(days=lookback_days)
+            year_start = current_date - timedelta(days=crossover_days)
             mask = (data.index > year_start) & (data.index <= current_date)
             period_data = data.loc[mask]
             
