@@ -3,6 +3,9 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from app.utils.config.layout_config import LAYOUT_CONFIG, CHART_STYLE, TABLE_STYLE
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def is_stock(symbol: str) -> bool:
@@ -485,15 +488,16 @@ class VisualizationService:
         # Place this after other line traces but before crossover points
         # Add R-square line
         # Add R-square line first with detailed debugging
-        print("\nDebug - R-square line addition:")
+        # Add R-square line first with detailed logging
+        logger.debug("Attempting to add R-square line")
         try:
             if isinstance(data, pd.DataFrame):
-                print("Data is a DataFrame")
+                logger.debug("Data is a DataFrame")
                 if 'R2_Pct' in data.columns:
-                    print("Found R2_Pct column")
-                    print("First few R2_Pct values:", data['R2_Pct'].head())
+                    logger.debug("Found R2_Pct column")
+                    logger.debug(f"First few R2_Pct values: {data['R2_Pct'].head().tolist()}")
                     r2_values = data['R2_Pct'].values
-                    print("Number of R2 values:", len(r2_values))
+                    logger.debug(f"Number of R2 values: {len(r2_values)}")
                     
                     if len(r2_values) == len(analysis_dates):
                         fig.add_trace(
@@ -504,23 +508,23 @@ class VisualizationService:
                                 line=dict(
                                     color='purple',
                                     dash='dot',
-                                    width=1.5
+                                    width=5
                                 ),
                                 hovertemplate='<b>Date</b>: %{x}<br>' +
                                             '<b>R²</b>: %{y:.1f}%<extra></extra>'
                             )
                         )
-                        print("Successfully added R-square line")
+                        logger.debug("Successfully added R-square line")
                     else:
-                        print(f"Length mismatch: R2 values ({len(r2_values)}) vs dates ({len(analysis_dates)})")
+                        logger.warning(f"Length mismatch: R2 values ({len(r2_values)}) vs dates ({len(analysis_dates)})")
                 else:
-                    print("R2_Pct not found in columns:", data.columns.tolist())
+                    logger.warning(f"R2_Pct not found in columns: {data.columns.tolist()}")
             else:
-                print("Data is not a DataFrame, type:", type(data))
+                logger.warning(f"Data is not a DataFrame, type: {type(data)}")
         except Exception as e:
-            print(f"Error adding R-square line: {str(e)}")
-            import traceback
-            print("Traceback:", traceback.format_exc())
+            logger.error(f"Error adding R-square line: {str(e)}", exc_info=True)
+
+        # Add price line
 
 
         # Add crossover points
