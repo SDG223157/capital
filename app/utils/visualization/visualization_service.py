@@ -428,27 +428,25 @@ class VisualizationService:
 
         # Add R-square line (using the same dates as other metrics)
          # Add R-square line
+        # Add R-square line (add this code in create_stock_analysis_chart method)
+        # Place this after other line traces but before crossover points
         if 'R2_Pct' in data.columns:
-            print("Adding R-square line with", len(data['R2_Pct']), "points")
-            print("First few R² values:", data['R2_Pct'].head())
-            
-            fig.add_trace(
-                go.Scatter(
-                    x=data.index,  # Use index for dates
-                    y=data['R2_Pct'],
-                    name='R² Quality',
-                    line=dict(
-                        color='purple',
-                        dash='dot',
-                        width=1.5
-                    ),
-                    hovertemplate='<b>Date</b>: %{x}<br>' +
-                                 '<b>R²</b>: %{y:.1f}%<extra></extra>'
+            r2_values = data['R2_Pct'].dropna()
+            if not r2_values.empty:
+                fig.add_trace(
+                    go.Scatter(
+                        x=r2_values.index,
+                        y=r2_values.values,
+                        name='R² Quality',
+                        line=dict(
+                            color='purple',
+                            dash='dot',
+                            width=1.5
+                        ),
+                        hovertemplate='<b>Date</b>: %{x}<br>' +
+                                     '<b>R²</b>: %{y:.1f}%<extra></extra>'
+                    )
                 )
-            )
-        else:
-            print("R2_Pct column not found in data")
-            print("Available columns:", data.columns.tolist())
             
         
         # Add regression components

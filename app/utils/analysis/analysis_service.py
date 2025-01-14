@@ -496,25 +496,28 @@ class AnalysisService:
     @staticmethod
     def analyze_stock_data(data, crossover_days=365):
         """Perform comprehensive stock analysis"""
-        result_data = []
-        
-        for current_date in data.index:
-            try:
+        try:
+            # Initialize empty lists for results
+            result_dates = []
+            result_data = []
+            
+            for current_date in data.index:
+                # Calculate lookback period
                 year_start = current_date - timedelta(days=crossover_days)
                 period_data = data.loc[data.index <= current_date].copy()
                 
                 if (current_date - period_data.index[0]).days > crossover_days:
                     period_data = period_data[period_data.index > year_start]
                 
-                if len(period_data) < 20:
+                if len(period_data) < 20:  # Minimum data points needed
                     continue
-                
+                    
                 # Calculate standard metrics
                 current_price = period_data['Close'].iloc[-1]
                 highest_price = period_data['Close'].max()
                 lowest_price = period_data['Close'].min()
                 
-                # Calculate ratio
+                # Calculate retracement ratio
                 total_move = highest_price - lowest_price
                 if total_move > 0:
                     current_retracement = highest_price - current_price
@@ -527,21 +530,27 @@ class AnalysisService:
                     current_price, highest_price, lowest_price)
                 
                 # Calculate R-square
-                period_data.loc[:, 'Log_Close'] = np.log(period_data['Close'])
-                X = (period_data.index - period_data.index[0]).days.values.reshape(-1, 1)
-                y = period_data['Log_Close'].values
-                X_scaled = X / np.max(X)
-                
-                poly_features = PolynomialFeatures(degree=2)
-                X_poly = poly_features.fit_transform(X_scaled)
-                model = LinearRegression()
-                model.fit(X_poly, y)
-                
-                r2 = r2_score(y, model.predict(X_poly))
-                r2_pct = r2 * 100  # Convert to percentage
+                try:
+                    period_data.loc[:, 'Log_Close'] = np.log(period_data['Close'])
+                    X = (period_data.index - period_data.index[0]).days.values.reshape(-1, 1)
+                    y = period_data['Log_Close'].values
+                    X_scaled = X / np.max(X)
+                    
+                    poly_features = PolynomialFeatures(degree=2)
+                    X_poly = poly_features.fit_transform(X_scaled)
+                    model = LinearRegression()
+                    model.fit(X_poly, y)
+                    
+                    r2 = r2_score(y, model.predict(X_poly))
+                    r2_pct = r2 * 100  # Convert to percentage
+                except Exception as e:
+                    print(f"Error calculating R² for {current_date}: {str(e)}")
+                    r2_pct = None
                 
                 # Store results
+                result_dates.append(current_date)
                 result_data.append({
+                    'Date': current_date,
                     'Price': current_price,
                     'High': highest_price,
                     'Low': lowest_price,
@@ -549,10 +558,13 @@ class AnalysisService:
                     'Price_Position_Pct': appreciation_pct,
                     'R2_Pct': r2_pct
                 })
-                
-            except Exception as e:
-                print(f"Error processing date {current_date}: {str(e)}")
-                continue
-        
-        # Create DataFrame with dates as index
-        return pd.DataFrame(result_data, index=pd.DatetimeIndex(data.index[:len(result_data)]))
+            
+            # Create DataFrame and set index
+            df = pd.DataFrame(result_data)
+            df.set_index('Date', inplace=True)
+            
+            return df
+            
+        except Exception as e:
+            print(f"Error in analyze_stock_data: {str(e)}")
+            raise

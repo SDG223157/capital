@@ -1,14 +1,21 @@
-# src/visualization/creator.py
+# app/analyzer/stock_analyzer.py
+
 import pandas as pd
-from datetime import datetime
-from app.utils.config.metrics_config import METRICS_TO_FETCH, ANALYSIS_DEFAULTS
-from app.utils.config.api_config import ROIC_API
+import numpy as np
+from datetime import datetime, timedelta
+from typing import Dict, Optional, Any
+
 from app.utils.data.data_service import DataService
 from app.utils.analysis.analysis_service import AnalysisService
 from app.utils.visualization.visualization_service import VisualizationService
-from typing import Optional
+from app.utils.config.metrics_config import METRICS_TO_FETCH, ANALYSIS_DEFAULTS
+from app.utils.config.layout_config import LAYOUT_CONFIG
 
-
+class StockAnalyzer:
+    """Class to handle stock analysis operations"""
+    
+    def __init__(self):
+        self.data_service = DataService()
 
 def create_stock_visualization(
     ticker: str, 
@@ -18,6 +25,22 @@ def create_stock_visualization(
 ) -> 'plotly.graph_objects.Figure':
     """
     Create a complete stock analysis visualization
+
+    Parameters
+    ----------
+    ticker : str
+        Stock ticker symbol
+    end_date : str, optional
+        End date in YYYY-MM-DD format. If None, uses current date
+    lookback_days : int, optional
+        Number of days to look back for display
+    crossover_days : int, optional
+        Number of days for crossover analysis
+
+    Returns
+    -------
+    plotly.graph_objects.Figure
+        Complete analysis visualization figure
     """
     analysis_id = datetime.now().strftime('%Y%m%d%H%M%S%f')
     print(f"Starting analysis {analysis_id} for {ticker}")
@@ -30,6 +53,7 @@ def create_stock_visualization(
             end_date = datetime.now().strftime("%Y-%m-%d")
         
         # Calculate extended start date for ratio calculations
+        # Fetch additional historical data (lookback + crossover days) to ensure accurate ratio calculations
         extended_lookback = lookback_days + crossover_days
         extended_start_date = data_service.get_analysis_dates(end_date, 'days', extended_lookback)
         display_start_date = data_service.get_analysis_dates(end_date, 'days', lookback_days)
@@ -46,18 +70,9 @@ def create_stock_visualization(
         # Perform technical analysis on extended data
         analysis_df = AnalysisService.analyze_stock_data(historical_data_extended, crossover_days)
         
-        # Debug prints for DataFrame structure
-        print("Analysis DataFrame structure:")
-        print("Columns:", analysis_df.columns.tolist())
-        print("Index:", type(analysis_df.index))
-        
-        # Filter data for display period using index
-        display_start = pd.to_datetime(display_start_date)
-        historical_data = historical_data_extended[historical_data_extended.index >= display_start]
-        # This is the line that was causing the error - replaced with index filtering
-        analysis_df = analysis_df[analysis_df.index >= display_start]
-        
-        print("Filtered analysis DataFrame rows:", len(analysis_df))
+        # Filter data for display period
+        historical_data = historical_data_extended[historical_data_extended.index >= display_start_date]
+        analysis_df = analysis_df[analysis_df['Date'] >= pd.to_datetime(display_start_date)]
         
         # Perform regression analysis on display period data
         regression_results = AnalysisService.perform_polynomial_regression(
@@ -65,9 +80,9 @@ def create_stock_visualization(
             future_days=int(lookback_days*LAYOUT_CONFIG['lookback_days_ratio'])
         )
         
-        # Find crossover points within display period using index
+        # Find crossover points within display period
         crossover_data = AnalysisService.find_crossover_points(
-            analysis_df.index.tolist(),
+            analysis_df['Date'].tolist(),
             analysis_df['Retracement_Ratio_Pct'].tolist(),
             analysis_df['Price_Position_Pct'].tolist(),
             analysis_df['Price'].tolist()
@@ -76,11 +91,14 @@ def create_stock_visualization(
         print("Fetching financial metrics...")
         # Get financial metrics
         current_year = datetime.now().year
+        start_year = str(current_year - 10)
+        end_year = str(current_year)
+        
         metrics_df = data_service.create_metrics_table(
             ticker=ticker,
             metrics=METRICS_TO_FETCH,
-            start_year=str(current_year - 10),
-            end_year=str(current_year)
+            start_year=start_year,
+            end_year=end_year
         )
         
         # Prepare signal returns data
@@ -126,17 +144,11 @@ def create_stock_visualization(
                     signal_returns[-1]['Current Price'] = last_price
         
         print("Creating visualization...")
-        # Check if R2_Pct exists in the DataFrame
-        if 'R2_Pct' in analysis_df.columns:
-            print("R2_Pct column found with values:", analysis_df['R2_Pct'].head())
-        else:
-            print("R2_Pct column not found in DataFrame")
-        
         # Create visualization
         fig = VisualizationService.create_stock_analysis_chart(
             symbol=ticker,
-            data=analysis_df,
-            analysis_dates=analysis_df.index.tolist(),
+            data=historical_data,  # Use display period data for visualization
+            analysis_dates=analysis_df['Date'].tolist(),
             ratios=analysis_df['Retracement_Ratio_Pct'].tolist(),
             prices=analysis_df['Price'].tolist(),
             appreciation_pcts=analysis_df['Price_Position_Pct'].tolist(),
@@ -153,76 +165,106 @@ def create_stock_visualization(
         print(f"Error in create_stock_visualization: {str(e)}")
         raise
 
-def save_visualization(fig, ticker: str, output_dir: str = "outputs") -> dict:
+# [Rest of the code remains unchanged]
+
+def analyze_signals(signal_returns: list) -> Dict[str, Any]:
     """
-    Save visualization in multiple formats
+    Analyze trading signals and calculate performance metrics
 
     Parameters
     ----------
-    fig : plotly.graph_objects.Figure
-        The visualization figure to save
-    ticker : str
-        Stock ticker symbol for filename
-    output_dir : str
-        Directory to save outputs
+    signal_returns : list
+        List of trading signals and returns
 
     Returns
     -------
-    dict
-        Dictionary containing paths to saved files
+    Dict[str, Any]
+        Dictionary containing signal analysis results
     """
-    import os
-    
-    # Create output directory if it doesn't exist
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # Generate base filename
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    base_filename = f"{ticker}_analysis_{timestamp}"
-    
-    saved_files = {}
-    
     try:
-        # Save as interactive HTML
-        html_path = os.path.join(output_dir, f"{base_filename}.html")
-        fig.write_html(
-            html_path,
-            include_plotlyjs=True,
-            full_html=True,
-            auto_open=True
-        )
-        saved_files['html'] = html_path
-        print(f"Interactive HTML saved to: {html_path}")
+        if not signal_returns:
+            return {
+                'total_trades': 0,
+                'win_rate': 0,
+                'average_return': 0,
+                'best_trade': 0,
+                'worst_trade': 0,
+                'total_return': 0
+            }
+
+        trades = []
+        for signal in signal_returns:
+            if 'Trade Return' in signal:
+                trades.append(signal['Trade Return'])
+
+        if not trades:
+            return {
+                'total_trades': len(signal_returns),
+                'win_rate': 0,
+                'average_return': 0,
+                'best_trade': 0,
+                'worst_trade': 0,
+                'total_return': 0
+            }
+
+        winning_trades = len([t for t in trades if t > 0])
         
-        try:
-            # Save as static image (PNG)
-            png_path = os.path.join(output_dir, f"{base_filename}.png")
-            fig.write_image(
-                png_path,
-                width=1920,
-                height=1080,
-                scale=2
-            )
-            saved_files['png'] = png_path
-            print(f"Static PNG saved to: {png_path}")
-            
-            # Save as PDF
-            pdf_path = os.path.join(output_dir, f"{base_filename}.pdf")
-            fig.write_image(
-                pdf_path,
-                width=1920,
-                height=1080
-            )
-            saved_files['pdf'] = pdf_path
-            print(f"PDF saved to: {pdf_path}")
-            
-        except Exception as e:
-            print(f"Warning: Could not save static images. Error: {str(e)}")
-            print("You may need to install additional dependencies:")
-            print("pip install -U kaleido")
+        return {
+            'total_trades': len(trades),
+            'win_rate': (winning_trades / len(trades)) * 100 if trades else 0,
+            'average_return': np.mean(trades),
+            'best_trade': max(trades),
+            'worst_trade': min(trades),
+            'total_return': sum(trades)
+        }
     
     except Exception as e:
-        print(f"Error saving visualization: {str(e)}")
-        raise
+        print(f"Error analyzing signals: {str(e)}")
+        return None
+
+def format_analysis_summary(ticker: str, historical_data: pd.DataFrame, 
+                          signal_analysis: Dict[str, Any]) -> str:
+    """
+    Format analysis summary for display
+
+    Parameters
+    ----------
+    ticker : str
+        Stock ticker symbol
+    historical_data : pd.DataFrame
+        Historical price data
+    signal_analysis : Dict[str, Any]
+        Signal analysis results
+
+    Returns
+    -------
+    str
+        Formatted analysis summary
+    """
+    try:
+        start_date = historical_data.index[0].strftime('%Y-%m-%d')
+        end_date = historical_data.index[-1].strftime('%Y-%m-%d')
+        start_price = historical_data['Close'].iloc[0]
+        end_price = historical_data['Close'].iloc[-1]
+        total_return = ((end_price / start_price) - 1) * 100
+        
+        summary = f"""
+        Analysis Summary for {ticker}
+        Period: {start_date} to {end_date}
+        Starting Price: ${start_price:.2f}
+        Ending Price: ${end_price:.2f}
+        Total Return: {total_return:.2f}%
+
+        Trading Performance:
+        Total Trades: {signal_analysis['total_trades']}
+        Win Rate: {signal_analysis['win_rate']:.1f}%
+        Average Trade Return: {signal_analysis['average_return']:.2f}%
+        Best Trade: {signal_analysis['best_trade']:.2f}%
+        Worst Trade: {signal_analysis['worst_trade']:.2f}%
+        Total Trading Return: {signal_analysis['total_return']:.2f}%
+        """
+        return summary
     
-    return saved_files
+    except Exception as e:
+        print(f"Error formatting analysis summary: {str(e)}")
+        return "Error generating analysis summary"
