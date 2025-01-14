@@ -498,7 +498,6 @@ class AnalysisService:
         """Perform comprehensive stock analysis"""
         try:
             # Initialize empty lists for results
-            result_dates = []
             result_data = []
             
             for current_date in data.index:
@@ -548,7 +547,6 @@ class AnalysisService:
                     r2_pct = None
                 
                 # Store results
-                result_dates.append(current_date)
                 result_data.append({
                     'Date': current_date,
                     'Price': current_price,
@@ -559,9 +557,11 @@ class AnalysisService:
                     'R2_Pct': r2_pct
                 })
             
-            # Create DataFrame and set index
+            # Create DataFrame
             df = pd.DataFrame(result_data)
-            df.set_index('Date', inplace=True)
+            
+            # Create a copy of the Date column as index while keeping the original
+            df.index = df['Date']
             
             return df
             
