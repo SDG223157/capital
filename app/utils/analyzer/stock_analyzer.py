@@ -147,7 +147,7 @@ def create_stock_visualization(
         # Create visualization
         fig = VisualizationService.create_stock_analysis_chart(
             symbol=ticker,
-            data=historical_data,  # Use display period data for visualization
+            data=analysis_df,  # Use display period data for visualization
             analysis_dates=analysis_df['Date'].tolist(),
             ratios=analysis_df['Retracement_Ratio_Pct'].tolist(),
             prices=analysis_df['Price'].tolist(),
