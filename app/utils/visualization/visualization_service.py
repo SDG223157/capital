@@ -505,9 +505,9 @@ class VisualizationService:
                     y=data['R2_Pct'],  # Use the R2_Pct column directly
                     name='R² Quality',
                     line=dict(
-                        color='purple',
+                        color='red',
                         dash='dot',
-                        width=1.5
+                        width=3
                     ),
                     hovertemplate='<b>Date</b>: %{x}<br>' +
                                 '<b>R²</b>: %{y:.1f}%<extra></extra>'
