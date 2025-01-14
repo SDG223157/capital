@@ -485,16 +485,28 @@ class VisualizationService:
         )
         
         # Add R-square line
+        # Debug information
+        print("Data columns available:", data.columns.tolist())
         if 'R2_Pct' in data.columns:
+            print("R2_Pct values:", data['R2_Pct'].head())
+        print("Number of analysis dates:", len(analysis_dates))
+        
+        # Add R-square line using the correct DataFrame
+        df = pd.DataFrame({
+            'Date': analysis_dates,
+            'R2_Pct': data['R2_Pct'] if 'R2_Pct' in data.columns else None
+        }).set_index('Date')
+        
+        if 'R2_Pct' in df.columns and not df['R2_Pct'].isnull().all():
             fig.add_trace(
                 go.Scatter(
-                    x=analysis_dates,
-                    y=data['R2_Pct'],
+                    x=df.index,
+                    y=df['R2_Pct'],
                     name='R² Quality',
                     line=dict(
-                        color='red',
+                        color='purple',
                         dash='dot',
-                        width=3
+                        width=1.5
                     ),
                     hovertemplate='<b>Date</b>: %{x}<br>' +
                                 '<b>R²</b>: %{y:.1f}%<extra></extra>'
@@ -643,8 +655,8 @@ class VisualizationService:
         )
 
         return fig
+            
         
-    
     @staticmethod
     def print_signal_analysis(signals_df):
         """Print detailed analysis of trading signals with statistics"""

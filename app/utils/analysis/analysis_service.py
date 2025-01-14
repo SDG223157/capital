@@ -495,6 +495,17 @@ class AnalysisService:
     @staticmethod
     def analyze_stock_data(data, crossover_days=365):
         """Perform comprehensive stock analysis"""
+        # Initialize filtered_data dictionary at the start
+        filtered_data = {
+            'Date': [],
+            'Price': [],
+            'High': [],
+            'Low': [],
+            'Retracement_Ratio_Pct': [],
+            'Price_Position_Pct': [],
+            'R2_Pct': []
+        }
+
         # Initialize all lists
         analysis_dates = []
         ratios = []
@@ -542,17 +553,6 @@ class AnalysisService:
         # Ensure all arrays have matching dates
         common_dates = set(analysis_dates).intersection(r2_dates)
         
-        # Create filtered lists with only common dates
-        filtered_data = {
-            'Date': [],
-            'Price': [],
-            'High': [],
-            'Low': [],
-            'Retracement_Ratio_Pct': [],
-            'Price_Position_Pct': [],
-            'R2_Pct': []
-        }
-        
         # Fill the filtered data
         for date in analysis_dates:
             if date in common_dates:
@@ -568,4 +568,10 @@ class AnalysisService:
                 filtered_data['R2_Pct'].append(r2_values[r2_index])
         
         # Create DataFrame with aligned data
-        return pd.DataFrame(filtered_data)
+        df = pd.DataFrame(filtered_data)
+        print("Debug - DataFrame creation:")
+        print("Columns:", df.columns.tolist())
+        print("Number of rows:", len(df))
+        if 'R2_Pct' in df.columns:
+            print("R2_Pct sample:", df['R2_Pct'].head())
+        return df
