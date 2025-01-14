@@ -427,11 +427,15 @@ class VisualizationService:
         )
 
         # Add R-square line (using the same dates as other metrics)
-        if hasattr(data, 'R2_Pct'):
+         # Add R-square line
+        if 'R2_Pct' in data.columns:
+            print("Adding R-square line with", len(data['R2_Pct']), "points")
+            print("First few R² values:", data['R2_Pct'].head())
+            
             fig.add_trace(
                 go.Scatter(
-                    x=analysis_dates,
-                    y=data.R2_Pct,
+                    x=data.index,  # Use index for dates
+                    y=data['R2_Pct'],
                     name='R² Quality',
                     line=dict(
                         color='purple',
@@ -439,9 +443,13 @@ class VisualizationService:
                         width=1.5
                     ),
                     hovertemplate='<b>Date</b>: %{x}<br>' +
-                             '<b>R²</b>: %{y:.1f}%<extra></extra>'
+                                 '<b>R²</b>: %{y:.1f}%<extra></extra>'
                 )
             )
+        else:
+            print("R2_Pct column not found in data")
+            print("Available columns:", data.columns.tolist())
+            
         
         # Add regression components
         future_dates = pd.date_range(

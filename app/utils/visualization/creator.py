@@ -6,77 +6,72 @@ from app.utils.config.api_config import ROIC_API
 from app.utils.data.data_service import DataService
 from app.utils.analysis.analysis_service import AnalysisService
 from app.utils.visualization.visualization_service import VisualizationService
-
 def create_stock_visualization(
     ticker: str, 
-    end_date: str = None, 
+    end_date: Optional[str] = None, 
     lookback_days: int = ANALYSIS_DEFAULTS['lookback_days'],
     crossover_days: int = ANALYSIS_DEFAULTS['crossover_days']
 ) -> 'plotly.graph_objects.Figure':
     """
     Create a complete stock analysis visualization
-
-    Parameters
-    ----------
-    ticker : str
-        Stock ticker symbol
-    end_date : str, optional
-        End date in YYYY-MM-DD format. If None, uses current date
-    lookback_days : int, optional
-        Number of days to look back for analysis (default from config)
-    crossover_days : int, optional
-        Number of days for crossover analysis (default from config)
-
-    Returns
-    -------
-    plotly.graph_objects.Figure
-        Complete analysis visualization
     """
+    analysis_id = datetime.now().strftime('%Y%m%d%H%M%S%f')
+    print(f"Starting analysis {analysis_id} for {ticker}")
     try:
         # Initialize services
         data_service = DataService()
         
         # Set up dates
-        if end_date is None:
+        if end_date is None or not end_date.strip():
             end_date = datetime.now().strftime("%Y-%m-%d")
-        start_date = data_service.get_analysis_dates(end_date, 'days', lookback_days)
         
-        print(f"Fetching data for {ticker} from {start_date} to {end_date}")
+        # Calculate extended start date for ratio calculations
+        extended_lookback = lookback_days + crossover_days
+        extended_start_date = data_service.get_analysis_dates(end_date, 'days', extended_lookback)
+        display_start_date = data_service.get_analysis_dates(end_date, 'days', lookback_days)
         
-        # Get historical data
-        historical_data = data_service.get_historical_data(ticker, start_date, end_date)
+        print(f"Fetching extended historical data for {ticker} from {extended_start_date} to {end_date}")
         
-        if historical_data.empty:
+        # Get extended historical data for calculations
+        historical_data_extended = data_service.get_historical_data(ticker, extended_start_date, end_date)
+        
+        if historical_data_extended.empty:
             raise ValueError(f"No historical data found for {ticker}")
         
-        # Perform technical analysis
-        analysis_df = AnalysisService.analyze_stock_data(historical_data, crossover_days)
+        print("Performing technical analysis...")
+        # Perform technical analysis on extended data
+        analysis_df = AnalysisService.analyze_stock_data(historical_data_extended, crossover_days)
         
-        # Perform regression analysis
-        regression_results = AnalysisService.perform_polynomial_regression(historical_data, future_days=int(lookback_days*0.4))
+        # Filter data for display period
+        historical_data = historical_data_extended[historical_data_extended.index >= display_start_date]
+        analysis_df = analysis_df[analysis_df.index >= pd.to_datetime(display_start_date)]
         
-        # Find crossover points
+        # Perform regression analysis on display period data
+        regression_results = AnalysisService.perform_polynomial_regression(
+            historical_data, 
+            future_days=int(lookback_days*LAYOUT_CONFIG['lookback_days_ratio'])
+        )
+        
+        # Find crossover points within display period
         crossover_data = AnalysisService.find_crossover_points(
-            analysis_df['Date'].tolist(),
+            analysis_df.index.tolist(),  # Use index for dates
             analysis_df['Retracement_Ratio_Pct'].tolist(),
             analysis_df['Price_Position_Pct'].tolist(),
             analysis_df['Price'].tolist()
         )
         
+        print("Fetching financial metrics...")
         # Get financial metrics
         current_year = datetime.now().year
-        start_year = str(current_year - 5)
-        end_year = str(current_year)
-        
-        print("Fetching financial metrics...")
         metrics_df = data_service.create_metrics_table(
             ticker=ticker,
             metrics=METRICS_TO_FETCH,
-            start_year=start_year,
-            end_year=end_year
+            start_year=str(current_year - 10),
+            end_year=str(current_year)
         )
         
         # Prepare signal returns data
+        print("Analyzing trading signals...")
         signal_returns = []
         if crossover_data[0]:  # If there are crossover points
             dates, values, directions, prices = crossover_data
@@ -118,10 +113,19 @@ def create_stock_visualization(
                     signal_returns[-1]['Current Price'] = last_price
         
         print("Creating visualization...")
+        # Create the data object for visualization
+        viz_data = pd.DataFrame({
+            'Price': analysis_df['Price'],
+            'Retracement_Ratio_Pct': analysis_df['Retracement_Ratio_Pct'],
+            'Price_Position_Pct': analysis_df['Price_Position_Pct'],
+            'R2_Pct': analysis_df['R2_Pct'] if 'R2_Pct' in analysis_df.columns else None
+        }, index=analysis_df.index)
+        
         # Create visualization
         fig = VisualizationService.create_stock_analysis_chart(
-            data=historical_data,
-            analysis_dates=analysis_df['Date'].tolist(),
+            symbol=ticker,
+            data=viz_data,  # Pass the properly structured DataFrame
+            analysis_dates=analysis_df.index.tolist(),
             ratios=analysis_df['Retracement_Ratio_Pct'].tolist(),
             prices=analysis_df['Price'].tolist(),
             appreciation_pcts=analysis_df['Price_Position_Pct'].tolist(),
@@ -131,10 +135,7 @@ def create_stock_visualization(
             metrics_df=metrics_df
         )
         
-        # Print signal analysis
-        if signal_returns:
-            VisualizationService.print_signal_analysis(pd.DataFrame(signal_returns))
-        
+        print("Analysis completed successfully!")
         return fig
     
     except Exception as e:

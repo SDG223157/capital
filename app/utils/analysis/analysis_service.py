@@ -492,42 +492,41 @@ class AnalysisService:
         
         return analysis_dates, r2_values
 
+    
     @staticmethod
     def analyze_stock_data(data, crossover_days=365):
         """Perform comprehensive stock analysis"""
-        analysis_dates = []
-        ratios = []
-        prices = []
-        highest_prices = []
-        lowest_prices = []
-        appreciation_pcts = []
-        r2_values = []
+        result_data = []
         
         for current_date in data.index:
-            year_start = current_date - timedelta(days=crossover_days)
-            period_data = data.loc[data.index <= current_date].copy()
-            
-            if (current_date - period_data.index[0]).days > crossover_days:
-                period_data = period_data[period_data.index > year_start]
-            
-            if len(period_data) < 20:
-                continue
-            
-            # Calculate standard metrics
-            current_price = period_data['Close'].iloc[-1]
-            highest_price = period_data['Close'].max()
-            lowest_price = period_data['Close'].min()
-            
-            # Calculate ratio
-            total_move = highest_price - lowest_price
-            if total_move > 0:
-                current_retracement = highest_price - current_price
-                ratio = (current_retracement / total_move) * 100
-            else:
-                ratio = 0
-            
-            # Calculate R-square
             try:
+                year_start = current_date - timedelta(days=crossover_days)
+                period_data = data.loc[data.index <= current_date].copy()
+                
+                if (current_date - period_data.index[0]).days > crossover_days:
+                    period_data = period_data[period_data.index > year_start]
+                
+                if len(period_data) < 20:
+                    continue
+                
+                # Calculate standard metrics
+                current_price = period_data['Close'].iloc[-1]
+                highest_price = period_data['Close'].max()
+                lowest_price = period_data['Close'].min()
+                
+                # Calculate ratio
+                total_move = highest_price - lowest_price
+                if total_move > 0:
+                    current_retracement = highest_price - current_price
+                    ratio = (current_retracement / total_move) * 100
+                else:
+                    ratio = 0
+                
+                # Calculate price appreciation
+                appreciation_pct = AnalysisService.calculate_price_appreciation_pct(
+                    current_price, highest_price, lowest_price)
+                
+                # Calculate R-square
                 period_data.loc[:, 'Log_Close'] = np.log(period_data['Close'])
                 X = (period_data.index - period_data.index[0]).days.values.reshape(-1, 1)
                 y = period_data['Log_Close'].values
@@ -540,31 +539,20 @@ class AnalysisService:
                 
                 r2 = r2_score(y, model.predict(X_poly))
                 r2_pct = r2 * 100  # Convert to percentage
+                
+                # Store results
+                result_data.append({
+                    'Price': current_price,
+                    'High': highest_price,
+                    'Low': lowest_price,
+                    'Retracement_Ratio_Pct': ratio,
+                    'Price_Position_Pct': appreciation_pct,
+                    'R2_Pct': r2_pct
+                })
+                
             except Exception as e:
-                print(f"Error calculating R² for {current_date}: {str(e)}")
-                r2_pct = None
-            
-            # Calculate price appreciation
-            appreciation_pct = AnalysisService.calculate_price_appreciation_pct(
-                current_price, highest_price, lowest_price)
-            
-            # Store all values
-            analysis_dates.append(current_date)
-            ratios.append(ratio)
-            prices.append(current_price)
-            highest_prices.append(highest_price)
-            lowest_prices.append(lowest_price)
-            appreciation_pcts.append(appreciation_pct)
-            r2_values.append(r2_pct)
+                print(f"Error processing date {current_date}: {str(e)}")
+                continue
         
-        # Create result DataFrame
-        result = pd.DataFrame({
-            'Price': prices,
-            'High': highest_prices,
-            'Low': lowest_prices,
-            'Retracement_Ratio_Pct': ratios,
-            'Price_Position_Pct': appreciation_pcts,
-            'R2_Pct': r2_values
-        }, index=analysis_dates)
-        
-        return result
+        # Create DataFrame with dates as index
+        return pd.DataFrame(result_data, index=pd.DatetimeIndex(data.index[:len(result_data)]))
