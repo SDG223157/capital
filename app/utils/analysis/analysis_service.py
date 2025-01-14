@@ -497,6 +497,9 @@ class AnalysisService:
     @staticmethod
     def analyze_stock_data(data, crossover_days=365):
         """Perform comprehensive stock analysis"""
+        logger = logging.getLogger(__name__)
+        logger.debug(f"Starting stock analysis with shape: {data.shape}")
+        
         try:
             # Initialize empty lists for results
             result_data = []
@@ -544,12 +547,11 @@ class AnalysisService:
                     r2 = r2_score(y, model.predict(X_poly))
                     r2_pct = r2 * 100  # Convert to percentage
                 except Exception as e:
-                    print(f"Error calculating R² for {current_date}: {str(e)}")
+                    logger.error(f"Error calculating R² for {current_date}: {str(e)}")
                     r2_pct = None
                 
                 # Store results
                 result_data.append({
-                    'Date': current_date,
                     'Price': current_price,
                     'High': highest_price,
                     'Low': lowest_price,
@@ -558,16 +560,15 @@ class AnalysisService:
                     'R2_Pct': r2_pct
                 })
             
-            # Create DataFrame
-            df = pd.DataFrame(result_data)
-            # logging.info(f"Result data: {df}")
+            # Create DataFrame with results
+            df = pd.DataFrame(result_data, index=data.index[:len(result_data)])
             
-            
-            # Create a copy of the Date column as index while keeping the original
-            df.index = df['Date']
+            # Log the resulting DataFrame info
+            logger.debug(f"Analysis complete. DataFrame columns: {df.columns.tolist()}")
+            logger.debug(f"R2_Pct stats: mean={df['R2_Pct'].mean():.2f}, count={df['R2_Pct'].count()}")
             
             return df
             
         except Exception as e:
-            print(f"Error in analyze_stock_data: {str(e)}")
+            logger.error(f"Error in analyze_stock_data: {str(e)}", exc_info=True)
             raise

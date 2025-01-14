@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Any
+import logging
 
 from app.utils.data.data_service import DataService
 from app.utils.analysis.analysis_service import AnalysisService
@@ -42,6 +43,7 @@ def create_stock_visualization(
     plotly.graph_objects.Figure
         Complete analysis visualization figure
     """
+    logger = logging.getLogger(__name__)
     analysis_id = datetime.now().strftime('%Y%m%d%H%M%S%f')
     print(f"Starting analysis {analysis_id} for {ticker}")
     try:
@@ -69,6 +71,11 @@ def create_stock_visualization(
         print("Performing technical analysis...")
         # Perform technical analysis on extended data
         analysis_df = AnalysisService.analyze_stock_data(historical_data_extended, crossover_days)
+         # Log analysis results
+        logger.debug(f"Analysis DataFrame columns: {analysis_df.columns.tolist()}")
+        if 'R2_Pct' in analysis_df.columns:
+            logger.debug(f"R2_Pct sample: {analysis_df['R2_Pct'].head()}")
+        
         
         # Filter data for display period
         historical_data = historical_data_extended[historical_data_extended.index >= display_start_date]
