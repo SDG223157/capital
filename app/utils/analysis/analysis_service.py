@@ -560,7 +560,7 @@ class AnalysisService:
             
             # Create DataFrame
             df = pd.DataFrame(result_data)
-            logging.info(f"Result data: {df}")
+            # logging.info(f"Result data: {df}")
             
             
             # Create a copy of the Date column as index while keeping the original
