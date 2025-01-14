@@ -484,34 +484,43 @@ class VisualizationService:
         # Add R-square line (add this code in create_stock_analysis_chart method)
         # Place this after other line traces but before crossover points
         # Add R-square line
+        # Add R-square line first with detailed debugging
+        print("\nDebug - R-square line addition:")
         try:
-            if 'R2_Pct' in data.columns:
-                print("Found R2_Pct column, adding to visualization")
-                print("R2_Pct values:", data['R2_Pct'].head())
-                r2_values = data['R2_Pct'].values
-                if len(r2_values) > 0:
-                    fig.add_trace(
-                        go.Scatter(
-                            x=analysis_dates,
-                            y=r2_values,
-                            name='R² Quality',
-                            line=dict(
-                                color='purple',
-                                dash='dot',
-                                width=1.5
-                            ),
-                            hovertemplate='<b>Date</b>: %{x}<br>' +
-                                        '<b>R²</b>: %{y:.1f}%<extra></extra>'
+            if isinstance(data, pd.DataFrame):
+                print("Data is a DataFrame")
+                if 'R2_Pct' in data.columns:
+                    print("Found R2_Pct column")
+                    print("First few R2_Pct values:", data['R2_Pct'].head())
+                    r2_values = data['R2_Pct'].values
+                    print("Number of R2 values:", len(r2_values))
+                    
+                    if len(r2_values) == len(analysis_dates):
+                        fig.add_trace(
+                            go.Scatter(
+                                x=analysis_dates,
+                                y=r2_values,
+                                name='R² Quality',
+                                line=dict(
+                                    color='purple',
+                                    dash='dot',
+                                    width=1.5
+                                ),
+                                hovertemplate='<b>Date</b>: %{x}<br>' +
+                                            '<b>R²</b>: %{y:.1f}%<extra></extra>'
+                            )
                         )
-                    )
-                    print("Successfully added R-square line")
+                        print("Successfully added R-square line")
+                    else:
+                        print(f"Length mismatch: R2 values ({len(r2_values)}) vs dates ({len(analysis_dates)})")
                 else:
-                    print("R2_Pct column is empty")
+                    print("R2_Pct not found in columns:", data.columns.tolist())
             else:
-                print("R2_Pct column not found in data")
-                print("Available columns:", data.columns.tolist())
+                print("Data is not a DataFrame, type:", type(data))
         except Exception as e:
             print(f"Error adding R-square line: {str(e)}")
+            import traceback
+            print("Traceback:", traceback.format_exc())
 
 
         # Add crossover points
