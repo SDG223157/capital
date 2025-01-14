@@ -559,6 +559,7 @@ class AnalysisService:
             
             # Create DataFrame
             df = pd.DataFrame(result_data)
+            print(df['R2_Pct'])
             
             # Create a copy of the Date column as index while keeping the original
             df.index = df['Date']
