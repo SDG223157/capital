@@ -459,35 +459,32 @@ class AnalysisService:
         
         for current_date in data.index:
             year_start = current_date - timedelta(days=lookback_days)
-            mask = (data.index <= current_date)  # Include all data up to current date
-            period_data = data.loc[mask]
+            mask = (data.index <= current_date)
+            period_data = data.loc[mask].copy()  # Create explicit copy
             
-            # If we have more than lookback_days of data, limit to the lookback period
             if (current_date - period_data.index[0]).days > lookback_days:
                 period_data = period_data[period_data.index > year_start]
             
-            # Only calculate if we have at least some minimum data points
-            if len(period_data) < 20:  # Minimum requirement for meaningful regression
+            if len(period_data) < 20:
                 continue
                 
             try:
-                # Prepare data for regression
-                period_data['Log_Close'] = np.log(period_data['Close'])
+                # Calculate log returns
+                period_data.loc[:, 'Log_Close'] = np.log(period_data['Close'])
+                
                 X = (period_data.index - period_data.index[0]).days.values.reshape(-1, 1)
                 y = period_data['Log_Close'].values
                 X_scaled = X / (np.max(X) * 1)
                 
-                # Perform regression
                 poly_features = PolynomialFeatures(degree=2)
                 X_poly = poly_features.fit_transform(X_scaled)
                 model = LinearRegression()
                 model.fit(X_poly, y)
                 
-                # Calculate R²
                 r2 = r2_score(y, model.predict(X_poly))
                 
                 analysis_dates.append(current_date)
-                r2_values.append(r2 * 100)  # Convert to percentage
+                r2_values.append(r2 * 100)
                 
             except Exception as e:
                 print(f"Error calculating R² for {current_date}: {str(e)}")
@@ -498,20 +495,19 @@ class AnalysisService:
     @staticmethod
     def analyze_stock_data(data, crossover_days=365):
         """Perform comprehensive stock analysis"""
+        # Initialize all lists
         analysis_dates = []
         ratios = []
         prices = []
         highest_prices = []
         lowest_prices = []
         appreciation_pcts = []
-        r2_dates = []
-        r2_values = []
         
-        # Calculate existing metrics
+        # Calculate standard metrics first
         for current_date in data.index:
             year_start = current_date - timedelta(days=crossover_days)
             mask = (data.index <= current_date)
-            period_data = data.loc[mask]
+            period_data = data.loc[mask].copy()  # Create explicit copy
             
             if (current_date - period_data.index[0]).days > crossover_days:
                 period_data = period_data[period_data.index > year_start]
@@ -540,15 +536,36 @@ class AnalysisService:
             lowest_prices.append(lowest_price)
             appreciation_pcts.append(appreciation_pct)
         
-        # Calculate rolling R-square values
+        # Calculate R-square values
         r2_dates, r2_values = AnalysisService.calculate_rolling_r2(data, crossover_days)
         
-        return pd.DataFrame({
-            'Date': analysis_dates,
-            'Price': prices,
-            'High': highest_prices,
-            'Low': lowest_prices,
-            'Retracement_Ratio_Pct': ratios,
-            'Price_Position_Pct': appreciation_pcts,
-            'R2_Pct': r2_values
-        })
+        # Ensure all arrays have matching dates
+        common_dates = set(analysis_dates).intersection(r2_dates)
+        
+        # Create filtered lists with only common dates
+        filtered_data = {
+            'Date': [],
+            'Price': [],
+            'High': [],
+            'Low': [],
+            'Retracement_Ratio_Pct': [],
+            'Price_Position_Pct': [],
+            'R2_Pct': []
+        }
+        
+        # Fill the filtered data
+        for date in analysis_dates:
+            if date in common_dates:
+                r2_index = r2_dates.index(date)
+                date_index = analysis_dates.index(date)
+                
+                filtered_data['Date'].append(date)
+                filtered_data['Price'].append(prices[date_index])
+                filtered_data['High'].append(highest_prices[date_index])
+                filtered_data['Low'].append(lowest_prices[date_index])
+                filtered_data['Retracement_Ratio_Pct'].append(ratios[date_index])
+                filtered_data['Price_Position_Pct'].append(appreciation_pcts[date_index])
+                filtered_data['R2_Pct'].append(r2_values[r2_index])
+        
+        # Create DataFrame with aligned data
+        return pd.DataFrame(filtered_data)
