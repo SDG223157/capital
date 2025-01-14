@@ -488,7 +488,7 @@ class VisualizationService:
             if not r2_values.empty:
                 fig.add_trace(
                     go.Scatter(
-                        x=r2_values.index,
+                        x=analysis_dates,
                         y=r2_values.values,
                         name='R² Quality',
                         line=dict(
