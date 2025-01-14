@@ -6,6 +6,10 @@ from app.utils.config.api_config import ROIC_API
 from app.utils.data.data_service import DataService
 from app.utils.analysis.analysis_service import AnalysisService
 from app.utils.visualization.visualization_service import VisualizationService
+from typing import Optional
+
+
+
 def create_stock_visualization(
     ticker: str, 
     end_date: Optional[str] = None, 
@@ -42,9 +46,13 @@ def create_stock_visualization(
         # Perform technical analysis on extended data
         analysis_df = AnalysisService.analyze_stock_data(historical_data_extended, crossover_days)
         
-        # Filter data for display period
-        historical_data = historical_data_extended[historical_data_extended.index >= display_start_date]
-        analysis_df = analysis_df[analysis_df.index >= pd.to_datetime(display_start_date)]
+        # Filter data for display period using index
+        display_start = pd.to_datetime(display_start_date)
+        historical_data = historical_data_extended[historical_data_extended.index >= display_start]
+        analysis_df = analysis_df[analysis_df.index >= display_start]
+        
+        print("Analysis DataFrame columns:", analysis_df.columns.tolist())
+        print("Analysis DataFrame index type:", type(analysis_df.index))
         
         # Perform regression analysis on display period data
         regression_results = AnalysisService.perform_polynomial_regression(
@@ -60,8 +68,8 @@ def create_stock_visualization(
             analysis_df['Price'].tolist()
         )
         
-        print("Fetching financial metrics...")
         # Get financial metrics
+        print("Fetching financial metrics...")
         current_year = datetime.now().year
         metrics_df = data_service.create_metrics_table(
             ticker=ticker,
@@ -113,18 +121,10 @@ def create_stock_visualization(
                     signal_returns[-1]['Current Price'] = last_price
         
         print("Creating visualization...")
-        # Create the data object for visualization
-        viz_data = pd.DataFrame({
-            'Price': analysis_df['Price'],
-            'Retracement_Ratio_Pct': analysis_df['Retracement_Ratio_Pct'],
-            'Price_Position_Pct': analysis_df['Price_Position_Pct'],
-            'R2_Pct': analysis_df['R2_Pct'] if 'R2_Pct' in analysis_df.columns else None
-        }, index=analysis_df.index)
-        
-        # Create visualization
+        # Create visualization with all data
         fig = VisualizationService.create_stock_analysis_chart(
             symbol=ticker,
-            data=viz_data,  # Pass the properly structured DataFrame
+            data=analysis_df,  # Pass the complete DataFrame
             analysis_dates=analysis_df.index.tolist(),
             ratios=analysis_df['Retracement_Ratio_Pct'].tolist(),
             prices=analysis_df['Price'].tolist(),
