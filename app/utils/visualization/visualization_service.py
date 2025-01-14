@@ -506,9 +506,9 @@ class VisualizationService:
                                 y=r2_values,
                                 name='R² Quality',
                                 line=dict(
-                                    color='purple',
-                                    dash='dot',
-                                    width=5
+                                    color='red',
+                                    
+                                    width=2.5
                                 ),
                                 hovertemplate='<b>Date</b>: %{x}<br>' +
                                             '<b>R²</b>: %{y:.1f}%<extra></extra>'
