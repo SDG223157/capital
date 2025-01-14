@@ -506,7 +506,7 @@ class VisualizationService:
                                 y=r2_values,
                                 name='R² Quality',
                                 line=dict(
-                                    color='red',
+                                    color='#FF1493',
                                     dash='dot',
                                     width=2.0
                                 ),
