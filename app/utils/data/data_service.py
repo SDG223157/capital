@@ -614,7 +614,9 @@ class DataService:
                         df[col] = 0.0
                 
                 # Sort by fiscal year descending
-                df = df.sort_values('fiscal_year', ascending=False)
+                # df = df.sort_values('fiscal_year', ascending=False)
+                df = df.sort_values('fiscal_year', ascending=True)
+                df.reset_index(drop=True, inplace=True)
                 
                 # Reorder columns
                 df = df[required_columns]
