@@ -483,23 +483,24 @@ class VisualizationService:
         )
         # Add R-square line (add this code in create_stock_analysis_chart method)
         # Place this after other line traces but before crossover points
-        if 'R2_Pct' in data.columns:
-            r2_values = data['R2_Pct'].dropna()
-            if not r2_values.empty:
-                fig.add_trace(
-                    go.Scatter(
-                        x=analysis_dates,
-                        y=r2_values.values,
-                        name='R² Quality',
-                        line=dict(
-                            color='purple',
-                            dash='dot',
-                            width=1.5
-                        ),
-                        hovertemplate='<b>Date</b>: %{x}<br>' +
-                                     '<b>R²</b>: %{y:.1f}%<extra></extra>'
-                    )
+        # Add R-square line
+        if hasattr(data, 'R2_Pct'):
+            print("Adding R-square line with", len(data['R2_Pct']), "points")
+            fig.add_trace(
+                go.Scatter(
+                    x=analysis_dates,
+                    y=data['R2_Pct'].values,
+                    name='R² Quality',
+                    line=dict(
+                        color='red',
+                        dash='dot',
+                        width=3
+                    ),
+                    hovertemplate='<b>Date</b>: %{x}<br>' +
+                                 '<b>R²</b>: %{y:.1f}%<extra></extra>'
                 )
+            )
+
         # Add crossover points
         if crossover_data[0]:
             dates, values, directions, prices = crossover_data
