@@ -46,13 +46,18 @@ def create_stock_visualization(
         # Perform technical analysis on extended data
         analysis_df = AnalysisService.analyze_stock_data(historical_data_extended, crossover_days)
         
+        # Debug prints for DataFrame structure
+        print("Analysis DataFrame structure:")
+        print("Columns:", analysis_df.columns.tolist())
+        print("Index:", type(analysis_df.index))
+        
         # Filter data for display period using index
         display_start = pd.to_datetime(display_start_date)
         historical_data = historical_data_extended[historical_data_extended.index >= display_start]
+        # This is the line that was causing the error - replaced with index filtering
         analysis_df = analysis_df[analysis_df.index >= display_start]
         
-        print("Analysis DataFrame columns:", analysis_df.columns.tolist())
-        print("Analysis DataFrame index type:", type(analysis_df.index))
+        print("Filtered analysis DataFrame rows:", len(analysis_df))
         
         # Perform regression analysis on display period data
         regression_results = AnalysisService.perform_polynomial_regression(
@@ -60,16 +65,16 @@ def create_stock_visualization(
             future_days=int(lookback_days*LAYOUT_CONFIG['lookback_days_ratio'])
         )
         
-        # Find crossover points within display period
+        # Find crossover points within display period using index
         crossover_data = AnalysisService.find_crossover_points(
-            analysis_df.index.tolist(),  # Use index for dates
+            analysis_df.index.tolist(),
             analysis_df['Retracement_Ratio_Pct'].tolist(),
             analysis_df['Price_Position_Pct'].tolist(),
             analysis_df['Price'].tolist()
         )
         
-        # Get financial metrics
         print("Fetching financial metrics...")
+        # Get financial metrics
         current_year = datetime.now().year
         metrics_df = data_service.create_metrics_table(
             ticker=ticker,
@@ -121,10 +126,16 @@ def create_stock_visualization(
                     signal_returns[-1]['Current Price'] = last_price
         
         print("Creating visualization...")
-        # Create visualization with all data
+        # Check if R2_Pct exists in the DataFrame
+        if 'R2_Pct' in analysis_df.columns:
+            print("R2_Pct column found with values:", analysis_df['R2_Pct'].head())
+        else:
+            print("R2_Pct column not found in DataFrame")
+        
+        # Create visualization
         fig = VisualizationService.create_stock_analysis_chart(
             symbol=ticker,
-            data=analysis_df,  # Pass the complete DataFrame
+            data=analysis_df,
             analysis_dates=analysis_df.index.tolist(),
             ratios=analysis_df['Retracement_Ratio_Pct'].tolist(),
             prices=analysis_df['Price'].tolist(),
