@@ -367,7 +367,6 @@ class VisualizationService:
 
         return annotations
 
-    
     @staticmethod
     def create_stock_analysis_chart(symbol, data, analysis_dates, ratios, prices, 
                                   appreciation_pcts, regression_results, 
@@ -376,6 +375,7 @@ class VisualizationService:
         """Create the complete stock analysis chart with all components"""
         config = VisualizationService._get_config(symbol)
         
+        # Adjust total height for non-stocks
         if config['layout'] == 'non_stock':
             total_height *= 0.7
 
@@ -396,58 +396,6 @@ class VisualizationService:
                              '<b>Price</b>: $%{y:.2f}<extra></extra>'
             )
         )
-
-        # Add technical indicators
-        fig.add_trace(
-            go.Scatter(
-                x=analysis_dates,
-                y=ratios,
-                name='Retracement Ratio',
-                line=dict(
-                    color=CHART_STYLE['colors']['retracement_line'],
-                    **CHART_STYLE['line_styles']['retracement']
-                ),
-                hovertemplate='<b>Date</b>: %{x}<br>' +
-                             '<b>Ratio</b>: %{y:.1f}%<extra></extra>'
-            )
-        )
-        
-        fig.add_trace(
-            go.Scatter(
-                x=analysis_dates,
-                y=appreciation_pcts,
-                name='Price Position',
-                line=dict(
-                    color=CHART_STYLE['colors']['position_line'],
-                    **CHART_STYLE['line_styles']['position']
-                ),
-                hovertemplate='<b>Date</b>: %{x}<br>' +
-                             '<b>Position</b>: %{y:.1f}%<extra></extra>'
-            )
-        )
-
-        # Add R-square line (using the same dates as other metrics)
-         # Add R-square line
-        # Add R-square line (add this code in create_stock_analysis_chart method)
-        # Place this after other line traces but before crossover points
-        if 'R2_Pct' in data.columns:
-            r2_values = data['R2_Pct'].dropna()
-            if not r2_values.empty:
-                fig.add_trace(
-                    go.Scatter(
-                        x=r2_values.index,
-                        y=r2_values.values,
-                        name='R² Quality',
-                        line=dict(
-                            color='purple',
-                            dash='dot',
-                            width=1.5
-                        ),
-                        hovertemplate='<b>Date</b>: %{x}<br>' +
-                                     '<b>R²</b>: %{y:.1f}%<extra></extra>'
-                    )
-                )
-            
         
         # Add regression components
         future_dates = pd.date_range(
@@ -470,8 +418,7 @@ class VisualizationService:
                              '<b>Predicted</b>: $%{y:.2f}<extra></extra>'
             )
         )
-
-        # Add confidence bands
+        
         fig.add_trace(
             go.Scatter(
                 x=future_dates,
@@ -505,6 +452,123 @@ class VisualizationService:
                              '<b>Lower Band</b>: $%{y:.2f}<extra></extra>'
             )
         )
+        
+        # Add technical indicators
+        fig.add_trace(
+            go.Scatter(
+                x=analysis_dates,
+                y=ratios,
+                name='Retracement Ratio',
+                line=dict(
+                    color=CHART_STYLE['colors']['retracement_line'],
+                    **CHART_STYLE['line_styles']['retracement']
+                ),
+                hovertemplate='<b>Date</b>: %{x}<br>' +
+                             '<b>Ratio</b>: %{y:.1f}%<extra></extra>'
+            )
+        )
+        
+        fig.add_trace(
+            go.Scatter(
+                x=analysis_dates,
+                y=appreciation_pcts,
+                name='Price Position',
+                line=dict(
+                    color=CHART_STYLE['colors']['position_line'],
+                    **CHART_STYLE['line_styles']['position']
+                ),
+                hovertemplate='<b>Date</b>: %{x}<br>' +
+                             '<b>Position</b>: %{y:.1f}%<extra></extra>'
+            )
+        )
+        # Add R-square line (add this code in create_stock_analysis_chart method)
+        # Place this after other line traces but before crossover points
+        if 'R2_Pct' in data.columns:
+            r2_values = data['R2_Pct'].dropna()
+            if not r2_values.empty:
+                fig.add_trace(
+                    go.Scatter(
+                        x=r2_values.index,
+                        y=r2_values.values,
+                        name='R² Quality',
+                        line=dict(
+                            color='purple',
+                            dash='dot',
+                            width=1.5
+                        ),
+                        hovertemplate='<b>Date</b>: %{x}<br>' +
+                                     '<b>R²</b>: %{y:.1f}%<extra></extra>'
+                    )
+                )
+        # Add crossover points
+        if crossover_data[0]:
+            dates, values, directions, prices = crossover_data
+            for date, value, direction, price in zip(dates, values, directions, prices):
+                color = CHART_STYLE['colors']['bullish_marker'] if direction == 'up' else CHART_STYLE['colors']['bearish_marker']
+                formatted_date = date.strftime('%Y-%m-%d')
+                base_name = 'Bullish Crossover' if direction == 'up' else 'Bearish Crossover'
+                detailed_name = f"({formatted_date}, ${price:.2f})"
+                
+                fig.add_trace(
+                    go.Scatter(
+                        x=[date],
+                        y=[value],
+                        mode='markers',
+                        showlegend=False,
+                        name=detailed_name,
+                        marker=dict(
+                            color=color,
+                            **CHART_STYLE['marker_styles']['crossover']
+                        ),
+                        hovertemplate='<b>%{text}</b><br>' +
+                                     '<b>Date</b>: %{x}<br>' +
+                                     '<b>Value</b>: %{y:.1f}%<br>' +
+                                     '<b>Price</b>: $%{customdata:.2f}<extra></extra>',
+                        text=[detailed_name],
+                        customdata=[price]
+                    )
+                )
+         # Add horizontal lines at key levels
+        fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.1)
+        fig.add_hline(y=50, line_dash="dash", line_color="gray", opacity=0.1)
+        fig.add_hline(y=100, line_dash="dash", line_color="gray", opacity=0.1)
+
+        # Add metrics tables
+        metrics_table = None
+        growth_table = None
+        
+        if config['layout'] == 'stock':
+            metrics_table, growth_table = VisualizationService.create_financial_metrics_table(metrics_df, config)
+            if metrics_table:
+                fig.add_trace(metrics_table)
+            if growth_table:
+                fig.add_trace(growth_table)
+
+        # Add analysis summary and trading signals tables
+        analysis_table = VisualizationService._create_analysis_summary_table(
+            days=(data.index[-1] - data.index[0]).days,
+            end_price=data['Close'].iloc[-1],
+            annual_return=((data['Close'].iloc[-1] / data['Close'].iloc[0]) ** (365 / (data.index[-1] - data.index[0]).days) - 1) * 100,
+            daily_volatility=data['Close'].pct_change().std(),
+            annualized_volatility=data['Close'].pct_change().std() * np.sqrt(252),
+            r2=regression_results['r2'],
+            regression_formula=regression_results['equation'],
+            final_score=regression_results['total_score']['score'],
+            table_style=config['table_style'],
+            table_domain=config['tables']['analysis_summary'],
+            signal_returns=signal_returns
+        )
+        fig.add_trace(analysis_table)
+
+        trading_table = VisualizationService._create_trading_signal_table(
+            signal_returns,
+            table_style=config['table_style'],
+            table_domain=config['tables']['trading_signals']
+        )
+        fig.add_trace(trading_table)
+
+        # Create and add annotations
+        annotations = VisualizationService._create_chart_annotations(config, metrics_df)
 
         # Update layout
         fig.update_layout(
@@ -519,6 +583,7 @@ class VisualizationService:
             height=total_height,
             showlegend=True,
             hovermode='x unified',
+            annotations=annotations,
             xaxis=dict(
                 title="Date",
                 showgrid=True,
@@ -531,9 +596,9 @@ class VisualizationService:
                 domain=config['chart_area']['domain']['x']
             ),
             yaxis=dict(
-                title="Ratio, Position and R² (%)",
+                title="Ratio and Position (%)",
                 ticksuffix="%",
-                range=[-10, 120],
+                range=[-10 , 120],
                 showgrid=True,
                 gridwidth=1,
                 gridcolor='rgba(128, 128, 128, 0.2)',
@@ -557,22 +622,26 @@ class VisualizationService:
             ),
             plot_bgcolor='white',
             paper_bgcolor='white',
-            margin=dict(l=50, r=100, t=100, b=50),
+            margin=dict(
+                l=50, 
+                r=100, 
+                t=0.05* total_height,
+                b=0.05* total_height
+            ),
             legend=dict(
                 yanchor="top",
                 y=0.95,
                 xanchor="right",
-                x=1.05
+                x=1.05,
+                bgcolor='rgba(255, 255, 255, 0.8)',
+                bordercolor='rgba(0, 0, 0, 0.2)',
+                borderwidth=1,
+                font=dict(size=11)
             )
         )
 
-        # Add horizontal reference lines
-        fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.1)
-        fig.add_hline(y=50, line_dash="dash", line_color="gray", opacity=0.1)
-        fig.add_hline(y=100, line_dash="dash", line_color="gray", opacity=0.1)
-
         return fig
-        
+
     @staticmethod
     def print_signal_analysis(signals_df):
         """Print detailed analysis of trading signals with statistics"""
