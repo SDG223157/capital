@@ -82,23 +82,19 @@ class DataService:
             return False
 
     def store_dataframe(self, df: pd.DataFrame, table_name: str) -> bool:
-        """Store DataFrame in database with correct ordering"""
+        """Store DataFrame in database"""
         try:
-            # Ensure index is reset and ordered correctly
-            # df = df.reset_index(drop=True)
-            
-            # Store DataFrame without the index
             df.to_sql(
                 name=table_name,
                 con=self.engine,
-                index=False,  # Don't use DataFrame index
+                index=True,
                 if_exists='replace',
                 chunksize=10000
             )
-            logger.info(f"Successfully stored data in table: {table_name}")
+            print(f"Successfully stored data in table: {table_name}")
             return True
         except Exception as e:
-            logger.error(f"Error storing DataFrame in table {table_name}: {e}")
+            print(f"Error storing DataFrame in table {table_name}: {e}")
             return False
     def clean_ticker_for_table_name(self, ticker: str) -> str:
         """
@@ -437,208 +433,57 @@ class DataService:
             return False
     
     
-    def calculate_roic(self, income_stmt, balance_sheet, date):
-        """Calculate ROIC = (Operating Income - Tax) / (Total Assets - Total Current Liabilities)"""
-        try:
-            operating_income = 0
-            if 'Operating Income' in income_stmt.index:
-                operating_income = float(income_stmt.loc['Operating Income', date] or 0)
-            
-            income_tax = 0
-            if 'Income Tax Expense' in income_stmt.index:
-                income_tax = float(income_stmt.loc['Income Tax Expense', date] or 0)
-            
-            total_assets = 0
-            total_current_liabilities = 0
-            
-            if date in balance_sheet.columns:
-                if 'Total Assets' in balance_sheet.index:
-                    total_assets = float(balance_sheet.loc['Total Assets', date] or 0)
-                if 'Total Current Liabilities' in balance_sheet.index:
-                    total_current_liabilities = float(balance_sheet.loc['Total Current Liabilities', date] or 0)
-            
-            numerator = operating_income - income_tax
-            denominator = total_assets - total_current_liabilities
-            
-            if denominator and denominator != 0:
-                roic = (numerator / denominator) * 100
-                return float(f"{roic:.15f}")
-            return 0.0
-            
-        except Exception as e:
-            logger.error(f"Error calculating ROIC: {str(e)}")
-            return 0.0
+    # In data_service.py
+    # In data_service.py
+
+    # In data_service.py
 
     def store_financial_data(self, ticker: str, start_year: str = None, end_year: str = None) -> bool:
-        """Fetch and store financial data, first try ROIC API then fallback to yfinance"""
+        """Fetch and store financial data from ROIC API"""
         try:
-            logger.info(f"Fetching financial data for {ticker}")
+            print(f"Fetching financial data for {ticker} from ROIC API")
             
+            # If no years specified, use last 5 years
             if not start_year or not end_year:
                 current_year = datetime.now().year
                 end_year = str(current_year)
                 start_year = str(current_year - 10)
 
-            # Try ROIC API first
             all_metrics_data = []
-            try:
-                logger.info(f"Trying ROIC API for {ticker}")
-                for metric_description in self.METRICS:
-                    metric_field = self.METRICS[metric_description]
-                    query = f"get({metric_field}(fa_period_reference=range('{start_year}', '{end_year}'))) for('{ticker}')"
-                    url = f"{self.BASE_URL}?query={query}&apikey={self.API_KEY}"
+            
+            # Fetch data for each metric
+            for metric_description in self.METRICS:
+                metric_field = self.METRICS[metric_description]
+                query = f"get({metric_field}(fa_period_reference=range('{start_year}', '{end_year}'))) for('{ticker}')"
+                url = f"{self.BASE_URL}?query={query}&apikey={self.API_KEY}"
 
-                    response = requests.get(url)
-                    response.raise_for_status()
-                    
-                    df = pd.DataFrame(response.json())
-                    if not df.empty:
-                        df.columns = df.iloc[0]
-                        df = df.drop(0).reset_index(drop=True)
-                        all_metrics_data.append(df)
-                        logger.info(f"Got {metric_description} from ROIC for {ticker}")
-                    sleep(1)
+                response = requests.get(url)
+                response.raise_for_status()
+                
+                df = pd.DataFrame(response.json())
+                if not df.empty:
+                    df.columns = df.iloc[0]
+                    df = df.drop(0).reset_index(drop=True)
+                    all_metrics_data.append(df)
 
-                if all_metrics_data:
-                    combined_df = pd.concat(all_metrics_data, axis=1)
-                    combined_df = combined_df.loc[:,~combined_df.columns.duplicated()]
-                    logger.info(f"Successfully got all ROIC data for {ticker}")
-                    
-                    cleaned_ticker = self.clean_ticker_for_table_name(ticker)
-                    table_name = f"roic_{cleaned_ticker}"
-                    success = self.store_dataframe(combined_df, table_name)
-                    if success:
-                        logger.info(f"Stored ROIC data for {ticker}")
-                        return True
-                else:
-                    logger.warning(f"No data from ROIC for {ticker}")
-                    
-            except Exception as e:
-                logger.warning(f"ROIC API failed for {ticker}: {str(e)}, trying yfinance")
-                success = False
-
-            # Try yfinance if ROIC failed
-            try:
-                logger.info(f"Getting data from yfinance for {ticker}")
-                yf_ticker = yf.Ticker(ticker)
-                
-                financial_data = []
-                
-                # Get all required financial statements
-                income_stmt = yf_ticker.income_stmt
-                balance_sheet = yf_ticker.balance_sheet
-                cash_flow = yf_ticker.cash_flow
-                
-                if income_stmt is not None and not income_stmt.empty:
-                    dates = income_stmt.columns
-                    
-                    for date in dates:
-                        year_data = {
-                            'fiscal_year': date.year,
-                            'period_label': 'Q4',
-                            'period_end_date': date.strftime('%Y-%m-%d')
-                        }
-                        
-                        # Total Revenue (is_sales_and_services_revenues)
-                        if 'Total Revenue' in income_stmt.index:
-                            revenue = float(income_stmt.loc['Total Revenue', date] or 0)
-                            year_data['is_sales_and_services_revenues'] = revenue
-                        
-                        # Net Income (is_net_income)
-                        if 'Net Income' in income_stmt.index:
-                            net_income = float(income_stmt.loc['Net Income', date] or 0)
-                            year_data['is_net_income'] = net_income
-                        
-                        # EPS
-                        if 'Basic EPS' in income_stmt.index:
-                            eps = float(income_stmt.loc['Basic EPS', date] or 0)
-                            year_data['eps'] = float(f"{eps:.15f}")
-                        
-                        # Operating Margin
-                        if 'Operating Income' in income_stmt.index and 'Total Revenue' in income_stmt.index:
-                            revenue = float(income_stmt.loc['Total Revenue', date] or 0)
-                            operating_income = float(income_stmt.loc['Operating Income', date] or 0)
-                            if revenue != 0:
-                                year_data['oper_margin'] = float(f"{(operating_income / revenue * 100):.15f}")
-                            else:
-                                year_data['oper_margin'] = 0.0
-                        
-                        # Calculate ROIC
-                        year_data['return_on_inv_capital'] = self.calculate_roic(income_stmt, balance_sheet, date)
-                        
-                        # Diluted Shares
-                        if 'Diluted Average Shares' in income_stmt.index:
-                            shares = float(income_stmt.loc['Diluted Average Shares', date] or 0)
-                            year_data['is_sh_for_diluted_eps'] = shares
-                        
-                        financial_data.append(year_data)
-                        
-                # Get cash flow data
-                if cash_flow is not None and not cash_flow.empty:
-                    for data in financial_data:
-                        date = pd.Timestamp(data['period_end_date'])
-                        if date in cash_flow.columns:
-                            # Operating Cash Flow (cf_cash_from_oper)
-                            if 'Operating Cash Flow' in cash_flow.index:
-                                cf = float(cash_flow.loc['Operating Cash Flow', date] or 0)
-                                data['cf_cash_from_oper'] = cf
-                            
-                            # Capital Expenditures (cf_cap_expenditures)
-                            if 'Capital Expenditure' in cash_flow.index:
-                                capex = float(cash_flow.loc['Capital Expenditure', date] or 0)
-                                data['cf_cap_expenditures'] = capex
-                
-                if not financial_data:
-                    logger.warning(f"No financial data found in yfinance for {ticker}")
-                    return False
-                
-                # Convert to DataFrame
-                df = pd.DataFrame(financial_data)
-                
-                # Ensure all required columns exist
-                required_columns = [
-                    'fiscal_year',
-                    'period_label',
-                    'period_end_date',
-                    'is_sales_and_services_revenues',
-                    'cf_cash_from_oper',
-                    'is_net_income',
-                    'eps',
-                    'oper_margin',
-                    'cf_cap_expenditures',
-                    'return_on_inv_capital',
-                    'is_sh_for_diluted_eps'
-                ]
-                
-                for col in required_columns:
-                    if col not in df.columns:
-                        if col in ['fiscal_year', 'period_label', 'period_end_date']:
-                            continue
-                        df[col] = 0.0
-                
-                # Sort by fiscal year descending
-                df = df.sort_values('fiscal_year', ascending=False)
-                
-                # Reorder columns
-                df = df[required_columns]
-                
-                # Store in database
-                cleaned_ticker = self.clean_ticker_for_table_name(ticker)
-                table_name = f"roic_{cleaned_ticker}"
-                
-                success = self.store_dataframe(df, table_name)
-                if success:
-                    logger.info(f"Successfully stored yfinance data for {ticker}")
-                return success
-                
-            except Exception as e:
-                logger.error(f"Both ROIC and yfinance failed for {ticker}: {str(e)}")
+            if not all_metrics_data:
+                print(f"No financial data found for {ticker}")
                 return False
-                    
+
+            # Combine all metrics data
+            combined_df = pd.concat(all_metrics_data, axis=1)
+            combined_df = combined_df.loc[:,~combined_df.columns.duplicated()]
+            # print(combined_df)
+            
+            # Store in database
+            cleaned_ticker = self.clean_ticker_for_table_name(ticker)
+            table_name = f"roic_{cleaned_ticker}"
+            return self.store_dataframe(combined_df, table_name)
+                
         except Exception as e:
-            logger.error(f"Error storing financial data for {ticker}: {str(e)}")
-            return False# In data_service.py
-    
+            print(f"Error storing financial data for {ticker}: {e}")
+            return False
+        
     def get_analysis_dates(self, end_date: str, lookback_type: str, 
                             lookback_value: int) -> str:
             """
