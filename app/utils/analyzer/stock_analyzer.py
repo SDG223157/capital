@@ -79,7 +79,7 @@ def create_stock_visualization(
         
         # Filter data for display period
         historical_data = historical_data_extended[historical_data_extended.index >= display_start_date]
-        analysis_df = analysis_df[analysis_df['Date'] >= pd.to_datetime(display_start_date)]
+        analysis_df = analysis_df[analysis_df.index >= pd.to_datetime(display_start_date)]
         
         # Perform regression analysis on display period data
         regression_results = AnalysisService.perform_polynomial_regression(
@@ -89,10 +89,10 @@ def create_stock_visualization(
         
         # Find crossover points within display period
         crossover_data = AnalysisService.find_crossover_points(
-            analysis_df['Date'].tolist(),
+            analysis_df.index.tolist(),
             analysis_df['Retracement_Ratio_Pct'].tolist(),
             analysis_df['Price_Position_Pct'].tolist(),
-            analysis_df['Price'].tolist()
+            analysis_df['Close'].tolist()
         )
         
         print("Fetching financial metrics...")
@@ -155,9 +155,9 @@ def create_stock_visualization(
         fig = VisualizationService.create_stock_analysis_chart(
             symbol=ticker,
             data=analysis_df,  # Use display period data for visualization
-            analysis_dates=analysis_df['Date'].tolist(),
+            analysis_dates=analysis_df.index.tolist(),
             ratios=analysis_df['Retracement_Ratio_Pct'].tolist(),
-            prices=analysis_df['Price'].tolist(),
+            prices=analysis_df['Close'].tolist(),
             appreciation_pcts=analysis_df['Price_Position_Pct'].tolist(),
             regression_results=regression_results,
             crossover_data=crossover_data,
