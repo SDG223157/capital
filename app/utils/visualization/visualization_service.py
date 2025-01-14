@@ -497,16 +497,17 @@ class VisualizationService:
             'R2_Pct': data['R2_Pct'] if 'R2_Pct' in data.columns else None
         }).set_index('Date')
         
-        if 'R2_Pct' in df.columns and not df['R2_Pct'].isnull().all():
+        # Add R-square line trace
+        if 'R2_Pct' in data.columns and not data['R2_Pct'].empty:
             fig.add_trace(
                 go.Scatter(
-                    x=df.index,
-                    y=df['R2_Pct'],
+                    x=data['Date'],
+                    y=data['R2_Pct'],  # Use the R2_Pct column directly
                     name='R² Quality',
                     line=dict(
-                        color='red',
+                        color='purple',
                         dash='dot',
-                        width=3
+                        width=1.5
                     ),
                     hovertemplate='<b>Date</b>: %{x}<br>' +
                                 '<b>R²</b>: %{y:.1f}%<extra></extra>'
