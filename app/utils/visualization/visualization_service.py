@@ -1,5 +1,3 @@
-# src/visualization/visualization_service.py
-
 import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
@@ -54,31 +52,6 @@ class VisualizationService:
             return "N/A"
 
     @staticmethod
-    def format_growth_values(growth_rates):
-        """Format growth rates for display"""
-        if not growth_rates:
-            return []
-        
-        metrics = list(growth_rates.keys())
-        if not metrics or not growth_rates[metrics[0]]:
-            return []
-        
-        periods = len(growth_rates[metrics[0]])
-        formatted_values = [metrics]
-        
-        for i in range(periods):
-            period_values = []
-            for metric in metrics:
-                value = growth_rates[metric][i]
-                if value is None:
-                    period_values.append("N/A")
-                else:
-                    period_values.append(f"{value:+.1f}%" if value != 0 else "0.0%")
-            formatted_values.append(period_values)
-        
-        return formatted_values
-
-    @staticmethod
     def create_financial_metrics_table(df, config):
         """Create financial metrics tables using provided configuration"""
         if df is None or df.empty or config['layout'] == 'non_stock':
@@ -90,7 +63,7 @@ class VisualizationService:
                 formatted_df[col] = formatted_df[col].apply(VisualizationService.format_number)
             else:
                 formatted_df[col] = formatted_df[col].apply(
-                    lambda x: f"{x:+.2f}" if pd.notna(x) and x is not None else "N/A"
+                    lambda x: f"{x:+.2f}%" if pd.notna(x) and x is not None else "N/A"
                 )
 
         metrics_table = go.Table(
@@ -114,15 +87,18 @@ class VisualizationService:
         growth_table = None
         if not df.empty:
             df_columns = list(df.columns)
-            year_columns = df_columns[1:-1]  # Exclude CAGR column if present
+            # Get all year columns excluding CAGR
+            year_columns = [col for col in df_columns if col != 'CAGR %']
             
             # Calculate growth rates with null checking
             growth_rates = {}
             for metric in df.index:
                 rates = []
-                for prev_col, col in zip(year_columns[:-1], year_columns[1:]):
+                for i in range(len(year_columns)-1):
+                    curr_col = year_columns[i+1]
+                    prev_col = year_columns[i]
                     try:
-                        curr_val = df.loc[metric, col]
+                        curr_val = df.loc[metric, curr_col]
                         prev_val = df.loc[metric, prev_col]
                         
                         if pd.isna(curr_val) or pd.isna(prev_val) or prev_val == 0:
@@ -134,35 +110,44 @@ class VisualizationService:
                         rates.append(None)
                 
                 growth_rates[metric] = rates
-            
+
             if growth_rates:
-                formatted_values = VisualizationService.format_growth_values(growth_rates)
-                if formatted_values:
-                    growth_table = go.Table(
-                        domain=dict(
-                            x=config['tables']['growth']['x'],
-                            y=config['tables']['growth']['y']
-                        ),
-                        header=dict(
-                            values=['<b>Metric</b>'] + [f'<b>{year_columns[i]}</b>' 
-                                for i in range(1, len(year_columns))],
-                            **config['table_style']['header']
-                        ),
-                        cells=dict(
-                            values=formatted_values,
-                            **config['table_style']['cells']
-                        )
+                # Format growth rates
+                formatted_values = [list(growth_rates.keys())]  # First row is metric names
+                growth_years = year_columns[1:]  # Years for growth rates (exclude first year)
+                
+                # Add the formatted growth rates
+                for i in range(len(growth_years)):
+                    period_values = []
+                    for metric in growth_rates:
+                        value = growth_rates[metric][i]
+                        if value is None:
+                            period_values.append("N/A")
+                        else:
+                            period_values.append(f"{value:+.1f}%" if value != 0 else "0.0%")
+                    formatted_values.append(period_values)
+                
+                # Create the growth table
+                growth_table = go.Table(
+                    domain=dict(
+                        x=config['tables']['growth']['x'],
+                        y=config['tables']['growth']['y']
+                    ),
+                    header=dict(
+                        values=['<b>Metric</b>'] + [f'<b>{year}</b>' for year in growth_years],
+                        **config['table_style']['header']
+                    ),
+                    cells=dict(
+                        values=formatted_values,
+                        **config['table_style']['cells']
                     )
+                )
         
         return metrics_table, growth_table
 
-    
-    
     @staticmethod
     def _analyze_signals(signal_returns):
-        """
-        Analyze trading signals and calculate performance metrics
-        """
+        """Analyze trading signals and calculate performance metrics"""
         try:
             if not signal_returns:
                 return {
@@ -190,7 +175,6 @@ class VisualizationService:
                 'win_rate': (winning_trades / len(trades)) * 100 if trades else 0,
                 'average_return': sum(trades) / len(trades) if trades else 0
             }
-        
         except Exception as e:
             print(f"Error analyzing signals: {str(e)}")
             return {
@@ -198,6 +182,7 @@ class VisualizationService:
                 'win_rate': 0,
                 'average_return': 0
             }
+
     @staticmethod
     def _get_score_stars(score):
         """Get star rating based on score value"""
@@ -214,14 +199,11 @@ class VisualizationService:
 
     @staticmethod
     def _create_analysis_summary_table(days, end_price, annual_return, 
-                                     daily_volatility, annualized_volatility, r2, 
-                                     regression_formula, final_score, table_style,
-                                     table_domain, signal_returns=None):
+                                     daily_volatility, annualized_volatility,
+                                     r2, regression_formula, final_score,
+                                     table_style, table_domain, signal_returns=None):
         """Create the analysis summary table with colored formula and R²"""
-        # Get signal metrics using local analysis method
         signal_metrics = VisualizationService._analyze_signals(signal_returns)
-        
-        # Get star rating for score
         stars = VisualizationService._get_score_stars(final_score)
         score_display = f"{final_score:.1f} ({stars})"
         
@@ -255,9 +237,10 @@ class VisualizationService:
             cells=dict(
                 values=[
                     ["Score", 'Regression Formula', 'Regression R²', 'Current Price', 
-                     'Annualized Return', 'Annual Volatility', 'Total Trades', 'Win Rate', 'Average Trade Return'],
+                     'Annualized Return', 'Annual Volatility', 'Total Trades',
+                     'Win Rate', 'Average Trade Return'],
                     [
-                        score_display,  # Updated score display with stars
+                        score_display,
                         regression_formula,
                         f"{r2:.4f}",
                         f"${end_price:.2f}",
@@ -270,8 +253,9 @@ class VisualizationService:
                 ],
                 font=dict(
                     color=[
-                        ['black'] * 9,  # Colors for first column
-                        ['black', formula_color, r2_color, 'black', 'black', 'black', 'black', 'black', 'black']  # Colors for second column
+                        ['black'] * 9,
+                        ['black', formula_color, r2_color, 'black', 'black', 'black',
+                         'black', 'black', 'black']
                     ]
                 ),
                 **{k: v for k, v in table_style['cells'].items() if k != 'font'}
@@ -350,7 +334,7 @@ class VisualizationService:
         """Create chart annotations"""
         annotations = []
         
-        # Add table headers
+        # Add table headers based on layout type
         table_headers = {
             'analysis_summary': ('Analysis Summary', True),
             'trading_signals': ('Trading Signal Analysis', True)
@@ -362,9 +346,14 @@ class VisualizationService:
                 'growth': ('Growth Analysis', True)
             })
 
+        # Get header positions based on layout type
+        layout_type = config['layout']  # 'stock' or 'non_stock'
+        headers_config = config['annotations'].get('headers', {})
+
+        # Add headers if they are in config and should be shown
         for section, (title, should_show) in table_headers.items():
-            if should_show and section in config['annotations']['headers']:
-                header_pos = config['annotations']['headers'][section]
+            if should_show and section in headers_config:
+                header_pos = headers_config[section]
                 annotations.append(dict(
                     x=header_pos['x'],
                     y=header_pos['y'],
@@ -372,12 +361,11 @@ class VisualizationService:
                     yref='paper',
                     text=f'<b>{title}</b>',
                     showarrow=False,
-                    font=dict(size=header_pos.get('font_size', 14)),
+                    font=dict(size=12),
                     align='left'
                 ))
 
         return annotations
-
 
     @staticmethod
     def create_stock_analysis_chart(symbol, data, analysis_dates, ratios, prices, 
@@ -389,7 +377,7 @@ class VisualizationService:
         
         # Adjust total height for non-stocks
         if config['layout'] == 'non_stock':
-            total_height *= 0.7  # Reduce total height for non-stocks since we have fewer tables
+            total_height *= 0.7
 
         fig = go.Figure()
 
@@ -526,14 +514,6 @@ class VisualizationService:
         fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.1)
         fig.add_hline(y=50, line_dash="dash", line_color="gray", opacity=0.1)
         fig.add_hline(y=100, line_dash="dash", line_color="gray", opacity=0.1)
-        #calculate metrics for annotations
-        start_price = data['Close'].iloc[0]
-        end_price = data['Close'].iloc[-1]
-        days = (data.index[-1] - data.index[0]).days
-        annual_return = ((end_price / start_price) ** (365 / days) - 1) * 100
-        daily_volatility = data['Close'].pct_change().std()
-        annualized_volatility = daily_volatility * np.sqrt(252)
-        total_return = sum(s.get('Trade Return', 0) for s in signal_returns if 'Trade Return' in s)
 
         # Add metrics tables
         metrics_table = None
@@ -545,15 +525,8 @@ class VisualizationService:
                 fig.add_trace(metrics_table)
             if growth_table:
                 fig.add_trace(growth_table)
-        # if metrics_df is not None:
-        #     metrics_table, growth_table = VisualizationService.create_financial_metrics_table(metrics_df)
-        #     if metrics_table:
-        #         fig.add_trace(metrics_table)
-        #     if growth_table:
-        #         fig.add_trace(growth_table)
 
-        # Add analysis summary table
-         # Add analysis summary and trading signals tables with appropriate styling
+        # Add analysis summary and trading signals tables
         analysis_table = VisualizationService._create_analysis_summary_table(
             days=(data.index[-1] - data.index[0]).days,
             end_price=data['Close'].iloc[-1],
@@ -565,11 +538,10 @@ class VisualizationService:
             final_score=regression_results['total_score']['score'],
             table_style=config['table_style'],
             table_domain=config['tables']['analysis_summary'],
-            signal_returns=signal_returns  # Add this parameter
+            signal_returns=signal_returns
         )
         fig.add_trace(analysis_table)
 
-        # Add trading signals table
         trading_table = VisualizationService._create_trading_signal_table(
             signal_returns,
             table_style=config['table_style'],
@@ -578,7 +550,7 @@ class VisualizationService:
         fig.add_trace(trading_table)
 
         # Create and add annotations
-        annotations = VisualizationService._create_chart_annotations(config)
+        annotations = VisualizationService._create_chart_annotations(config, metrics_df)
 
         # Update layout
         fig.update_layout(
