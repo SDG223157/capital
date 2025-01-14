@@ -7,6 +7,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 from app.utils.data.data_service import DataService
+import logging
 
 class AnalysisService:
     @staticmethod
@@ -559,7 +560,8 @@ class AnalysisService:
             
             # Create DataFrame
             df = pd.DataFrame(result_data)
-            print(df['R2_Pct'])
+            logging.info(f"Result data: {df}")
+            
             
             # Create a copy of the Date column as index while keeping the original
             df.index = df['Date']
