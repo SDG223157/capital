@@ -495,12 +495,6 @@ class AnalysisService:
     @staticmethod
     def analyze_stock_data(data, crossover_days=365):
         """Perform comprehensive stock analysis"""
-        # Debug logging at start
-        print("\nDEBUG - Stock Analysis:")
-        print("1. Input data shape:", data.shape)
-        print("2. Date range:", data.index[0], "to", data.index[-1])
-        
-        # Initialize lists
         analysis_dates = []
         ratios = []
         prices = []
@@ -511,21 +505,33 @@ class AnalysisService:
         
         for current_date in data.index:
             year_start = current_date - timedelta(days=crossover_days)
-            mask = (data.index <= current_date)
-            period_data = data.loc[mask].copy()
+            period_data = data.loc[data.index <= current_date].copy()
             
             if (current_date - period_data.index[0]).days > crossover_days:
                 period_data = period_data[period_data.index > year_start]
             
             if len(period_data) < 20:
                 continue
-                
+            
+            # Calculate standard metrics
+            current_price = period_data['Close'].iloc[-1]
+            highest_price = period_data['Close'].max()
+            lowest_price = period_data['Close'].min()
+            
+            # Calculate ratio
+            total_move = highest_price - lowest_price
+            if total_move > 0:
+                current_retracement = highest_price - current_price
+                ratio = (current_retracement / total_move) * 100
+            else:
+                ratio = 0
+            
+            # Calculate R-square
             try:
-                # Calculate R-square
                 period_data.loc[:, 'Log_Close'] = np.log(period_data['Close'])
                 X = (period_data.index - period_data.index[0]).days.values.reshape(-1, 1)
                 y = period_data['Log_Close'].values
-                X_scaled = X / (np.max(X) * 1)
+                X_scaled = X / np.max(X)
                 
                 poly_features = PolynomialFeatures(degree=2)
                 X_poly = poly_features.fit_transform(X_scaled)
@@ -533,54 +539,32 @@ class AnalysisService:
                 model.fit(X_poly, y)
                 
                 r2 = r2_score(y, model.predict(X_poly))
-                r2_pct = r2 * 100
-                
-                # Calculate other metrics
-                current_price = period_data['Close'].iloc[-1]
-                highest_price = period_data['Close'].max()
-                lowest_price = period_data['Close'].min()
-                
-                total_move = highest_price - lowest_price
-                if total_move > 0:
-                    current_retracement = highest_price - current_price
-                    ratio = (current_retracement / total_move) * 100
-                else:
-                    ratio = 0
-                    
-                appreciation_pct = AnalysisService.calculate_price_appreciation_pct(
-                    current_price, highest_price, lowest_price)
-                
-                # Append all values
-                analysis_dates.append(current_date)
-                ratios.append(ratio)
-                prices.append(current_price)
-                highest_prices.append(highest_price)
-                lowest_prices.append(lowest_price)
-                appreciation_pcts.append(appreciation_pct)
-                r2_values.append(r2_pct)
-                
+                r2_pct = r2 * 100  # Convert to percentage
             except Exception as e:
-                print(f"Error processing {current_date}: {str(e)}")
-                continue
+                print(f"Error calculating R² for {current_date}: {str(e)}")
+                r2_pct = None
+            
+            # Calculate price appreciation
+            appreciation_pct = AnalysisService.calculate_price_appreciation_pct(
+                current_price, highest_price, lowest_price)
+            
+            # Store all values
+            analysis_dates.append(current_date)
+            ratios.append(ratio)
+            prices.append(current_price)
+            highest_prices.append(highest_price)
+            lowest_prices.append(lowest_price)
+            appreciation_pcts.append(appreciation_pct)
+            r2_values.append(r2_pct)
         
-        # Create DataFrame
-        df = pd.DataFrame({
-            'Date': analysis_dates,
+        # Create result DataFrame
+        result = pd.DataFrame({
             'Price': prices,
             'High': highest_prices,
             'Low': lowest_prices,
             'Retracement_Ratio_Pct': ratios,
             'Price_Position_Pct': appreciation_pcts,
             'R2_Pct': r2_values
-        })
+        }, index=analysis_dates)
         
-        # Debug logging at end
-        print("\n3. Output DataFrame info:")
-        print(df.info())
-        print("\n4. R2_Pct statistics:")
-        if 'R2_Pct' in df.columns:
-            print(df['R2_Pct'].describe())
-        else:
-            print("R2_Pct column not created")
-            
-        return df
+        return result
