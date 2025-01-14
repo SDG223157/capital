@@ -489,41 +489,21 @@ class VisualizationService:
         # Add R-square line
         # Add R-square line first with detailed debugging
         # Add R-square line first with detailed logging
-        logger.debug("Attempting to add R-square line")
-        try:
-            if isinstance(data, pd.DataFrame):
-                logger.debug("Data is a DataFrame")
-                if 'R2_Pct' in data.columns:
-                    logger.debug("Found R2_Pct column")
-                    logger.debug(f"First few R2_Pct values: {data['R2_Pct'].head().tolist()}")
-                    r2_values = data['R2_Pct'].values
-                    logger.debug(f"Number of R2 values: {len(r2_values)}")
-                    
-                    if len(r2_values) == len(analysis_dates):
-                        fig.add_trace(
-                            go.Scatter(
-                                x=analysis_dates,
-                                y=r2_values,
-                                name='R² Quality',
-                                line=dict(
-                                    color='#FF1493',
-                                    dash='dot',
-                                    width=2.0
-                                ),
-                                hovertemplate='<b>Date</b>: %{x}<br>' +
-                                            '<b>R²</b>: %{y:.1f}%<extra></extra>'
-                            )
-                        )
-                        logger.debug("Successfully added R-square line")
-                    else:
-                        logger.warning(f"Length mismatch: R2 values ({len(r2_values)}) vs dates ({len(analysis_dates)})")
-                else:
-                    logger.warning(f"R2_Pct not found in columns: {data.columns.tolist()}")
-            else:
-                logger.warning(f"Data is not a DataFrame, type: {type(data)}")
-        except Exception as e:
-            logger.error(f"Error adding R-square line: {str(e)}", exc_info=True)
-
+        # Add R-square line with contrasting color
+        if 'R2_Pct' in data.columns:
+            fig.add_trace(
+                go.Scatter(
+                    x=analysis_dates,
+                    y=data['R2_Pct'].values,
+                    name='R² Quality',
+                    line=dict(
+                        color='#FF1493',  # Deep pink for high contrast
+                        width=2
+                    ),
+                    hovertemplate='<b>Date</b>: %{x}<br>' +
+                                '<b>R²</b>: %{y:.1f}%<extra></extra>'
+                )
+            )
         # Add price line
 
 
