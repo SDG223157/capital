@@ -449,6 +449,52 @@ class AnalysisService:
         
         return growth_rates
 
+    
+    
+    @staticmethod
+    def calculate_rolling_r2(data, lookback_days=365):
+        """Calculate rolling R-square values for regression analysis"""
+        analysis_dates = []
+        r2_values = []
+        
+        for current_date in data.index:
+            year_start = current_date - timedelta(days=lookback_days)
+            mask = (data.index <= current_date)  # Include all data up to current date
+            period_data = data.loc[mask]
+            
+            # If we have more than lookback_days of data, limit to the lookback period
+            if (current_date - period_data.index[0]).days > lookback_days:
+                period_data = period_data[period_data.index > year_start]
+            
+            # Only calculate if we have at least some minimum data points
+            if len(period_data) < 20:  # Minimum requirement for meaningful regression
+                continue
+                
+            try:
+                # Prepare data for regression
+                period_data['Log_Close'] = np.log(period_data['Close'])
+                X = (period_data.index - period_data.index[0]).days.values.reshape(-1, 1)
+                y = period_data['Log_Close'].values
+                X_scaled = X / (np.max(X) * 1)
+                
+                # Perform regression
+                poly_features = PolynomialFeatures(degree=2)
+                X_poly = poly_features.fit_transform(X_scaled)
+                model = LinearRegression()
+                model.fit(X_poly, y)
+                
+                # Calculate R²
+                r2 = r2_score(y, model.predict(X_poly))
+                
+                analysis_dates.append(current_date)
+                r2_values.append(r2 * 100)  # Convert to percentage
+                
+            except Exception as e:
+                print(f"Error calculating R² for {current_date}: {str(e)}")
+                continue
+        
+        return analysis_dates, r2_values
+
     @staticmethod
     def analyze_stock_data(data, crossover_days=365):
         """Perform comprehensive stock analysis"""
@@ -458,25 +504,25 @@ class AnalysisService:
         highest_prices = []
         lowest_prices = []
         appreciation_pcts = []
+        r2_dates = []
+        r2_values = []
         
+        # Calculate existing metrics
         for current_date in data.index:
             year_start = current_date - timedelta(days=crossover_days)
-            mask = (data.index <= current_date)  # Include all data up to current date
+            mask = (data.index <= current_date)
             period_data = data.loc[mask]
             
-            # If we have more than crossover_days of data, limit to the lookback period
             if (current_date - period_data.index[0]).days > crossover_days:
                 period_data = period_data[period_data.index > year_start]
             
-            # Only calculate if we have at least some minimum data points
-            if len(period_data) < 2:  # Reduced minimum requirement to 2 points
+            if len(period_data) < 2:
                 continue
                 
             current_price = period_data['Close'].iloc[-1]
             highest_price = period_data['Close'].max()
             lowest_price = period_data['Close'].min()
             
-            # Calculate ratio
             total_move = highest_price - lowest_price
             if total_move > 0:
                 current_retracement = highest_price - current_price
@@ -484,7 +530,6 @@ class AnalysisService:
             else:
                 ratio = 0
                 
-            # Calculate appreciation percentage
             appreciation_pct = AnalysisService.calculate_price_appreciation_pct(
                 current_price, highest_price, lowest_price)
             
@@ -494,12 +539,16 @@ class AnalysisService:
             highest_prices.append(highest_price)
             lowest_prices.append(lowest_price)
             appreciation_pcts.append(appreciation_pct)
-            
+        
+        # Calculate rolling R-square values
+        r2_dates, r2_values = AnalysisService.calculate_rolling_r2(data, crossover_days)
+        
         return pd.DataFrame({
             'Date': analysis_dates,
             'Price': prices,
             'High': highest_prices,
             'Low': lowest_prices,
             'Retracement_Ratio_Pct': ratios,
-            'Price_Position_Pct': appreciation_pcts
+            'Price_Position_Pct': appreciation_pcts,
+            'R2_Pct': r2_values
         })

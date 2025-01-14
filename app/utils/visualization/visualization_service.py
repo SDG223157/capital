@@ -367,11 +367,13 @@ class VisualizationService:
 
         return annotations
 
+    
+    
     @staticmethod
     def create_stock_analysis_chart(symbol, data, analysis_dates, ratios, prices, 
-                                  appreciation_pcts, regression_results, 
-                                  crossover_data, signal_returns, 
-                                  metrics_df, total_height=LAYOUT_CONFIG['total_height']):
+                                appreciation_pcts, regression_results, 
+                                crossover_data, signal_returns, 
+                                metrics_df, total_height=LAYOUT_CONFIG['total_height']):
         """Create the complete stock analysis chart with all components"""
         config = VisualizationService._get_config(symbol)
         
@@ -393,7 +395,7 @@ class VisualizationService:
                 ),
                 yaxis='y2',
                 hovertemplate='<b>Date</b>: %{x}<br>' +
-                             '<b>Price</b>: $%{y:.2f}<extra></extra>'
+                            '<b>Price</b>: $%{y:.2f}<extra></extra>'
             )
         )
         
@@ -415,7 +417,7 @@ class VisualizationService:
                 ),
                 yaxis='y2',
                 hovertemplate='<b>Date</b>: %{x}<br>' +
-                             '<b>Predicted</b>: $%{y:.2f}<extra></extra>'
+                            '<b>Predicted</b>: $%{y:.2f}<extra></extra>'
             )
         )
         
@@ -431,7 +433,7 @@ class VisualizationService:
                 yaxis='y2',
                 showlegend=False,
                 hovertemplate='<b>Date</b>: %{x}<br>' +
-                             '<b>Upper Band</b>: $%{y:.2f}<extra></extra>'
+                            '<b>Upper Band</b>: $%{y:.2f}<extra></extra>'
             )
         )
         
@@ -449,7 +451,7 @@ class VisualizationService:
                 yaxis='y2',
                 showlegend=False,
                 hovertemplate='<b>Date</b>: %{x}<br>' +
-                             '<b>Lower Band</b>: $%{y:.2f}<extra></extra>'
+                            '<b>Lower Band</b>: $%{y:.2f}<extra></extra>'
             )
         )
         
@@ -464,7 +466,7 @@ class VisualizationService:
                     **CHART_STYLE['line_styles']['retracement']
                 ),
                 hovertemplate='<b>Date</b>: %{x}<br>' +
-                             '<b>Ratio</b>: %{y:.1f}%<extra></extra>'
+                            '<b>Ratio</b>: %{y:.1f}%<extra></extra>'
             )
         )
         
@@ -478,9 +480,26 @@ class VisualizationService:
                     **CHART_STYLE['line_styles']['position']
                 ),
                 hovertemplate='<b>Date</b>: %{x}<br>' +
-                             '<b>Position</b>: %{y:.1f}%<extra></extra>'
+                            '<b>Position</b>: %{y:.1f}%<extra></extra>'
             )
         )
+        
+        # Add R-square line
+        if 'R2_Pct' in data.columns:
+            fig.add_trace(
+                go.Scatter(
+                    x=analysis_dates,
+                    y=data['R2_Pct'],
+                    name='R² Quality',
+                    line=dict(
+                        color='purple',
+                        dash='dot',
+                        width=1.5
+                    ),
+                    hovertemplate='<b>Date</b>: %{x}<br>' +
+                                '<b>R²</b>: %{y:.1f}%<extra></extra>'
+                )
+            )
         
         # Add crossover points
         if crossover_data[0]:
@@ -503,14 +522,15 @@ class VisualizationService:
                             **CHART_STYLE['marker_styles']['crossover']
                         ),
                         hovertemplate='<b>%{text}</b><br>' +
-                                     '<b>Date</b>: %{x}<br>' +
-                                     '<b>Value</b>: %{y:.1f}%<br>' +
-                                     '<b>Price</b>: $%{customdata:.2f}<extra></extra>',
+                                    '<b>Date</b>: %{x}<br>' +
+                                    '<b>Value</b>: %{y:.1f}%<br>' +
+                                    '<b>Price</b>: $%{customdata:.2f}<extra></extra>',
                         text=[detailed_name],
                         customdata=[price]
                     )
                 )
-         # Add horizontal lines at key levels
+                
+        # Add horizontal lines at key levels
         fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.1)
         fig.add_hline(y=50, line_dash="dash", line_color="gray", opacity=0.1)
         fig.add_hline(y=100, line_dash="dash", line_color="gray", opacity=0.1)
@@ -580,7 +600,7 @@ class VisualizationService:
             yaxis=dict(
                 title="Ratio and Position (%)",
                 ticksuffix="%",
-                range=[-10 , 120],
+                range=[-10, 120],
                 showgrid=True,
                 gridwidth=1,
                 gridcolor='rgba(128, 128, 128, 0.2)',
@@ -605,10 +625,10 @@ class VisualizationService:
             plot_bgcolor='white',
             paper_bgcolor='white',
             margin=dict(
-                l=50, 
-                r=100, 
-                t=0.05* total_height,
-                b=0.05* total_height
+                l=50,
+                r=100,
+                t=0.05 * total_height,
+                b=0.05 * total_height
             ),
             legend=dict(
                 yanchor="top",
@@ -623,7 +643,8 @@ class VisualizationService:
         )
 
         return fig
-
+        
+    
     @staticmethod
     def print_signal_analysis(signals_df):
         """Print detailed analysis of trading signals with statistics"""
