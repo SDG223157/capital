@@ -375,6 +375,21 @@ class VisualizationService:
                                 crossover_data, signal_returns, 
                                 metrics_df, total_height=LAYOUT_CONFIG['total_height']):
         """Create the complete stock analysis chart with all components"""
+        """Create the complete stock analysis chart with all components"""
+        # Debug logging
+        print("\nDEBUG - Chart Creation:")
+        print("1. Input data columns:", data.columns.tolist())
+        print("2. Number of analysis dates:", len(analysis_dates))
+        print("3. Number of prices:", len(prices))
+        
+        # Check R-square data
+        if 'R2_Pct' in data.columns:
+            print("4. R2_Pct exists in columns")
+            print("5. First few R2_Pct values:", data['R2_Pct'].head())
+            print("6. Number of R2_Pct values:", len(data['R2_Pct']))
+        else:
+            print("4. R2_Pct NOT found in columns!")
+        
         config = VisualizationService._get_config(symbol)
         
         # Adjust total height for non-stocks
@@ -382,6 +397,33 @@ class VisualizationService:
             total_height *= 0.7
 
         fig = go.Figure()
+        # Add R-square line with additional checks
+        print("\nDEBUG - R-square Line Addition:")
+        if 'R2_Pct' in data.columns:
+            if data['R2_Pct'].empty:
+                print("R2_Pct column is empty")
+            elif data['R2_Pct'].isnull().all():
+                print("R2_Pct column contains only null values")
+            else:
+                print("Adding R-square line with", len(data['R2_Pct']), "points")
+                print("Sample values:", data['R2_Pct'].head())
+                fig.add_trace(
+                    go.Scatter(
+                        x=analysis_dates,
+                        y=data['R2_Pct'],
+                        name='R² Quality',
+                        line=dict(
+                            color='red',
+                            dash='dot',
+                            width=3
+                        ),
+                        hovertemplate='<b>Date</b>: %{x}<br>' +
+                                    '<b>R²</b>: %{y:.1f}%<extra></extra>'
+                    )
+                )
+                print("R-square line trace added")
+        else:
+            print("Cannot add R-square line - column not found")
 
         # Add price line
         fig.add_trace(
