@@ -119,8 +119,8 @@ CHART_STYLE = {
         'price': dict(width=3),
         'regression': dict(width=2, dash='dash'),
         'bands': dict(width=1),
-        'retracement': dict(width=2, dash='dot'),
-        'position': dict(width=2, dash='dot')
+        'retracement': dict(width=1, dash='dot'),
+        'position': dict(width=1, dash='dot')
     },
     'marker_styles': {
         'crossover': dict(
