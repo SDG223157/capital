@@ -552,7 +552,8 @@ class AnalysisService:
                 
                 # Store results
                 result_data.append({
-                    'Price': current_price,
+                    'Date': current_date,
+                    'Close': current_price,  # Keep original column name
                     'High': highest_price,
                     'Low': lowest_price,
                     'Retracement_Ratio_Pct': ratio,
@@ -560,12 +561,18 @@ class AnalysisService:
                     'R2_Pct': r2_pct
                 })
             
-            # Create DataFrame with results
-            df = pd.DataFrame(result_data, index=data.index[:len(result_data)])
+            # Create DataFrame and set index
+            df = pd.DataFrame(result_data)
+            df.set_index('Date', inplace=True)
             
-            # Log the resulting DataFrame info
+            # Copy original OHLCV columns to maintain compatibility
+            for col in ['Open', 'Volume', 'Dividends', 'Stock Splits']:
+                if col in data.columns:
+                    df[col] = data[col]
+            
             logger.debug(f"Analysis complete. DataFrame columns: {df.columns.tolist()}")
-            logger.debug(f"R2_Pct stats: mean={df['R2_Pct'].mean():.2f}, count={df['R2_Pct'].count()}")
+            if 'R2_Pct' in df.columns:
+                logger.debug(f"R2_Pct stats: mean={df['R2_Pct'].mean():.2f}, count={df['R2_Pct'].count()}")
             
             return df
             
