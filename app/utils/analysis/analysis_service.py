@@ -495,17 +495,6 @@ class AnalysisService:
     @staticmethod
     def analyze_stock_data(data, crossover_days=365):
         """Perform comprehensive stock analysis"""
-        # Initialize filtered_data dictionary at the start
-        filtered_data = {
-            'Date': [],
-            'Price': [],
-            'High': [],
-            'Low': [],
-            'Retracement_Ratio_Pct': [],
-            'Price_Position_Pct': [],
-            'R2_Pct': []
-        }
-
         # Initialize all lists
         analysis_dates = []
         ratios = []
@@ -552,6 +541,17 @@ class AnalysisService:
         
         # Ensure all arrays have matching dates
         common_dates = set(analysis_dates).intersection(r2_dates)
+        
+        # Create filtered lists with only common dates
+        filtered_data = {
+            'Date': [],
+            'Price': [],
+            'High': [],
+            'Low': [],
+            'Retracement_Ratio_Pct': [],
+            'Price_Position_Pct': [],
+            'R2_Pct': []
+        }
         
         # Fill the filtered data
         for date in analysis_dates:
