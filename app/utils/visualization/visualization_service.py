@@ -498,6 +498,7 @@ class VisualizationService:
                     name='R² Quality',
                     line=dict(
                         color='#FF1493',  # Deep pink for high contrast
+                        dash='dot',
                         width=2
                     ),
                     hovertemplate='<b>Date</b>: %{x}<br>' +
