@@ -484,22 +484,35 @@ class VisualizationService:
         # Add R-square line (add this code in create_stock_analysis_chart method)
         # Place this after other line traces but before crossover points
         # Add R-square line
-        if hasattr(data, 'R2_Pct'):
-            print("Adding R-square line with", len(data['R2_Pct']), "points")
-            fig.add_trace(
-                go.Scatter(
-                    x=analysis_dates,
-                    y=data['R2_Pct'].values,
-                    name='R² Quality',
-                    line=dict(
-                        color='red',
-                        dash='dot',
-                        width=3
-                    ),
-                    hovertemplate='<b>Date</b>: %{x}<br>' +
-                                 '<b>R²</b>: %{y:.1f}%<extra></extra>'
-                )
-            )
+        try:
+            if 'R2_Pct' in data.columns:
+                print("Found R2_Pct column, adding to visualization")
+                print("R2_Pct values:", data['R2_Pct'].head())
+                r2_values = data['R2_Pct'].values
+                if len(r2_values) > 0:
+                    fig.add_trace(
+                        go.Scatter(
+                            x=analysis_dates,
+                            y=r2_values,
+                            name='R² Quality',
+                            line=dict(
+                                color='purple',
+                                dash='dot',
+                                width=1.5
+                            ),
+                            hovertemplate='<b>Date</b>: %{x}<br>' +
+                                        '<b>R²</b>: %{y:.1f}%<extra></extra>'
+                        )
+                    )
+                    print("Successfully added R-square line")
+                else:
+                    print("R2_Pct column is empty")
+            else:
+                print("R2_Pct column not found in data")
+                print("Available columns:", data.columns.tolist())
+        except Exception as e:
+            print(f"Error adding R-square line: {str(e)}")
+
 
         # Add crossover points
         if crossover_data[0]:
