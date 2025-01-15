@@ -366,7 +366,7 @@ class AnalysisService:
                 scaling_factor =  75/ sp500_raw_score
 
                 # Calculate final scaled score
-                final_score = min(100, raw_score * scaling_factor)
+                final_score = min(95, raw_score * scaling_factor)
                 final_score =  round(random.uniform(final_score-2, final_score+2), 2)
                 # Determine rating
                 if final_score >= 90: rating = 'Excellent'
