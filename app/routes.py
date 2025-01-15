@@ -28,6 +28,7 @@ from sqlalchemy import inspect
 import traceback
 import threading
 import queue
+from app.utils.config.analyze_config import ANALYZE_CONFIG
 # from flask_login import current_user
 
 # Add this decorator function to check for admin privileges
@@ -439,8 +440,8 @@ def quick_analyze():
         fig = create_stock_visualization(
             ticker_input,
             end_date=None,  # Use current date
-            lookback_days=365,  # Default lookback
-            crossover_days=365  # Default crossover
+            lookback_days=ANALYZE_CONFIG['lookback_days'],  # Default lookback
+            crossover_days=ANALYZE_CONFIG['crossover_days']  # Default crossover
         )
         
         html_content = fig.to_html(
