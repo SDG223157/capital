@@ -350,6 +350,8 @@ class AnalysisService:
                     sp500_return_score * weights['return'] +
                     sp500_vol_score * weights['volatility']
                 )
+                logger.info(f"SP500 raw score: {sp500_raw_score}")
+                logger.info(f"asset raw score: {raw_score}")
                 scaling_factor =  75/ sp500_raw_score
 
                 # Calculate final scaled score
