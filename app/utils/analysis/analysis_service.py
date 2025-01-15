@@ -226,7 +226,7 @@ class AnalysisService:
                         
                         # Linear component contribution (±25 points)
                         linear_impact = linear_coef / vol_linear
-                        trend_score += 25 * min(1, max(-1, linear_impact))
+                        trend_score += 25 * min(2, max(-1, linear_impact))
                         
                         # Quadratic component contribution (±15 points)
                         quad_impact = quad_coef / vol_quad
