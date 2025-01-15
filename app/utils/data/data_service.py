@@ -546,9 +546,9 @@ class DataService:
                             try:
                                 cf = float(cash_flow.loc['Operating Cash Flow', date] or 0)
                                 year_data['cf_cash_from_oper'] = cf
-                                logger.info(f"Got Operating Cash Flow for {ticker} at {date}: {cf}")
+                                # logger.info(f"Got Operating Cash Flow for {ticker} at {date}: {cf}")
                             except Exception as e:
-                                logger.error(f"Error getting Operating Cash Flow for {ticker} at {date}: {str(e)}")
+                                # logger.error(f"Error getting Operating Cash Flow for {ticker} at {date}: {str(e)}")
                                 year_data['cf_cash_from_oper'] = 0
                                 
                         # Capital Expenditures
@@ -556,7 +556,7 @@ class DataService:
                             try:
                                 capex = float(cash_flow.loc['Capital Expenditure', date] or 0)
                                 year_data['cf_cap_expenditures'] = capex
-                                logger.info(f"Got Capital Expenditure for {ticker} at {date}: {capex}")
+                                # logger.info(f"Got Capital Expenditure for {ticker} at {date}: {capex}")
                             except Exception as e:
                                 logger.error(f"Error getting Capital Expenditure for {ticker} at {date}: {str(e)}")
                                 year_data['cf_cap_expenditures'] = 0

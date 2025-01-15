@@ -552,10 +552,10 @@ class AnalysisService:
                         r2 = r2_score(y, model.predict(X_poly))
                         r2_pct = r2 * 100
                         
-                        logger.debug(f"R² for {current_date}: {r2_pct:.2f}% (using {len(r2_data)} days)")
+                        # logger.debug(f"R² for {current_date}: {r2_pct:.2f}% (using {len(r2_data)} days)")
                     else:
                         r2_pct = None
-                        logger.debug(f"Insufficient data for R² calculation at {current_date}")
+                        # logger.debug(f"Insufficient data for R² calculation at {current_date}")
                         
                 except Exception as e:
                     logger.error(f"Error calculating R² for {current_date}: {str(e)}")
@@ -582,10 +582,10 @@ class AnalysisService:
                     df[col] = data[col]
                     
             logger.info("Analysis complete")
-            if 'R2_Pct' in df.columns:
-                valid_r2 = df['R2_Pct'].dropna()
-                if not valid_r2.empty:
-                    logger.info(f"R² Stats - Mean: {valid_r2.mean():.2f}%, Min: {valid_r2.min():.2f}%, Max: {valid_r2.max():.2f}%")
+            # if 'R2_Pct' in df.columns:
+            #     valid_r2 = df['R2_Pct'].dropna()
+                # if not valid_r2.empty:
+                #     logger.info(f"R² Stats - Mean: {valid_r2.mean():.2f}%, Min: {valid_r2.min():.2f}%, Max: {valid_r2.max():.2f}%")
             
             return df
             
