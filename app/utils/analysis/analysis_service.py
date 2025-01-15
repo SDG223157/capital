@@ -284,12 +284,12 @@ class AnalysisService:
                         if diff >= 10: return 80
                         if diff >= 5:  return 75
                         if diff >= 0:  return 75     # Meeting benchmark
-                        if diff >= -5: return 70
-                        if diff >= -10: return 65
-                        if diff >= -15: return 60
-                        if diff >= -20: return 55
-                        if diff >= -25: return 50
-                        return 40                     # >25% worse than benchmark
+                        if diff >= -5: return 65
+                        if diff >= -10: return 55
+                        if diff >= -15: return 45
+                        if diff >= -20: return 35
+                        if diff >= -25: return 30
+                        return 20                     # >25% worse than benchmark
                         
                     else:  # volatility
                         # For volatility, use ratio (lower is better)
