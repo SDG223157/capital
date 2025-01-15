@@ -115,10 +115,11 @@ class AnalysisService:
                     sp500_model.fit(X_sp_poly, y_sp)
                     
                     sp500_r2 = r2_score(y_sp, sp500_model.predict(X_sp_poly))
-                    sp500_returns = sp500_data['Close'].pct_change().dropna()
-                    sp500_annual_return = sp500_returns.mean() * 252
-                    sp500_annual_volatility = sp500_returns.std() * np.sqrt(252)
-                    
+                    sp500_returns = ((sp500_data['Close'].iloc[-1] / sp500_data['Close'].iloc[0]) ** (365 / (sp500_data.index[-1] - sp500_data.index[0]).days) - 1)
+                    sp500_annual_return = sp500_returns
+                    sp500_daily_returns = sp500_data['Close'].pct_change().dropna()  # still needed for volatility
+                    sp500_annual_volatility = sp500_daily_returns.std() * np.sqrt(252)
+                                        
                     sp500_params = {
                         'quad_coef': sp500_model.coef_[2],
                         'linear_coef': sp500_model.coef_[1],
@@ -321,7 +322,7 @@ class AnalysisService:
                
                 # Calculate returns and volatility
                 returns = data['Close'].pct_change().dropna()
-                annual_return = returns.mean() * 252
+                annual_return = ((data['Close'].iloc[-1] / data['Close'].iloc[0]) ** (365 / (data.index[-1] - data.index[0]).days) - 1)
                 annual_volatility = returns.std() * np.sqrt(252)
                 logger.info(f"sp500_params: {sp500_params}")
                 logger.info(f"annual_return: {annual_return}")
