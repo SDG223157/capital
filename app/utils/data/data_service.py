@@ -466,6 +466,7 @@ class DataService:
             logger.error(f"Error calculating ROIC: {str(e)}")
             return 0.0
 
+    
     def store_financial_data(self, ticker: str, start_year: str = None, end_year: str = None) -> bool:
         """Fetch and store financial data, first try ROIC API then fallback to yfinance"""
         try:
@@ -526,65 +527,78 @@ class DataService:
                 balance_sheet = yf_ticker.balance_sheet
                 cash_flow = yf_ticker.cash_flow
                 
-                if income_stmt is not None and not income_stmt.empty:
-                    dates = income_stmt.columns
-                    
-                    for date in dates:
+                # Log statement information for debugging
+                logger.info(f"Cash Flow shape: {cash_flow.shape if cash_flow is not None else None}")
+                logger.info(f"Cash Flow dates: {cash_flow.columns.tolist() if cash_flow is not None else None}")
+                logger.info(f"Cash Flow items: {cash_flow.index.tolist() if cash_flow is not None else None}")
+                
+                if cash_flow is not None and not cash_flow.empty:
+                    logger.info(f"Processing cash flow data for {ticker}")
+                    for date in cash_flow.columns:
                         year_data = {
                             'fiscal_year': date.year,
                             'period_label': 'Q4',
                             'period_end_date': date.strftime('%Y-%m-%d')
                         }
                         
-                        # Total Revenue (is_sales_and_services_revenues)
-                        if 'Total Revenue' in income_stmt.index:
-                            revenue = float(income_stmt.loc['Total Revenue', date] or 0)
-                            year_data['is_sales_and_services_revenues'] = revenue
+                        # Operating Cash Flow
+                        if 'Operating Cash Flow' in cash_flow.index:
+                            try:
+                                cf = float(cash_flow.loc['Operating Cash Flow', date] or 0)
+                                year_data['cf_cash_from_oper'] = cf
+                                logger.info(f"Got Operating Cash Flow for {ticker} at {date}: {cf}")
+                            except Exception as e:
+                                logger.error(f"Error getting Operating Cash Flow for {ticker} at {date}: {str(e)}")
+                                year_data['cf_cash_from_oper'] = 0
+                                
+                        # Capital Expenditures
+                        if 'Capital Expenditure' in cash_flow.index:
+                            try:
+                                capex = float(cash_flow.loc['Capital Expenditure', date] or 0)
+                                year_data['cf_cap_expenditures'] = capex
+                                logger.info(f"Got Capital Expenditure for {ticker} at {date}: {capex}")
+                            except Exception as e:
+                                logger.error(f"Error getting Capital Expenditure for {ticker} at {date}: {str(e)}")
+                                year_data['cf_cap_expenditures'] = 0
                         
-                        # Net Income (is_net_income)
-                        if 'Net Income' in income_stmt.index:
-                            net_income = float(income_stmt.loc['Net Income', date] or 0)
-                            year_data['is_net_income'] = net_income
-                        
-                        # EPS
-                        if 'Basic EPS' in income_stmt.index:
-                            eps = float(income_stmt.loc['Basic EPS', date] or 0)
-                            year_data['eps'] = float(f"{eps:.15f}")
-                        
-                        # Operating Margin
-                        if 'Operating Income' in income_stmt.index and 'Total Revenue' in income_stmt.index:
-                            revenue = float(income_stmt.loc['Total Revenue', date] or 0)
-                            operating_income = float(income_stmt.loc['Operating Income', date] or 0)
-                            if revenue != 0:
-                                year_data['oper_margin'] = float(f"{(operating_income / revenue * 100):.15f}")
-                            else:
-                                year_data['oper_margin'] = 0.0
-                        
-                        # Calculate ROIC
-                        year_data['return_on_inv_capital'] = self.calculate_roic(income_stmt, balance_sheet, date)
-                        
-                        # Diluted Shares
-                        if 'Diluted Average Shares' in income_stmt.index:
-                            shares = float(income_stmt.loc['Diluted Average Shares', date] or 0)
-                            year_data['is_sh_for_diluted_eps'] = shares
+                        # Get other financial metrics if income statement exists
+                        if income_stmt is not None and not income_stmt.empty and date in income_stmt.columns:
+                            # Total Revenue
+                            if 'Total Revenue' in income_stmt.index:
+                                revenue = float(income_stmt.loc['Total Revenue', date] or 0)
+                                year_data['is_sales_and_services_revenues'] = revenue
+                            
+                            # Net Income
+                            if 'Net Income' in income_stmt.index:
+                                net_income = float(income_stmt.loc['Net Income', date] or 0)
+                                year_data['is_net_income'] = net_income
+                            
+                            # EPS
+                            if 'Basic EPS' in income_stmt.index:
+                                eps = float(income_stmt.loc['Basic EPS', date] or 0)
+                                year_data['eps'] = float(f"{eps:.15f}")
+                            
+                            # Operating Margin
+                            if 'Operating Income' in income_stmt.index and 'Total Revenue' in income_stmt.index:
+                                revenue = float(income_stmt.loc['Total Revenue', date] or 0)
+                                operating_income = float(income_stmt.loc['Operating Income', date] or 0)
+                                if revenue != 0:
+                                    year_data['oper_margin'] = float(f"{(operating_income / revenue * 100):.15f}")
+                                else:
+                                    year_data['oper_margin'] = 0.0
+                            
+                            # Calculate ROIC
+                            year_data['return_on_inv_capital'] = self.calculate_roic(income_stmt, balance_sheet, date)
+                            
+                            # Diluted Shares
+                            if 'Diluted Average Shares' in income_stmt.index:
+                                shares = float(income_stmt.loc['Diluted Average Shares', date] or 0)
+                                year_data['is_sh_for_diluted_eps'] = shares
                         
                         financial_data.append(year_data)
-                        
-                # Get cash flow data
-                if cash_flow is not None and not cash_flow.empty:
-                    for data in financial_data:
-                        date = pd.Timestamp(data['period_end_date'])
-                        if date in cash_flow.columns:
-                            # Operating Cash Flow (cf_cash_from_oper)
-                            if 'Operating Cash Flow' in cash_flow.index:
-                                cf = float(cash_flow.loc['Operating Cash Flow', date] or 0)
-                                data['cf_cash_from_oper'] = cf
-                            
-                            # Capital Expenditures (cf_cap_expenditures)
-                            if 'Capital Expenditure' in cash_flow.index:
-                                capex = float(cash_flow.loc['Capital Expenditure', date] or 0)
-                                data['cf_cap_expenditures'] = capex
-                
+                else:
+                    logger.warning(f"No cash flow data available for {ticker}")
+
                 if not financial_data:
                     logger.warning(f"No financial data found in yfinance for {ticker}")
                     return False
@@ -613,8 +627,7 @@ class DataService:
                             continue
                         df[col] = 0.0
                 
-                # Sort by fiscal year descending
-                # df = df.sort_values('fiscal_year', ascending=False)
+                # Sort by fiscal year ascending
                 df = df.sort_values('fiscal_year', ascending=True)
                 df.reset_index(drop=True, inplace=True)
                 
@@ -632,12 +645,14 @@ class DataService:
                 
             except Exception as e:
                 logger.error(f"Both ROIC and yfinance failed for {ticker}: {str(e)}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
                 return False
                     
         except Exception as e:
             logger.error(f"Error storing financial data for {ticker}: {str(e)}")
-            return False# In data_service.py
-    
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return False
+        
     def get_analysis_dates(self, end_date: str, lookback_type: str, 
                             lookback_value: int) -> str:
             """
