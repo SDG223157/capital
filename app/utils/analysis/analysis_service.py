@@ -351,6 +351,9 @@ class AnalysisService:
                     sp500_vol_score * weights['volatility']
                 )
                 logger.info(f"SP500 raw score: {sp500_raw_score}")
+                logger.info(f"asset trend score: {trend_score}")
+                logger.info(f"asset return score: {return_score}")
+                logger.info(f"asset volatility score: {vol_score}")
                 logger.info(f"asset raw score: {raw_score}")
                 scaling_factor =  75/ sp500_raw_score
 
