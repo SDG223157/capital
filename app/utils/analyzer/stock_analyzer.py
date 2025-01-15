@@ -228,7 +228,7 @@ def create_stock_visualization_old(
         
         print("Performing technical analysis...")
         # Perform technical analysis on extended data
-        analysis_df = AnalysisService.analyze_stock_data(historical_data_extended, crossover_days)
+        analysis_df = AnalysisService.analyze_stock_data_old(historical_data_extended, crossover_days)
         
         # Filter data for display period
         historical_data = historical_data_extended[historical_data_extended.index >= display_start_date]
