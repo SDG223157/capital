@@ -281,12 +281,12 @@ class AnalysisService:
                     if metric_type == 'return':
                         # For returns, use absolute difference in percentage points
                         diff = (value - benchmark) * 100 
-                        if diff >= 70: return 100
-                        if diff >= 60: return 97
-                        if diff >= 50: return 95
-                        if diff >= 35: return 90
-                        if diff >= 30: return 85   # ≥30% better than benchmark
-                        if diff >= 25: return 80
+                        if diff >= 80: return 100
+                        if diff >= 70: return 97
+                        if diff >= 60: return 95
+                        if diff >= 50: return 90
+                        if diff >= 40: return 85   # ≥30% better than benchmark
+                        if diff >= 30: return 80
                         if diff >= 20: return 78
                         if diff >= 15: return 76
                         if diff >= 10: return 74
