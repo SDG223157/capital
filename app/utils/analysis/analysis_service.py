@@ -276,21 +276,20 @@ class AnalysisService:
                         
                         # Score based on 5% steps from -30% to +30%
                         
-                        if diff >= 40: return 100
-                        if diff >= 35: return 95
-                        if diff >= 30: return 90    # ≥30% better than benchmark
-                        if diff >= 25: return 85
-                        if diff >= 20: return 80
-                        if diff >= 15: return 75
-                        if diff >= 10: return 70
-                        if diff >= 5:  return 65
-                        if diff >= 0:  return 60     # Meeting benchmark
-                        if diff >= -5: return 45
-                        if diff >= -10: return 40
-                        if diff >= -15: return 30
-                        if diff >= -20: return 20
-                        if diff >= -25: return 10
-                        return 5                     # >25% worse than benchmark
+                       
+                        if diff >= 30: return 100    # ≥30% better than benchmark
+                        if diff >= 25: return 95
+                        if diff >= 20: return 90
+                        if diff >= 15: return 85
+                        if diff >= 10: return 80
+                        if diff >= 5:  return 75
+                        if diff >= 0:  return 75     # Meeting benchmark
+                        if diff >= -5: return 70
+                        if diff >= -10: return 65
+                        if diff >= -15: return 60
+                        if diff >= -20: return 55
+                        if diff >= -25: return 50
+                        return 40                     # >25% worse than benchmark
                         
                     else:  # volatility
                         # For volatility, use ratio (lower is better)
@@ -301,11 +300,11 @@ class AnalysisService:
                         if ratio <= 0.8: return 85
                         if ratio <= 0.9: return 80
                         if ratio <= 1.0: return 75     # Equal to benchmark
-                        if ratio <= 1.1: return 70
-                        if ratio <= 1.2: return 65
-                        if ratio <= 1.3: return 60
-                        if ratio <= 1.4: return 55
-                        if ratio <= 1.5: return 50
+                        if ratio <= 1.2: return 70
+                        if ratio <= 1.4: return 65
+                        if ratio <= 1.6: return 60
+                        if ratio <= 1.8: return 55
+                        if ratio <= 2.0: return 50
                         return 40                       # >50% more volatile
 
                
