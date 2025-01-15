@@ -323,6 +323,8 @@ class AnalysisService:
                 returns = data['Close'].pct_change().dropna()
                 annual_return = returns.mean() * 252
                 annual_volatility = returns.std() * np.sqrt(252)
+                logger.info(f"annual_return: {annual_return}")
+                logger.info(f"annual_volatility: {annual_volatility}")
                 
                 # Calculate trend score
                 trend_score, ratio, credibility_level = evaluate_trend_score(coef[2], coef[1], r2)
