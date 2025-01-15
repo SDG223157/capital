@@ -232,7 +232,7 @@ class AnalysisService:
                         
                         # Quadratic component contribution (±15 points)
                         quad_impact = quad_coef / vol_quad
-                        if (quad_coef > 0 and linear_coef > 0) :
+                        if quad_coef > 0  :
                             # Reinforcing trend
                             trend_score += 20 * min(1, max(-1, quad_impact))
                         # elif (quad_coef > 0 and linear_coef < 0):
