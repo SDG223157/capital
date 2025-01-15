@@ -495,27 +495,31 @@ class AnalysisService:
 
     
     @staticmethod
-    def analyze_stock_data(data, crossover_days=365):
+    def analyze_stock_data(data, crossover_days=365, lookback_days=365):
         """Perform comprehensive stock analysis"""
         logger = logging.getLogger(__name__)
         logger.debug(f"Starting stock analysis with shape: {data.shape}")
         
         try:
-            # Initialize empty lists for results
             result_data = []
             
             for current_date in data.index:
-                # Calculate lookback period
-                year_start = current_date - timedelta(days=crossover_days)
-                period_data = data.loc[data.index <= current_date].copy()
+                # Get data for R-square calculation (lookback_days)
+                r2_start = current_date - timedelta(days=lookback_days)
+                r2_data = data.loc[data.index <= current_date].copy()
+                if (current_date - r2_data.index[0]).days > lookback_days:
+                    r2_data = r2_data[r2_data.index > r2_start]
                 
+                # Get data for technical indicators (crossover_days)
+                tech_start = current_date - timedelta(days=crossover_days)
+                period_data = data.loc[data.index <= current_date].copy()
                 if (current_date - period_data.index[0]).days > crossover_days:
-                    period_data = period_data[period_data.index > year_start]
+                    period_data = period_data[period_data.index > tech_start]
                 
                 if len(period_data) < 20:  # Minimum data points needed
                     continue
-                    
-                # Calculate standard metrics
+                
+                # Calculate technical metrics using crossover window
                 current_price = period_data['Close'].iloc[-1]
                 highest_price = period_data['Close'].max()
                 lowest_price = period_data['Close'].min()
@@ -532,20 +536,27 @@ class AnalysisService:
                 appreciation_pct = AnalysisService.calculate_price_appreciation_pct(
                     current_price, highest_price, lowest_price)
                 
-                # Calculate R-square
+                # Calculate R-square using lookback window
                 try:
-                    period_data.loc[:, 'Log_Close'] = np.log(period_data['Close'])
-                    X = (period_data.index - period_data.index[0]).days.values.reshape(-1, 1)
-                    y = period_data['Log_Close'].values
-                    X_scaled = X / np.max(X)
-                    
-                    poly_features = PolynomialFeatures(degree=2)
-                    X_poly = poly_features.fit_transform(X_scaled)
-                    model = LinearRegression()
-                    model.fit(X_poly, y)
-                    
-                    r2 = r2_score(y, model.predict(X_poly))
-                    r2_pct = r2 * 100  # Convert to percentage
+                    if len(r2_data) >= 20:  # Ensure enough data for R² calculation
+                        r2_data.loc[:, 'Log_Close'] = np.log(r2_data['Close'])
+                        X = (r2_data.index - r2_data.index[0]).days.values.reshape(-1, 1)
+                        y = r2_data['Log_Close'].values
+                        X_scaled = X / np.max(X)
+                        
+                        poly_features = PolynomialFeatures(degree=2)
+                        X_poly = poly_features.fit_transform(X_scaled)
+                        model = LinearRegression()
+                        model.fit(X_poly, y)
+                        
+                        r2 = r2_score(y, model.predict(X_poly))
+                        r2_pct = r2 * 100
+                        
+                        logger.debug(f"R² for {current_date}: {r2_pct:.2f}% (using {len(r2_data)} days)")
+                    else:
+                        r2_pct = None
+                        logger.debug(f"Insufficient data for R² calculation at {current_date}")
+                        
                 except Exception as e:
                     logger.error(f"Error calculating R² for {current_date}: {str(e)}")
                     r2_pct = None
@@ -553,7 +564,7 @@ class AnalysisService:
                 # Store results
                 result_data.append({
                     'Date': current_date,
-                    'Close': current_price,  # Keep original column name
+                    'Close': current_price,
                     'High': highest_price,
                     'Low': lowest_price,
                     'Retracement_Ratio_Pct': ratio,
@@ -561,18 +572,20 @@ class AnalysisService:
                     'R2_Pct': r2_pct
                 })
             
-            # Create DataFrame and set index
+            # Create DataFrame
             df = pd.DataFrame(result_data)
             df.set_index('Date', inplace=True)
             
-            # Copy original OHLCV columns to maintain compatibility
+            # Copy original OHLCV columns
             for col in ['Open', 'Volume', 'Dividends', 'Stock Splits']:
                 if col in data.columns:
                     df[col] = data[col]
-            
-            logger.debug(f"Analysis complete. DataFrame columns: {df.columns.tolist()}")
+                    
+            logger.info("Analysis complete")
             if 'R2_Pct' in df.columns:
-                logger.debug(f"R2_Pct stats: mean={df['R2_Pct'].mean():.2f}, count={df['R2_Pct'].count()}")
+                valid_r2 = df['R2_Pct'].dropna()
+                if not valid_r2.empty:
+                    logger.info(f"R² Stats - Mean: {valid_r2.mean():.2f}%, Min: {valid_r2.min():.2f}%, Max: {valid_r2.max():.2f}%")
             
             return df
             

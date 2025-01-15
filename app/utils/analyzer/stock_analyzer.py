@@ -56,13 +56,11 @@ def create_stock_visualization(
         
         # Calculate extended start date for ratio calculations
         # Fetch additional historical data (lookback + crossover days) to ensure accurate ratio calculations
-        extended_lookback = lookback_days + crossover_days
+        extended_lookback = max(lookback_days, crossover_days) + lookback_days
         extended_start_date = data_service.get_analysis_dates(end_date, 'days', extended_lookback)
         display_start_date = data_service.get_analysis_dates(end_date, 'days', lookback_days)
         
-        print(f"Fetching extended historical data for {ticker} from {extended_start_date} to {end_date}")
-        
-        # Get extended historical data for calculations
+        logger.info(f"Fetching extended historical data for {ticker} from {extended_start_date} to {end_date}")
         historical_data_extended = data_service.get_historical_data(ticker, extended_start_date, end_date)
         
         if historical_data_extended.empty:
@@ -70,7 +68,12 @@ def create_stock_visualization(
         
         print("Performing technical analysis...")
         # Perform technical analysis on extended data
-        analysis_df = AnalysisService.analyze_stock_data(historical_data_extended, crossover_days)
+        analysis_df = AnalysisService.analyze_stock_data(
+            historical_data_extended, 
+            crossover_days=crossover_days,
+            lookback_days=lookback_days
+        )
+        
          # Log analysis results
         logger.debug(f"Analysis DataFrame columns: {analysis_df.columns.tolist()}")
         if 'R2_Pct' in analysis_df.columns:
@@ -78,8 +81,9 @@ def create_stock_visualization(
         
         
         # Filter data for display period
-        historical_data = historical_data_extended[historical_data_extended.index >= display_start_date]
-        analysis_df = analysis_df[analysis_df.index >= pd.to_datetime(display_start_date)]
+        display_start = pd.to_datetime(display_start_date)
+        historical_data = historical_data_extended[historical_data_extended.index >= display_start]
+        analysis_df = analysis_df[analysis_df.index >= display_start]
         
         # Perform regression analysis on display period data
         regression_results = AnalysisService.perform_polynomial_regression(
