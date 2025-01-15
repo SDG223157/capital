@@ -189,11 +189,11 @@ class VisualizationService:
     @staticmethod
     def _get_score_stars(score):
         """Get star rating based on score value"""
-        if 90 <= score <= 100:
+        if 85 <= score <= 100:
             return "★★★★★"
-        elif 80 <= score < 90:
+        elif 75 < score < 85:
             return "★★★★"
-        elif 60 <= score < 80:
+        elif 60 <= score <= 75:
             return "★★★"
         elif 40 <= score < 60:
             return "★★"
