@@ -323,6 +323,7 @@ class AnalysisService:
                 returns = data['Close'].pct_change().dropna()
                 annual_return = returns.mean() * 252
                 annual_volatility = returns.std() * np.sqrt(252)
+                logger.info(f"sp500_params: {sp500_params}")
                 logger.info(f"annual_return: {annual_return}")
                 logger.info(f"annual_volatility: {annual_volatility}")
                 
