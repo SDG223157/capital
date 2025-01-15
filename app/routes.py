@@ -9,7 +9,7 @@ import re
 import os
 import traceback
 from flask_login import login_required, current_user
-from app.utils.analyzer.stock_analyzer import create_stock_visualization
+from app.utils.analyzer.stock_analyzer import create_stock_visualization, create_stock_visualization_old
 from sqlalchemy import inspect
 from app import db
 from sqlalchemy import text
@@ -437,7 +437,7 @@ def quick_analyze():
             raise ValueError("Ticker symbol is required")
             
         # Use default values for quick analysis
-        fig = create_stock_visualization(
+        fig = create_stock_visualization_old(
             ticker_input,
             end_date=None,  # Use current date
             lookback_days=ANALYZE_CONFIG['lookback_days'],  # Default lookback

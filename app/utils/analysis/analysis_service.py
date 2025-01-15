@@ -592,3 +592,59 @@ class AnalysisService:
         except Exception as e:
             logger.error(f"Error in analyze_stock_data: {str(e)}", exc_info=True)
             raise
+        
+        
+    @staticmethod
+    def analyze_stock_data_old(data, crossover_days=365):
+        """Perform comprehensive stock analysis"""
+        analysis_dates = []
+        ratios = []
+        prices = []
+        highest_prices = []
+        lowest_prices = []
+        appreciation_pcts = []
+        
+        for current_date in data.index:
+            year_start = current_date - timedelta(days=crossover_days)
+            mask = (data.index <= current_date)  # Include all data up to current date
+            period_data = data.loc[mask]
+            
+            # If we have more than crossover_days of data, limit to the lookback period
+            if (current_date - period_data.index[0]).days > crossover_days:
+                period_data = period_data[period_data.index > year_start]
+            
+            # Only calculate if we have at least some minimum data points
+            if len(period_data) < 2:  # Reduced minimum requirement to 2 points
+                continue
+                
+            current_price = period_data['Close'].iloc[-1]
+            highest_price = period_data['Close'].max()
+            lowest_price = period_data['Close'].min()
+            
+            # Calculate ratio
+            total_move = highest_price - lowest_price
+            if total_move > 0:
+                current_retracement = highest_price - current_price
+                ratio = (current_retracement / total_move) * 100
+            else:
+                ratio = 0
+                
+            # Calculate appreciation percentage
+            appreciation_pct = AnalysisService.calculate_price_appreciation_pct(
+                current_price, highest_price, lowest_price)
+            
+            analysis_dates.append(current_date)
+            ratios.append(ratio)
+            prices.append(current_price)
+            highest_prices.append(highest_price)
+            lowest_prices.append(lowest_price)
+            appreciation_pcts.append(appreciation_pct)
+            
+        return pd.DataFrame({
+            'Date': analysis_dates,
+            'Price': prices,
+            'High': highest_prices,
+            'Low': lowest_prices,
+            'Retracement_Ratio_Pct': ratios,
+            'Price_Position_Pct': appreciation_pcts
+        })
