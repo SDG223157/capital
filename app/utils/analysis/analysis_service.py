@@ -9,6 +9,8 @@ from sklearn.metrics import r2_score
 from app.utils.data.data_service import DataService
 import logging
 
+logger = logging.getLogger(__name__)
+
 class AnalysisService:
     @staticmethod
     def calculate_price_appreciation_pct(current_price, highest_price, lowest_price):
@@ -131,6 +133,7 @@ class AnalysisService:
                         'annual_return': 0.2384,
                         'annual_volatility': 0.125
                     }
+                    logger.info(f"S&P 500 parameters: {sp500_params}")
             except Exception as sp_error:
                 print(f"Error calculating S&P 500 parameters: {str(sp_error)}")
                 sp500_params = {
@@ -272,28 +275,28 @@ class AnalysisService:
                     """
                     if metric_type == 'return':
                         # For returns, use absolute difference in percentage points
-                        diff = (value - benchmark) * 100  # Convert to percentage points
+                        diff = (value - benchmark) * 100 
+                        
+                        if diff >= 40: return 100
+                        if diff >= 35: return 95
+                        if diff >= 30: return 90    # ≥30% better than benchmark
+                        if diff >= 25: return 85
+                        if diff >= 20: return 80
+                        if diff >= 15: return 75
+                        if diff >= 10: return 70
+                        if diff >= 5:  return 65
+                        if diff >= 0:  return 60     # Meeting benchmark
+                        if diff >= -5: return 45
+                        if diff >= -10: return 40
+                        if diff >= -15: return 30
+                        if diff >= -20: return 20
+                        if diff >= -25: return 10
+                        return 5                     # >25% worse than benchmark
+# Convert to percentage points
                         
                         # Score based on 5% steps from -30% to +30%
                         
-                        if diff >= 80: return 100 
-                        if diff >= 70: return 95 
-                        if diff >= 60: return 95 
-                        if diff >= 50: return 90  
-                        if diff >= 40: return 90  
-                        if diff >= 30: return 85    # ≥30% better than benchmark
-                        if diff >= 25: return 85
-                        if diff >= 20: return 80
-                        if diff >= 15: return 80
-                        if diff >= 10: return 75
-                        if diff >= 5:  return 75
-                        if diff >= 0:  return 75     # Meeting benchmark
-                        if diff >= -5: return 65
-                        if diff >= -10: return 55
-                        if diff >= -15: return 45
-                        if diff >= -20: return 35
-                        if diff >= -25: return 30
-                        return 20                     # >25% worse than benchmark
+                        
                         
                     else:  # volatility
                         # For volatility, use ratio (lower is better)
