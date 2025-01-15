@@ -125,7 +125,7 @@ CHART_STYLE = {
     'marker_styles': {
         'crossover': dict(
             symbol='star',
-            size=12,
+            size=10,
             line=dict(width=1)
         )
     }
