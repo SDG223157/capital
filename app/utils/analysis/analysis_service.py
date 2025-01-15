@@ -235,9 +235,9 @@ class AnalysisService:
                         if (quad_coef > 0 and linear_coef > 0) :
                             # Reinforcing trend
                             trend_score += 25 * min(1, max(-1, quad_impact))
-                        elif (quad_coef > 0 and linear_coef < 0):
-                            # Counteracting trend
-                            trend_score += 25 * min(0.5, max(-1, abs(quad_impact)))
+                        # elif (quad_coef > 0 and linear_coef < 0):
+                        #     # Counteracting trend
+                        #     trend_score += 25 * min(0.5, max(-1, abs(quad_impact)))
                         else:
                             # Counteracting trend
                             trend_score -= 25 * min(1, max(-1, abs(quad_impact)))
