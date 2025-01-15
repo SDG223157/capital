@@ -276,12 +276,16 @@ class AnalysisService:
                         
                         # Score based on 5% steps from -30% to +30%
                         
-                       
-                        if diff >= 30: return 100    # ≥30% better than benchmark
-                        if diff >= 25: return 95
-                        if diff >= 20: return 90
-                        if diff >= 15: return 85
-                        if diff >= 10: return 80
+                        if diff >= 80: return 100 
+                        if diff >= 70: return 95 
+                        if diff >= 60: return 95 
+                        if diff >= 50: return 90  
+                        if diff >= 40: return 90  
+                        if diff >= 30: return 85    # ≥30% better than benchmark
+                        if diff >= 25: return 85
+                        if diff >= 20: return 80
+                        if diff >= 15: return 80
+                        if diff >= 10: return 75
                         if diff >= 5:  return 75
                         if diff >= 0:  return 75     # Meeting benchmark
                         if diff >= -5: return 65
@@ -322,7 +326,7 @@ class AnalysisService:
                 vol_score = score_metric(annual_volatility, sp500_params['annual_volatility'], 'volatility')
                 
                 # Calculate raw score
-                weights = {'trend': 0.4, 'return': 0.4, 'volatility': 0.20}
+                weights = {'trend': 0.4, 'return': 0.45, 'volatility': 0.15}
                 raw_score = (
                     trend_score * weights['trend'] +
                     return_score * weights['return'] +
