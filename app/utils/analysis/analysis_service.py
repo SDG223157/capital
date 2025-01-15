@@ -224,23 +224,23 @@ class AnalysisService:
                         vol_quad = annual_vol / np.sqrt(period_days)
                         
                         # 2. Calculate base trend score (50 is neutral)
-                        trend_score = 50
+                        trend_score = 30
                         
                         # Linear component contribution (±25 points)
                         linear_impact = linear_coef / vol_linear
-                        trend_score += 30 * min(1.0, max(-1, linear_impact))
+                        trend_score += 40 * min(1.0, max(-1, linear_impact))
                         
                         # Quadratic component contribution (±15 points)
                         quad_impact = quad_coef / vol_quad
                         if quad_coef > 0  :
                             # Reinforcing trend
-                            trend_score += 20 * min(1, max(-1, quad_impact))
+                            trend_score += 30 * min(1, max(-1, quad_impact))
                         # elif (quad_coef > 0 and linear_coef < 0):
                         #     # Counteracting trend
                         #     trend_score += 25 * min(0.5, max(-1, abs(quad_impact)))
                         else:
                             # Counteracting trend
-                            trend_score -= 20 * min(1, max(-1, abs(quad_impact)))
+                            trend_score -= 30 * min(1, max(-1, abs(quad_impact)))
                             
                         # 3. Apply strength multiplier based on R-squared
                         strength_multiplier = 0.5 + (0.5 * r_squared)  # Range: 0.5-1.0
