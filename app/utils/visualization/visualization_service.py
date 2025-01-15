@@ -537,9 +537,9 @@ class VisualizationService:
                     )
                 )
          # Add horizontal lines at key levels
-        fig.add_hline(y=0, line_dash="dash", line_color="gray", width=1, opacity=0.1)
-        fig.add_hline(y=50, line_dash="dash", line_color="gray", width=1, opacity=0.1)
-        fig.add_hline(y=100, line_dash="dash", line_color="gray", width=1, opacity=0.1)
+        fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.1)
+        fig.add_hline(y=50, line_dash="dash", line_color="gray", opacity=0.1)
+        fig.add_hline(y=100, line_dash="dash", line_color="gray", opacity=0.1)
         fig.add_hline(y=80, line_dash="dash", line_color='#FF1493', width=1, opacity=0.3)
 
         # Add metrics tables
