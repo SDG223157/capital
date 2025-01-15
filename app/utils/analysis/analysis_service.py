@@ -234,13 +234,13 @@ class AnalysisService:
                         quad_impact = quad_coef / vol_quad
                         if (quad_coef > 0 and linear_coef > 0) :
                             # Reinforcing trend
-                            trend_score += 25 * min(1, max(-1, quad_impact))
+                            trend_score += 15 * min(1, max(-1, quad_impact))
                         # elif (quad_coef > 0 and linear_coef < 0):
                         #     # Counteracting trend
                         #     trend_score += 25 * min(0.5, max(-1, abs(quad_impact)))
                         else:
                             # Counteracting trend
-                            trend_score -= 25 * min(1, max(-1, abs(quad_impact)))
+                            trend_score -= 15 * min(1, max(-1, abs(quad_impact)))
                             
                         # 3. Apply strength multiplier based on R-squared
                         strength_multiplier = 0.5 + (0.5 * r_squared)  # Range: 0.5-1.0
