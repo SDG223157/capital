@@ -292,12 +292,16 @@ class AnalysisService:
                         if diff >= 10: return 76
                         if diff >= 5:  return 73
                         if diff >= 0:  return 70     # Meeting benchmark
-                        if diff >= -5: return 45
-                        if diff >= -10: return 40
-                        if diff >= -15: return 30
-                        if diff >= -20: return 20
-                        if diff >= -25: return 10
-                        return 5                     # >25% worse than benchmark
+                        if diff >= -5: return 67
+                        if diff >= -10: return 64
+                        if diff >= -15: return 61
+                        if diff >= -20: return 58
+                        if diff >= -25: return 55
+                        if diff >= -30: return 52
+                        if diff >= -35: return 49
+                        if diff >= -40: return 30
+                        if diff >= -45: return 25
+                        return 20                   # >25% worse than benchmark
 # Convert to percentage points
                         
                         # Score based on 5% steps from -30% to +30%
