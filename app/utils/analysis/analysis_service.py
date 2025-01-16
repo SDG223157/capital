@@ -293,9 +293,9 @@ class AnalysisService:
                         modified_score = base_score + points_change
                         
                         # Cap at maximum of 100 and minimum of 25
-                        if final_score > 100:
+                        if modified_score > 100:
                             return 100
-                        if final_score < 25:
+                        if modified_score < 25:
                             return 25
                             
                         return round(modified_score)
