@@ -284,26 +284,21 @@ class AnalysisService:
                     if metric_type == 'return':
                         # For returns, use absolute difference in percentage points
                         diff = (value - benchmark) * 100 
-                        if diff >= 80: return 100
-                        if diff >= 70: return 97
-                        if diff >= 60: return 95
-                        if diff >= 50: return 90
-                        if diff >= 40: return 85   # ≥30% better than benchmark
-                        if diff >= 30: return 81
-                        if diff >= 20: return 72
-                        if diff >= 15: return 69
-                        if diff >= 10: return 66
-                        if diff >= 5:  return 63
-                        if diff >= 0:  return 60    # Meeting benchmark
-                        if diff >= -5: return 58
-                        if diff >= -10: return 56
-                        if diff >= -15: return 54
-                        if diff >= -20: return 52
-                        if diff >= -25: return 50
-                        if diff >= -35: return 49
-                        if diff >= -40: return 30
-                        if diff >= -45: return 25
-                        return 20                   # >25% worse than benchmark
+                        base_score = 60
+    
+    # Calculate points to add/subtract (1 point per 2% difference)
+                        points_change = diff / 2
+                        
+                        # Calculate final score
+                        modified_score = base_score + points_change
+                        
+                        # Cap at maximum of 100 and minimum of 25
+                        if final_score > 100:
+                            return 100
+                        if final_score < 25:
+                            return 25
+                            
+                        return round(modified_score)
 # Convert to percentage points
                         
                         # Score based on 5% steps from -30% to +30%
