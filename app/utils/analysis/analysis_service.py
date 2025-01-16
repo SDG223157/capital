@@ -283,23 +283,26 @@ class AnalysisService:
                     """
                     if metric_type == 'return':
                         # For returns, use absolute difference in percentage points
-                        diff = (value - benchmark) * 100 
                         base_score = 60
-    
-    # Calculate points to add/subtract (1 point per 2% difference)
-                        points_change = diff / 2
+                        diff = (value - benchmark) * 100 
+                        if diff >= 0:
+                            # For positive diff, add 1 point per 2%
+                            points_change = diff / 2
+                        else:
+                            # For negative diff, subtract 2 points per 1%
+                            points_change = diff * 2
                         
                         # Calculate final score
-                        modified_score = base_score + points_change
+                        final_score = base_score + points_change
                         
                         # Cap at maximum of 100 and minimum of 25
-                        if modified_score > 100:
+                        if final_score > 100:
                             return 100
-                        if modified_score < 25:
+                        if final_score < 25:
                             return 25
                             
-                        return round(modified_score)
-# Convert to percentage points
+                        return round(final_score)
+                    # Convert to percentage points
                         
                         # Score based on 5% steps from -30% to +30%
                         
