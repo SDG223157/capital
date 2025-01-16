@@ -244,7 +244,7 @@ class AnalysisService:
                             trend_score -= 25 * min(1, max(-1, abs(quad_impact)))
                             
                         # 3. Apply strength multiplier based on R-squared
-                        strength_multiplier = 0.2 + (0.8 * r_squared)  # Range: 0.2-1.0
+                        strength_multiplier = 0.5 + (0.5 * math.pow(r_squared, 2))  # Range: 0.5-1.0
                         # strength_multiplier = math.pow(r_squared, 2)
                     
                         
