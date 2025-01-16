@@ -308,7 +308,6 @@ class AnalysisService:
                         }
                         
                         return results['final_score']
-                    
                     except Exception as e:
                         print(f"Error in trend evaluation: {str(e)}")
                         return 50
