@@ -240,7 +240,7 @@ class AnalysisService:
                         
                         # Adjust weights based on ratio
                         if ratio > 1:  # Quadratic dominates
-                            strength_factor = min(ratio, 2)  # Cap at 2x
+                            strength_factor = min(ratio, 4)  # Cap at 2x
                             quad_weight = total_weight * (strength_factor / (1 + strength_factor))
                             linear_weight = total_weight * (1 / (1 + strength_factor))
                         else:  # Linear dominates
