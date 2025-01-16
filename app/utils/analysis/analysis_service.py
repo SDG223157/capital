@@ -210,113 +210,75 @@ class AnalysisService:
                 
                 def evaluate_trend_score(quad_coef, linear_coef, r_squared):
                     """
-                    Comprehensive trend analysis function
-                    
-                    Parameters:
-                    - quad_coef: coefficient of quadratic term (x²)
-                    - linear_coef: coefficient of linear term (x)
-                    - constant: constant term
-                    - r_squared: R-squared value of regression
-                    - days: number of days in regression
-                    - annual_vol: annualized volatility
-                    - normalize_by: scaling factor used in regression (default 1000)
-                    
-                    Returns:
-                    - Dictionary containing detailed analysis
+                    Calculate trend score ranging from 0 (most bearish) to 100 (most bullish)
+                    based on trend direction, strength, and credibility.
+                    Uses quad/linear ratio to determine dominant force and adjust weights.
                     """
                     try:
-                        results = {}
-                          # 1. Calculate asset's own volatility for benchmarks
+                        # 1. Calculate asset's own volatility for benchmarks
                         returns = data['Close'].pct_change().dropna()
                         annual_vol = returns.std() * np.sqrt(252)
                         period_days = len(data)
                         period_years = period_days / 252
                         
-                        # 1. Calculate volatility-adjusted impacts
-                        vol_linear = annual_vol * np.sqrt(period_years)
+                        # Calculate benchmarks using asset's own volatility
+                        vol_linear = annual_vol * np.sqrt(period_years)  
                         vol_quad = annual_vol / np.sqrt(period_days)
                         
+                        # 2. Calculate base trend score (50 is neutral)
+                        trend_score = 50
+                        
+                        # Calculate normalized impacts
                         linear_impact = linear_coef / vol_linear
                         quad_impact = quad_coef / vol_quad
                         
-                        # 2. Calculate force dominance ratio
-                        raw_ratio = abs(quad_coef / linear_coef) if linear_coef != 0 else float('inf')
-                        impact_ratio = abs(quad_impact / linear_impact) if linear_impact != 0 else float('inf')
+                        # Calculate ratio to determine dominance
+                        ratio = abs(quad_coef / linear_coef) if linear_coef != 0 else float('inf')
                         
-                        # 3. Determine trend characteristics
-                        trend_type = {
-                            'accelerating_up': quad_coef > 0 and linear_coef > 0,
-                            'accelerating_down': quad_coef < 0 and linear_coef < 0,
-                            'reversal_up': quad_coef > 0 and linear_coef < 0,
-                            'reversal_down': quad_coef < 0 and linear_coef > 0,
-                            'neutral': abs(linear_impact) < 0.1 and abs(quad_impact) < 0.1
-                        }
+                        # Base weight total is 50 points (from neutral 50 to either 0 or 100)
+                        total_weight = 50
                         
-                        # 4. Calculate trend strengths
-                        future_strength = min(1, abs(quad_impact)) * 3  # Triple weight for future
-                        historic_strength = min(1, abs(linear_impact))
+                        # Adjust weights based on ratio
+                        if ratio > 1:  # Quadratic dominates
+                            strength_factor = min(ratio, 3)  # Cap at 2x
+                            quad_weight = total_weight * (strength_factor / (1 + strength_factor))
+                            linear_weight = total_weight * (1 / (1 + strength_factor))
+                        else:  # Linear dominates 
+                            strength_factor = min(1/ratio, 3)  # Cap at 2x
+                            linear_weight = total_weight * (strength_factor / (1 + strength_factor))
+                            quad_weight = total_weight * (1 / (1 + strength_factor))
+                            
+                        # Apply weighted impacts
+                        trend_score += linear_weight * min(1.0, max(-1, linear_impact))
                         
-                        # 5. Calculate base trend score (50 is neutral)
-                        trend_score = 50
+                        if quad_coef > 0:
+                            # Reinforcing trend
+                            trend_score += quad_weight * min(1, max(-1, abs(quad_impact)))
+                        else:
+                            # Counteracting trend
+                            trend_score -= quad_weight * min(1, max(-1, abs(quad_impact)))
+                            
+                        # 3. Apply strength multiplier based on R-squared
+                        strength_multiplier = 0.5 + (0.5 * r_squared)  # Range: 0.5-1.0
                         
-                        # Apply weighted impacts based on trend type
-                        if trend_type['accelerating_up']:
-                            trend_score += (future_strength + historic_strength) * 25
-                        elif trend_type['accelerating_down']:
-                            trend_score -= (future_strength + historic_strength) * 25
-                        elif trend_type['reversal_up']:
-                            trend_score += (future_strength * 25 - historic_strength * 10)
-                        elif trend_type['reversal_down']:
-                            trend_score -= (future_strength * 25 - historic_strength * 10)
+                        # 4. Calculate final score
+                        final_score = trend_score * strength_multiplier
                         
-                        # 6. Apply confidence adjustments
-                        r_squared_multiplier = 0.5 + (0.5 * math.pow(r_squared, 2))
-                        volatility_penalty = max(0, (annual_vol - 0.3) / 2)  # Penalty for high volatility
-                        
-                        # 7. Calculate final score
-                        final_score = (trend_score * r_squared_multiplier) * (1 - volatility_penalty)
+                        # 5. Normalize to 0-100 range
                         final_score = min(100, max(0, final_score))
                         
-                        # 8. Determine confidence levels
-                        confidence = {
-                            'model_fit': 'very_high' if r_squared >= 0.9 else
-                                        'high' if r_squared >= 0.8 else
-                                        'moderate' if r_squared >= 0.7 else
-                                        'low' if r_squared >= 0.6 else 'very_low',
-                            'volatility': 'high' if annual_vol < 0.2 else
-                                        'moderate' if annual_vol < 0.4 else 'low',
-                            'trend_clarity': 'high' if max(abs(linear_impact), abs(quad_impact)) > 1 else
-                                        'moderate' if max(abs(linear_impact), abs(quad_impact)) > 0.5 else 'low'
-                        }
+                        # Determine credibility level for compatibility
+                        if r_squared >= 0.90: credibility_level = 5  # Very High
+                        elif r_squared >= 0.80: credibility_level = 4  # High
+                        elif r_squared >= 0.70: credibility_level = 3  # Moderate
+                        elif r_squared >= 0.60: credibility_level = 2  # Low
+                        else: credibility_level = 1  # Very Low
                         
-                        # 9. Compile results
-                        results = {
-                            'final_score': final_score,
-                            'trend_characteristics': {
-                                'type': [k for k, v in trend_type.items() if v][0],
-                                'quad_impact': quad_impact,
-                                'linear_impact': linear_impact,
-                                'force_ratio': impact_ratio
-                            },
-                            'confidence_metrics': confidence,
-                            'strength_metrics': {
-                                'future_strength': future_strength,
-                                'historic_strength': historic_strength,
-                                'r_squared': r_squared,
-                                'volatility': annual_vol
-                            }
-                        }
-                        
-                        return results['final_score']
+                        return final_score, ratio, credibility_level
+       
                     except Exception as e:
-                        print(f"Error in trend evaluation: {str(e)}")
-                        return 50
-               
-                
-                                
-                
-                
-                
+                        print(f"Error in trend score calculation: {str(e)}")
+                        return 50, 0, 1  # Return neutral score on error
                 def score_metric(value, benchmark, metric_type='return'):
                     """
                     Score metrics based on type:
@@ -381,7 +343,7 @@ class AnalysisService:
                 logger.info(f"annual_volatility: {annual_volatility}")
                 
                 # Calculate trend score
-                trend_score = evaluate_trend_score(coef[2], coef[1], r2)
+                trend_score, ratio, credibility_level = evaluate_trend_score(coef[2], coef[1], r2)
                 
                 # Calculate other scores
                  # Usage in scoring section:
@@ -397,7 +359,7 @@ class AnalysisService:
                 )
 
                 # Calculate SP500's raw score
-                sp500_trend_score = evaluate_trend_score(
+                sp500_trend_score, _, _ = evaluate_trend_score(
                     sp500_params['quad_coef'], 
                     sp500_params['linear_coef'],
                     sp500_params['r_squared']
