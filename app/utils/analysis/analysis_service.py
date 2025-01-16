@@ -255,7 +255,7 @@ class AnalysisService:
                             trend_score -= (future_strength * 50 - historic_strength * 20)
                         
                         # Apply confidence adjustment
-                        r_squared_multiplier = 0.5 + (0.5 * math.pow(r_squared, 2))
+                        r_squared_multiplier = 0.5 + (0.5 * r_squared)
                         
                         # Calculate final score
                         final_score = trend_score * r_squared_multiplier
