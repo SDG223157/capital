@@ -1,8 +1,8 @@
 # src/analysis/analysis_service.py
 
-import random
 import numpy as np
 import pandas as pd
+import math
 from datetime import datetime, timedelta
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
@@ -243,7 +243,9 @@ class AnalysisService:
                             trend_score -= 25 * min(1, max(-1, abs(quad_impact)))
                             
                         # 3. Apply strength multiplier based on R-squared
-                        strength_multiplier = 0.5 + (0.5 * r_squared)  # Range: 0.5-1.0
+                        # strength_multiplier = 0.5 + (0.5 * r_squared)  # Range: 0.5-1.0
+                        strength_multiplier = math.pow(r_squared, 2)
+                    
                         
                         # 4. Calculate final score
                         final_score = trend_score * strength_multiplier
@@ -286,18 +288,17 @@ class AnalysisService:
                         if diff >= 60: return 95
                         if diff >= 50: return 90
                         if diff >= 40: return 85   # ≥30% better than benchmark
-                        if diff >= 30: return 80
-                        if diff >= 20: return 78
-                        if diff >= 15: return 76
-                        if diff >= 10: return 74
-                        if diff >= 5:  return 72
-                        if diff >= 0:  return 70     # Meeting benchmark
-                        if diff >= -5: return 65
-                        if diff >= -10: return 62
-                        if diff >= -15: return 59
-                        if diff >= -20: return 56
-                        if diff >= -25: return 53
-                        if diff >= -30: return 50
+                        if diff >= 30: return 81
+                        if diff >= 20: return 72
+                        if diff >= 15: return 69
+                        if diff >= 10: return 66
+                        if diff >= 5:  return 63
+                        if diff >= 0:  return 60    # Meeting benchmark
+                        if diff >= -5: return 58
+                        if diff >= -10: return 56
+                        if diff >= -15: return 54
+                        if diff >= -20: return 52
+                        if diff >= -25: return 50
                         if diff >= -35: return 49
                         if diff >= -40: return 30
                         if diff >= -45: return 25
