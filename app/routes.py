@@ -485,7 +485,7 @@ def analyze():
         if crossover_days < 30 or crossover_days > 1000:
             raise ValueError("Crossover days must be between 30 and 1000")
         
-        fig = create_stock_visualization(
+        fig = create_stock_visualization_old(
             ticker_input,
             end_date=end_date,
             lookback_days=lookback_days,
