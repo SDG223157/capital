@@ -240,22 +240,28 @@ class AnalysisService:
                             'reversal_down': quad_coef < 0 and linear_coef > 0
                         }
                         
-                        # Calculate future and historic strengths with smaller scale
-                        future_strength = min(0.6, abs(quad_impact)/100)  # Cap at 0.6
-                        historic_strength = min(0.4, abs(linear_impact))  # Cap at 0.4
+                        # Calculate strengths with modified scaling
+                        future_strength = min(1.0, abs(quad_impact)/30)  # Less aggressive scaling
+                        historic_strength = min(1.0, abs(linear_impact))
                         
                         # Apply weighted impacts based on trend type
                         if trend_type['accelerating_up']:
-                            trend_score += (future_strength + historic_strength) * 50
+                            trend_score += (future_strength * 35 + historic_strength * 25)
                         elif trend_type['accelerating_down']:
-                            trend_score -= (future_strength + historic_strength) * 50
+                            trend_score -= (future_strength * 35 + historic_strength * 25)
                         elif trend_type['reversal_up']:
-                            trend_score += (future_strength * 50 - historic_strength * 20)
+                            trend_score += (future_strength * 35 - historic_strength * 15)
                         elif trend_type['reversal_down']:
-                            trend_score -= (future_strength * 50 - historic_strength * 20)
+                            # Give more weight to linear when it's strong
+                            if historic_strength > 0.7:  # Strong linear uptrend
+                                trend_score += historic_strength * 35
+                            elif future_strength > historic_strength:
+                                trend_score -= future_strength * 25
+                            else:
+                                trend_score += historic_strength * 20
                         
-                        # Apply confidence adjustment
-                        r_squared_multiplier = 0.5 + (0.5 * r_squared)
+                        # Apply confidence adjustment with higher base
+                        r_squared_multiplier = 0.7 + (0.3 * math.pow(r_squared, 2))  # Range: 0.7-1.0
                         
                         # Calculate final score
                         final_score = trend_score * r_squared_multiplier
@@ -281,7 +287,6 @@ class AnalysisService:
                     except Exception as e:
                         print(f"Error in trend score calculation: {str(e)}")
                         return 50, 0, 1  # Return neutral score on error
-                                
                                 
                 
                 def score_metric(value, benchmark, metric_type='return'):
