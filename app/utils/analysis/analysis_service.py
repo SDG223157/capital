@@ -3,6 +3,7 @@
 import numpy as np
 import pandas as pd
 import math
+import random
 from datetime import datetime, timedelta
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
