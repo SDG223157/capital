@@ -211,7 +211,8 @@ class AnalysisService:
                 def evaluate_trend_score(quad_coef, linear_coef, r_squared):
                     """
                     Calculate trend score ranging from 0 (most bearish) to 100 (most bullish)
-                    based on trend direction, strength, and credibility
+                    based on trend direction, strength, and credibility.
+                    Uses quad/linear ratio to determine dominant force and adjust weights.
                     """
                     try:
                         # 1. Calculate asset's own volatility for benchmarks
@@ -227,35 +228,44 @@ class AnalysisService:
                         # 2. Calculate base trend score (50 is neutral)
                         trend_score = 50
                         
-                        # Linear component contribution (±25 points)
+                        # Calculate normalized impacts
                         linear_impact = linear_coef / vol_linear
-                        trend_score += 25 * min(1.0, max(-1, linear_impact))
-                        
-                        # Quadratic component contribution (±15 points)
                         quad_impact = quad_coef / vol_quad
-                        if quad_coef > 0  :
+                        
+                        # Calculate ratio to determine dominance
+                        ratio = abs(quad_coef / linear_coef) if linear_coef != 0 else float('inf')
+                        
+                        # Base weight total is 50 points (from neutral 50 to either 0 or 100)
+                        total_weight = 50
+                        
+                        # Adjust weights based on ratio
+                        if ratio > 1:  # Quadratic dominates
+                            strength_factor = min(ratio, 2)  # Cap at 2x
+                            quad_weight = total_weight * (strength_factor / (1 + strength_factor))
+                            linear_weight = total_weight * (1 / (1 + strength_factor))
+                        else:  # Linear dominates
+                            strength_factor = min(1/ratio, 2)  # Cap at 2x
+                            linear_weight = total_weight * (strength_factor / (1 + strength_factor))
+                            quad_weight = total_weight * (1 / (1 + strength_factor))
+                            
+                        # Apply weighted impacts
+                        trend_score += linear_weight * min(1.0, max(-1, linear_impact))
+                        
+                        if quad_coef > 0:
                             # Reinforcing trend
-                            trend_score += 25 * min(1, max(-1, abs(quad_impact)))
-                        # elif (quad_coef > 0 and linear_coef < 0):
-                        #     # Counteracting trend
-                        #     trend_score += 25 * min(0.5, max(-1, abs(quad_impact)))
+                            trend_score += quad_weight * min(1, max(-1, abs(quad_impact)))
                         else:
                             # Counteracting trend
-                            trend_score -= 25 * min(1, max(-1, abs(quad_impact)))
+                            trend_score -= quad_weight * min(1, max(-1, abs(quad_impact)))
                             
                         # 3. Apply strength multiplier based on R-squared
                         strength_multiplier = 0.5 + (0.5 * math.pow(r_squared, 2))  # Range: 0.5-1.0
-                        # strength_multiplier = math.pow(r_squared, 2)
-                    
                         
                         # 4. Calculate final score
                         final_score = trend_score * strength_multiplier
                         
                         # 5. Normalize to 0-100 range
                         final_score = min(100, max(0, final_score))
-                        
-                        # Calculate ratio for compatibility with existing code
-                        ratio = abs(quad_coef / linear_coef) if linear_coef != 0 else float('inf')
                         
                         # Determine credibility level for compatibility
                         if r_squared >= 0.90: credibility_level = 5  # Very High
@@ -265,11 +275,10 @@ class AnalysisService:
                         else: credibility_level = 1  # Very Low
                         
                         return final_score, ratio, credibility_level
-                        
+       
                     except Exception as e:
                         print(f"Error in trend score calculation: {str(e)}")
                         return 50, 0, 1  # Return neutral score on error
-
                 def score_metric(value, benchmark, metric_type='return'):
                     """
                     Score metrics based on type:
