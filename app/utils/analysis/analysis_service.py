@@ -261,7 +261,7 @@ class AnalysisService:
                                 trend_score += historic_strength * 20
                         
                         # Apply confidence adjustment with higher base
-                        r_squared_multiplier = 0.7 + (0.3 * math.pow(r_squared, 2))  # Range: 0.7-1.0
+                        r_squared_multiplier = 0.6 + (0.4 * math.pow(r_squared, 2))  # Range: 0.7-1.0
                         
                         # Calculate final score
                         final_score = trend_score * r_squared_multiplier
