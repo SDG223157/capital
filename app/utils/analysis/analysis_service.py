@@ -63,7 +63,7 @@ class AnalysisService:
         if intercept != 0:
             sign = "+" if intercept > 0 else ""
             terms.append(f"{sign}{intercept:.4f}")
-        equation = "ln(y) = " + " ".join(terms)
+        equation = "Ln(y) = " + " ".join(terms)
         return equation
 
     @staticmethod
