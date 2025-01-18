@@ -265,9 +265,11 @@ class VisualizationService:
             )
         )
 
+    
     @staticmethod
     def _create_trading_signal_table(signal_returns, table_style, table_domain):
         """Create the trading signal analysis table"""
+        # Check if there are any signals with either entry or exit information
         if not signal_returns and not any('Exit Date' in signal for signal in signal_returns):
             return go.Table(
                 domain=dict(
@@ -298,17 +300,18 @@ class VisualizationService:
                         'Return': signal['Trade Return'],
                         'Status': 'Open'
                     })
-            elif signal['Signal'] == 'Sell' and buy_signal is not None:
-                trades.append({
-                    'Entry Date': buy_signal['Entry Date'].strftime('%Y-%m-%d'),
-                    'Entry Price': buy_signal['Entry Price'],
-                    'Exit Date': signal['Entry Date'].strftime('%Y-%m-%d'),
-                    'Exit Price': signal['Entry Price'],
-                    'Return': signal['Trade Return'],
-                    'Status': 'Closed'
-                })
-                buy_signal = None
-            elif 'Entry Date' not in signal and 'Exit Date' in signal:
+            elif signal['Signal'] == 'Sell':
+                if buy_signal is not None:
+                    trades.append({
+                        'Entry Date': buy_signal['Entry Date'].strftime('%Y-%m-%d'),
+                        'Entry Price': buy_signal['Entry Price'],
+                        'Exit Date': signal['Entry Date'].strftime('%Y-%m-%d'),
+                        'Exit Price': signal['Entry Price'],
+                        'Return': signal['Trade Return'],
+                        'Status': 'Closed'
+                    })
+                    buy_signal = None
+                elif 'Entry Date' not in signal and 'Exit Date' in signal:
                     # Handle case where we only have exit information
                     trades.append({
                         'Entry Date': 'Unknown',
@@ -326,22 +329,22 @@ class VisualizationService:
             ),
             header=dict(
                 values=['<b>Entry Date</b>', '<b>Entry Price</b>', '<b>Exit Date</b>', 
-                       '<b>Exit Price</b>', '<b>Return</b>', '<b>Status</b>'],
+                    '<b>Exit Price</b>', '<b>Return</b>', '<b>Status</b>'],
                 **table_style['header']
             ),
             cells=dict(
                 values=[
                     [t['Entry Date'] for t in trades],
-                    [f"${t['Entry Price']:.2f}" for t in trades],
+                    [f"${t['Entry Price']:.2f}" if t['Entry Price'] != 'Unknown' else t['Entry Price'] for t in trades],
                     [t['Exit Date'] for t in trades],
-                    [f"${t['Exit Price']:.2f}" for t in trades],
-                    [f"{t['Return']:.2f}%" for t in trades],
+                    [f"${t['Exit Price']:.2f}" if isinstance(t['Exit Price'], (int, float)) else t['Exit Price'] for t in trades],
+                    [f"{t['Return']:.2f}%" if isinstance(t['Return'], (int, float)) else t['Return'] for t in trades],
                     [t['Status'] for t in trades]
                 ],
                 **table_style['cells']
             )
         )
-
+        
     @staticmethod
     def _create_chart_annotations(config, metrics_df=None):
         """Create chart annotations"""
