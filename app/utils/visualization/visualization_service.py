@@ -308,6 +308,16 @@ class VisualizationService:
                     'Status': 'Closed'
                 })
                 buy_signal = None
+            elif 'Entry Date' not in signal and 'Exit Date' in signal:
+                    # Handle case where we only have exit information
+                    trades.append({
+                        'Entry Date': 'Unknown',
+                        'Entry Price': 'Unknown',
+                        'Exit Date': signal['Exit Date'].strftime('%Y-%m-%d'),
+                        'Exit Price': signal['Exit Price'],
+                        'Return': signal.get('Trade Return', 'N/A'),
+                        'Status': 'Exit Only'
+                    })
 
         return go.Table(
             domain=dict(
