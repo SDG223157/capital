@@ -113,6 +113,9 @@ def create_stock_visualization(
         )
         
         # Prepare signal returns data
+        # Inside create_stock_visualization function, replace the signal returns section with:
+
+        # Prepare signal returns data
         print("Analyzing trading signals...")
         signal_returns = []
         if crossover_data[0]:  # If there are crossover points
@@ -130,21 +133,29 @@ def create_stock_visualization(
                         'Signal': 'Buy',
                         'Status': 'Open'
                     })
-                elif direction == 'down' and current_position == 'long':  # Sell signal
+                elif direction == 'down':  # Sell signal
                     exit_price = price
-                    trade_return = ((exit_price / entry_price) - 1) * 100
-                    current_position = None
-                    
-                    if signal_returns:
-                        signal_returns[-1]['Status'] = 'Closed'
-                    
-                    signal_returns.append({
-                        'Entry Date': date,
-                        'Entry Price': price,
-                        'Signal': 'Sell',
-                        'Trade Return': trade_return,
-                        'Status': 'Closed'
-                    })
+                    if current_position == 'long':  # Regular sell after buy
+                        trade_return = ((exit_price / entry_price) - 1) * 100
+                        current_position = None
+                        
+                        if signal_returns:
+                            signal_returns[-1]['Status'] = 'Closed'
+                        
+                        signal_returns.append({
+                            'Entry Date': date,
+                            'Entry Price': price,
+                            'Signal': 'Sell',
+                            'Trade Return': trade_return,
+                            'Status': 'Closed'
+                        })
+                    else:  # Exit-only signal (no corresponding buy)
+                        signal_returns.append({
+                            'Signal': 'Sell',
+                            'Exit Date': date,
+                            'Exit Price': price,
+                            'Status': 'Exit Only'
+                        })
             
             # Handle open position
             if current_position == 'long':
@@ -262,6 +273,9 @@ def create_stock_visualization_old(
         )
         
         # Prepare signal returns data
+        # Inside create_stock_visualization function, replace the signal returns section with:
+
+        # Prepare signal returns data
         print("Analyzing trading signals...")
         signal_returns = []
         if crossover_data[0]:  # If there are crossover points
@@ -279,21 +293,29 @@ def create_stock_visualization_old(
                         'Signal': 'Buy',
                         'Status': 'Open'
                     })
-                elif direction == 'down' and current_position == 'long':  # Sell signal
+                elif direction == 'down':  # Sell signal
                     exit_price = price
-                    trade_return = ((exit_price / entry_price) - 1) * 100
-                    current_position = None
-                    
-                    if signal_returns:
-                        signal_returns[-1]['Status'] = 'Closed'
-                    
-                    signal_returns.append({
-                        'Entry Date': date,
-                        'Entry Price': price,
-                        'Signal': 'Sell',
-                        'Trade Return': trade_return,
-                        'Status': 'Closed'
-                    })
+                    if current_position == 'long':  # Regular sell after buy
+                        trade_return = ((exit_price / entry_price) - 1) * 100
+                        current_position = None
+                        
+                        if signal_returns:
+                            signal_returns[-1]['Status'] = 'Closed'
+                        
+                        signal_returns.append({
+                            'Entry Date': date,
+                            'Entry Price': price,
+                            'Signal': 'Sell',
+                            'Trade Return': trade_return,
+                            'Status': 'Closed'
+                        })
+                    else:  # Exit-only signal (no corresponding buy)
+                        signal_returns.append({
+                            'Signal': 'Sell',
+                            'Exit Date': date,
+                            'Exit Price': price,
+                            'Status': 'Exit Only'
+                        })
             
             # Handle open position
             if current_position == 'long':
@@ -302,6 +324,7 @@ def create_stock_visualization_old(
                 if signal_returns and signal_returns[-1]['Signal'] == 'Buy':
                     signal_returns[-1]['Trade Return'] = open_trade_return
                     signal_returns[-1]['Current Price'] = last_price
+            
         
         print("Creating visualization...")
         # Create visualization
