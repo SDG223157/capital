@@ -645,20 +645,22 @@ class VisualizationService:
             plot_bgcolor='white',
             paper_bgcolor='white',
             margin=dict(
-                l=50, 
-                r=100, 
-                t=0.05* total_height,
-                b=0.05* total_height
-            ),
-            legend=dict(
-                yanchor="top",
-                y=0.95,
-                xanchor="right",
-                x=1.05,
-                bgcolor='rgba(255, 255, 255, 0.8)',
-                bordercolor='rgba(0, 0, 0, 0.2)',
-                borderwidth=1,
-                font=dict(size=11)
+            l=50,
+            r=100,
+            t=0.05 * total_height,
+            b=0.05 * total_height,
+            # Add extra right margin for legend
+            autoexpand=True
+        ),
+        legend=dict(
+            yanchor="top",
+            y=0.99,
+            xanchor="left",
+            x=1.02,
+            bgcolor='rgba(255, 255, 255, 0.8)',
+            bordercolor='rgba(0, 0, 0, 0.2)',
+            borderwidth=1,
+            font=dict(size=11)
             )
         )
 
