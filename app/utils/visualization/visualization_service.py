@@ -268,7 +268,7 @@ class VisualizationService:
     @staticmethod
     def _create_trading_signal_table(signal_returns, table_style, table_domain):
         """Create the trading signal analysis table"""
-        if not signal_returns:
+        if not signal_returns and not any('Exit Date' in signal for signal in signal_returns):
             return go.Table(
                 domain=dict(
                     x=table_domain['x'],
