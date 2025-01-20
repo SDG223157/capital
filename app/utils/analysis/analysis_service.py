@@ -695,3 +695,136 @@ class AnalysisService:
             'Retracement_Ratio_Pct': ratios,
             'Price_Position_Pct': appreciation_pcts
         })
+
+
+
+# app/utils/analysis/analysis_service.py
+
+from typing import Dict, List, Optional, Tuple
+from datetime import datetime, timedelta
+import logging
+from ..config.analyze_config import AnalyzeConfig
+from apify_client import ApifyClient
+from textblob import TextBlob
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import nltk
+
+class NewsAnalysisService:
+    def __init__(self):
+        """Initialize news analysis service"""
+        self.logger = logging.getLogger(__name__)
+        self.client = ApifyClient(AnalyzeConfig.APIFY_TOKEN)
+        
+        try:
+            nltk.download('vader_lexicon')
+            self.vader = SentimentIntensityAnalyzer()
+        except Exception as e:
+            self.logger.error(f"Error initializing VADER: {e}")
+            self.vader = None
+
+    def get_news(self, symbol: str, days: int = 7) -> List[Dict]:
+        """Fetch news for a symbol"""
+        try:
+            run_input = {
+                "symbols": [symbol],
+                "proxy": {"useApifyProxy": True},
+                "resultsLimit": AnalyzeConfig.MAX_NEWS_ARTICLES
+            }
+            
+            # Run the Actor
+            run = self.client.actor("mscraper/tradingview-news-scraper").call(
+                run_input=run_input
+            )
+            
+            return list(self.client.dataset(run["defaultDatasetId"]).iterate_items())
+        except Exception as e:
+            self.logger.error(f"Error fetching news: {e}")
+            return []
+
+    def analyze_sentiment(self, text: str) -> Dict:
+        """Analyze text sentiment"""
+        try:
+            # TextBlob analysis
+            blob = TextBlob(text)
+            textblob_score = blob.sentiment.polarity
+            
+            # VADER analysis
+            vader_scores = self.vader.polarity_scores(text)
+            compound_score = vader_scores['compound']
+            
+            # Determine sentiment
+            if compound_score >= 0.05:
+                sentiment = "POSITIVE"
+            elif compound_score <= -0.05:
+                sentiment = "NEGATIVE"
+            else:
+                sentiment = "NEUTRAL"
+                
+            return {
+                "sentiment": sentiment,
+                "score": compound_score,
+                "confidence": abs(compound_score)
+            }
+        except Exception as e:
+            self.logger.error(f"Error analyzing sentiment: {e}")
+            return {"sentiment": "NEUTRAL", "score": 0, "confidence": 0}
+
+    def analyze_articles(self, articles: List[Dict]) -> List[Dict]:
+        """Analyze a list of news articles"""
+        analyzed = []
+        for article in articles:
+            try:
+                content = article.get("descriptionText", "")
+                sentiment = self.analyze_sentiment(content)
+                
+                analyzed.append({
+                    "title": article.get("title", ""),
+                    "content": content,
+                    "url": article.get("storyPath", ""),
+                    "published_at": datetime.fromtimestamp(
+                        article.get("published", 0) / 1000
+                    ).strftime("%Y-%m-%d %H:%M:%S"),
+                    "source": article.get("source", ""),
+                    "sentiment": sentiment
+                })
+            except Exception as e:
+                self.logger.error(f"Error analyzing article: {e}")
+                continue
+                
+        return analyzed
+
+    def get_news_analysis(self, symbol: str, days: int = 7) -> Dict:
+        """Get complete news analysis for a symbol"""
+        articles = self.get_news(symbol, days)
+        analyzed_articles = self.analyze_articles(articles)
+        
+        # Calculate summary statistics
+        if analyzed_articles:
+            positive = sum(1 for a in analyzed_articles 
+                         if a['sentiment']['sentiment'] == 'POSITIVE')
+            negative = sum(1 for a in analyzed_articles 
+                         if a['sentiment']['sentiment'] == 'NEGATIVE')
+            neutral = sum(1 for a in analyzed_articles 
+                         if a['sentiment']['sentiment'] == 'NEUTRAL')
+            avg_score = sum(a['sentiment']['score'] for a in analyzed_articles) / len(analyzed_articles)
+            
+            summary = {
+                "total_articles": len(analyzed_articles),
+                "sentiment_distribution": {
+                    "positive": positive,
+                    "negative": negative,
+                    "neutral": neutral
+                },
+                "average_sentiment": avg_score
+            }
+        else:
+            summary = {
+                "total_articles": 0,
+                "sentiment_distribution": {"positive": 0, "negative": 0, "neutral": 0},
+                "average_sentiment": 0
+            }
+            
+        return {
+            "summary": summary,
+            "articles": analyzed_articles
+        }

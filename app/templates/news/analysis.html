@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header Section -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold">News Analysis - {{ symbol }}</h1>
+        <p class="text-gray-600">Analysis period: Last {{ days }} days</p>
+    </div>
+
+    <!-- Sentiment Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- Total Articles -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="text-2xl font-bold">{{ summary.total_articles }}</div>
+            <div class="text-gray-600">Total Articles</div>
+        </div>
+
+        <!-- Average Sentiment -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="text-2xl font-bold 
+                {% if summary.average_sentiment > 0 %}text-green-600
+                {% elif summary.average_sentiment < 0 %}text-red-600
+                {% else %}text-gray-600{% endif %}">
+                {{ "%.2f"|format(summary.average_sentiment) }}
+            </div>
+            <div class="text-gray-600">Average Sentiment Score</div>
+        </div>
+
+        <!-- Sentiment Distribution -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex space-x-4">
+                <div class="text-green-600">
+                    <div class="text-xl font-bold">{{ summary.sentiment_distribution.positive }}</div>
+                    <div class="text-sm">Positive</div>
+                </div>
+                <div class="text-red-600">
+                    <div class="text-xl font-bold">{{ summary.sentiment_distribution.negative }}</div>
+                    <div class="text-sm">Negative</div>
+                </div>
+                <div class="text-gray-600">
+                    <div class="text-xl font-bold">{{ summary.sentiment_distribution.neutral }}</div>
+                    <div class="text-sm">Neutral</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sentiment Timeline Chart -->
+    <div class="bg-white rounded-lg shadow p-6 mb-8">
+        <h2 class="text-xl font-bold mb-4">Sentiment Timeline</h2>
+        <div id="sentimentChart" style="height: 300px;"></div>
+    </div>
+
+    <!-- Articles List -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="p-6">
+            <h2 class="text-xl font-bold mb-4">Recent Articles</h2>
+        </div>
+        <div class="border-t">
+            {% for article in articles %}
+            <div class="p-6 {% if not loop.last %}border-b{% endif %}">
+                <h3 class="text-lg font-semibold mb-2">
+                    <a href="{{ article.url }}" target="_blank" class="hover:text-blue-600">
+                        {{ article.title }}
+                    </a>
+                </h3>
+                <div class="flex items-center space-x-4 text-sm text-gray-600 mb-2">
+                    <span>{{ article.source }}</span>
+                    <span>{{ article.published_at }}</span>
+                    <span class="
+                        {% if article.sentiment.sentiment == 'POSITIVE' %}text-green-600
+                        {% elif article.sentiment.sentiment == 'NEGATIVE' %}text-red-600
+                        {% else %}text-gray-600{% endif %}
+                    ">
+                        {{ article.sentiment.sentiment }}
+                        ({{ "%.2f"|format(article.sentiment.score) }})
+                    </span>
+                </div>
+                <p class="text-gray-700">{{ article.content[:200] }}...</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Load Charts.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Initialize Charts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Sentiment Timeline Chart
+    const ctx = document.getElementById('sentimentChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ chart_data.dates|tojson }},
+            datasets: [{
+                label: 'Sentiment Score',
+                data: {{ chart_data.scores|tojson }},
+                borderColor: 'rgb(59, 130, 246)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    suggestedMin: -1,
+                    suggestedMax: 1
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
