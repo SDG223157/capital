@@ -1,19 +1,27 @@
 # app/tests/run_tests.py
+
 import unittest
 import sys
 import os
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Get the parent directory of 'app'
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Add the project root to Python path
+sys.path.insert(0, project_root)
 
 def run_tests():
-    # Get all tests from the news directory
+    """Run all tests in the news directory"""
+    # Get the directory containing the tests
+    test_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Discover and run tests
     loader = unittest.TestLoader()
-    start_dir = os.path.join(os.path.dirname(__file__), 'news')
-    suite = loader.discover(start_dir, pattern='test_*.py')
-
-    # Run tests
+    suite = loader.discover(start_dir=test_dir, pattern='test_*.py')
+    
     runner = unittest.TextTestRunner(verbosity=2)
-    runner.run(suite)
+    return runner.run(suite)
 
 if __name__ == '__main__':
-    run_tests()
+    result = run_tests()
+    sys.exit(not result.wasSuccessful())
