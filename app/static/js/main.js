@@ -122,3 +122,127 @@ function togglePassword(button) {
 
 // Make togglePassword globally available
 window.togglePassword = togglePassword;
+
+
+
+
+// main.js
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if elements exist before trying to use them
+    const searchForm = document.getElementById('searchForm');
+    const searchResults = document.getElementById('searchResults');
+    const searchButton = document.getElementById('searchButton');
+    const resetButton = document.getElementById('resetButton');
+    const fetchButton = document.getElementById('fetchNews');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const resultsCount = document.getElementById('resultsCount');
+
+    // Only proceed if we're on the news search page
+    if (searchForm && fetchButton) {
+        // Set default dates if not set
+        const endDateInput = document.getElementById('end_date');
+        const startDateInput = document.getElementById('start_date');
+        
+        if (endDateInput && !endDateInput.value) {
+            const today = new Date().toISOString().split('T')[0];
+            endDateInput.value = today;
+        }
+        if (startDateInput && !startDateInput.value) {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            startDateInput.value = thirtyDaysAgo.toISOString().split('T')[0];
+        }
+
+        // Helper function to show/hide loading state
+        function setLoading(isLoading) {
+            if (loadingIndicator) {
+                loadingIndicator.classList.toggle('hidden', !isLoading);
+            }
+            // Disable buttons during loading
+            [searchButton, resetButton, fetchButton].forEach(button => {
+                if (button) {
+                    button.disabled = isLoading;
+                }
+            });
+        }
+
+        // Fetch button handler
+        fetchButton.addEventListener('click', async function() {
+            try {
+                const symbol = document.getElementById('symbol')?.value?.trim();
+                
+                if (!symbol) {
+                    alert('Please enter a stock symbol');
+                    return;
+                }
+
+                setLoading(true);
+                console.log('Fetching news for symbol:', symbol);
+
+                const response = await fetch('/news/api/fetch', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        symbols: [symbol],
+                        limit: 10
+                    })
+                });
+
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch news: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Fetch response:', data);
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                alert(`Successfully fetched ${data.articles?.length || 0} articles. You can now search for them.`);
+                
+                // Trigger a search with the current symbol
+                if (searchForm) {
+                    const formData = new FormData(searchForm);
+                    const searchParams = new URLSearchParams(formData);
+                    window.location.href = `/news/search?${searchParams.toString()}`;
+                }
+
+            } catch (error) {
+                console.error('Error fetching news:', error);
+                alert('Failed to fetch news: ' + error.message);
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        // Form submit handler
+        searchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(searchForm);
+            const searchParams = new URLSearchParams(formData);
+            window.location.href = `/news/search?${searchParams.toString()}`;
+        });
+
+        // Reset button handler
+        if (resetButton) {
+            resetButton.addEventListener('click', function() {
+                searchForm.reset();
+                if (endDateInput && startDateInput) {
+                    const today = new Date();
+                    endDateInput.value = today.toISOString().split('T')[0];
+                    const thirtyDaysAgo = new Date();
+                    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                    startDateInput.value = thirtyDaysAgo.toISOString().split('T')[0];
+                }
+                searchForm.dispatchEvent(new Event('submit'));
+            });
+        }
+    }
+});
