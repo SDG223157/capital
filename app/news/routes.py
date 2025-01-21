@@ -209,3 +209,22 @@ def test_fetch():
     except Exception as e:
         logger.error(f"Error in test fetch: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
+    
+# In app/news/routes.py
+
+@bp.route('/test')
+def test():
+    return 'News blueprint is working!'
+# Add this to your routes.py
+
+@bp.route('/debug-routes')
+def debug_routes():
+    """List all registered routes"""
+    output = []
+    for rule in bp.url_map.iter_rules():
+        output.append({
+            "endpoint": rule.endpoint,
+            "methods": list(rule.methods),
+            "path": str(rule)
+        })
+    return jsonify(output)
