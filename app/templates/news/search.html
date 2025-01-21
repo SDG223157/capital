@@ -16,7 +16,7 @@
 
     <!-- Search Form -->
     <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-        <form id="searchForm" method="GET" class="space-y-6">
+        <form id="searchForm" class="space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Keyword Search -->
                 <div>
@@ -68,16 +68,21 @@
             <!-- Action Buttons -->
             <div class="flex justify-end space-x-3">
                 <button type="button" id="resetButton"
-                    class="btn-hover-effect px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        class="btn-hover-effect px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                     Reset
                 </button>
                 <button type="submit" id="searchButton"
-                    class="btn-hover-effect px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        class="btn-hover-effect px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                     Search
                 </button>
                 <button type="button" id="fetchNews"
-                    class="btn-hover-effect px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                    Fetch Latest News
+                        class="btn-hover-effect relative px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                    <span class="inline-flex items-center">
+                        <span class="fetch-text">Fetch Latest News</span>
+                        <span class="fetch-loading hidden ml-2">
+                            <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent"></span>
+                        </span>
+                    </span>
                 </button>
             </div>
         </form>
@@ -170,7 +175,7 @@
                 <div class="flex w-0 flex-1">
                     {% if search_params.page > 1 %}
                     <button type="button" data-page="{{ search_params.page - 1 }}"
-                        class="inline-flex items-center border-t-2 border-transparent pt-4 pr-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700">
+                            class="inline-flex items-center border-t-2 border-transparent pt-4 pr-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700">
                         <svg class="mr-3 h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M7.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l2.293 2.293a1 1 0 010 1.414z" clip-rule="evenodd" />
                         </svg>
@@ -184,7 +189,7 @@
                 <div class="flex w-0 flex-1 justify-end">
                     {% if total > search_params.page * search_params.per_page %}
                     <button type="button" data-page="{{ search_params.page + 1 }}"
-                        class="inline-flex items-center border-t-2 border-transparent pt-4 pl-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700">
+                            class="inline-flex items-center border-t-2 border-transparent pt-4 pl-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700">
                         Next
                         <svg class="ml-3 h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />

@@ -234,6 +234,38 @@
         height: 20%;
     }
 }
+/* Notification styles */
+.notification {
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease-out;
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* Button loading state */
+.fetch-loading {
+    transition: all 0.3s ease-out;
+}
+
+/* Disable button styles */
+button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
 
 /* Print styles */
 @media print {
