@@ -48,6 +48,7 @@ def index():
 @login_required
 def search():
     """Search news articles"""
+    logger.debug(f"Search request received with params: {request.args}")
     try:
         keyword = request.args.get('keyword')
         symbol = request.args.get('symbol')

@@ -1,240 +1,117 @@
-// app/static/js/news.js
+document.addEventListener('DOMContentLoaded', function() {
+    const searchForm = document.getElementById('searchForm');
+    const searchResults = document.getElementById('searchResults');
 
-class NewsAnalysis {
-    constructor(symbol) {
-        this.symbol = symbol;
-        this.charts = {};
-        this.initializeCharts();
-        this.setupEventListeners();
-        this.updateInterval = null;
-        this.startAutoRefresh();
-    }
-
-    initializeCharts() {
-        // Initialize sentiment timeline chart
-        const timelineCtx = document.getElementById('sentimentChart')?.getContext('2d');
-        if (timelineCtx) {
-            this.charts.timeline = new Chart(timelineCtx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'Sentiment Score',
-                        data: [],
-                        borderColor: 'rgb(59, 130, 246)',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            callbacks: {
-                                label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) {
-                                        label += ': ';
-                                    }
-                                    if (context.parsed.y !== null) {
-                                        label += context.parsed.y.toFixed(2);
-                                    }
-                                    return label;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: false,
-                            suggestedMin: -1,
-                            suggestedMax: 1,
-                            ticks: {
-                                callback: function(value) {
-                                    return value.toFixed(2);
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-    }
-
-    setupEventListeners() {
-        // Setup refresh button
-        const refreshBtn = document.getElementById('refreshData');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => this.refreshData());
-        }
-
-        // Setup date range filter
-        const dateFilter = document.getElementById('dateRange');
-        if (dateFilter) {
-            dateFilter.addEventListener('change', () => this.refreshData());
-        }
-    }
-
-    async refreshData() {
-        try {
-            this.setLoading(true);
-            const dateRange = document.getElementById('dateRange')?.value || '7d';
+    if (searchForm) {
+        searchForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
             
-            // Fetch all data in parallel
-            const [timelineData, analysisData] = await Promise.all([
-                this.fetchTimelineData(dateRange),
-                this.fetchAnalysisData(dateRange)
-            ]);
-
-            // Update visualizations
-            this.updateCharts(timelineData);
-            this.updateAnalysis(analysisData);
-
-        } catch (error) {
-            console.error('Error refreshing data:', error);
-            this.showError('Failed to refresh news analysis data');
-        } finally {
-            this.setLoading(false);
-        }
+            const formData = new FormData(searchForm);
+            const searchParams = new URLSearchParams(formData);
+            
+            try {
+                const response = await fetch(`${searchForm.action}?${searchParams.toString()}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Update the results count
+                const resultsCount = document.querySelector('.results-count');
+                if (resultsCount) {
+                    resultsCount.textContent = `${data.total} articles found`;
+                }
+                
+                // Update the results container
+                if (searchResults && data.articles) {
+                    renderSearchResults(data.articles);
+                }
+                
+                // Update URL with search parameters without reloading
+                const url = new URL(window.location);
+                formData.forEach((value, key) => {
+                    if (value) {
+                        url.searchParams.set(key, value);
+                    } else {
+                        url.searchParams.delete(key);
+                    }
+                });
+                window.history.pushState({}, '', url);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while searching. Please try again.');
+            }
+        });
     }
 
-    async fetchTimelineData(dateRange) {
-        const response = await fetch(`/api/news/${this.symbol}/timeline?range=${dateRange}`);
-        if (!response.ok) throw new Error('Failed to fetch timeline data');
-        return await response.json();
-    }
-
-    async fetchAnalysisData(dateRange) {
-        const response = await fetch(`/api/news/${this.symbol}/analysis?range=${dateRange}`);
-        if (!response.ok) throw new Error('Failed to fetch analysis data');
-        return await response.json();
-    }
-
-    updateCharts(timelineData) {
-        if (this.charts.timeline) {
-            this.charts.timeline.data.labels = timelineData.dates;
-            this.charts.timeline.data.datasets[0].data = timelineData.sentiments;
-            this.charts.timeline.update();
-        }
-    }
-
-    updateAnalysis(data) {
-        // Update summary statistics
-        this.updateElement('totalArticles', data.total_articles);
-        this.updateElement('positiveCount', data.sentiment_distribution.positive);
-        this.updateElement('negativeCount', data.sentiment_distribution.negative);
-        this.updateElement('neutralCount', data.sentiment_distribution.neutral);
-        
-        // Update average sentiment
-        const avgSentiment = document.getElementById('averageSentiment');
-        if (avgSentiment) {
-            avgSentiment.textContent = data.average_sentiment.toFixed(2);
-            avgSentiment.className = this.getSentimentClass(data.average_sentiment);
-        }
-
-        // Update articles list
-        this.updateArticlesList(data.articles);
-    }
-
-    updateArticlesList(articles) {
-        const container = document.getElementById('articlesList');
-        if (!container) return;
-
-        container.innerHTML = articles.map(article => `
-            <div class="news-card mb-4">
-                <h3 class="text-lg font-semibold mb-2">
-                    <a href="${article.url}" target="_blank" class="hover:text-blue-600">
-                        ${this.escapeHtml(article.title)}
-                    </a>
-                </h3>
-                <div class="flex items-center space-x-4 text-sm text-gray-600 mb-2">
-                    <span>${article.source}</span>
-                    <span>${this.formatDate(article.published_at)}</span>
-                    <span class="sentiment-badge ${this.getSentimentBadgeClass(article.sentiment.score)}">
-                        ${article.sentiment.label} (${article.sentiment.score.toFixed(2)})
-                    </span>
-                </div>
-                <p class="text-gray-700">${this.escapeHtml(article.summary)}</p>
-            </div>
-        `).join('');
-    }
-
-    updateElement(id, value) {
-        const element = document.getElementById(id);
-        if (element) {
-            element.textContent = value;
-        }
-    }
-
-    getSentimentClass(score) {
-        return score > 0.05 ? 'text-green-600' :
-               score < -0.05 ? 'text-red-600' :
-               'text-gray-600';
-    }
-
-    getSentimentBadgeClass(score) {
-        return score > 0.05 ? 'positive' :
-               score < -0.05 ? 'negative' :
-               'neutral';
-    }
-
-    formatDate(dateString) {
-        return new Date(dateString).toLocaleString();
-    }
-
-    escapeHtml(unsafe) {
-        return unsafe
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-    }
-
-    setLoading(isLoading) {
-        const loader = document.getElementById('dataLoader');
-        if (loader) {
-            loader.style.display = isLoading ? 'block' : 'none';
-        }
-    }
-
-    showError(message) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mt-4';
-        errorDiv.innerHTML = `
-            <strong class="font-bold">Error!</strong>
-            <span class="block sm:inline">${this.escapeHtml(message)}</span>
-        `;
-
-        const container = document.querySelector('.container');
-        if (container) {
-            container.insertBefore(errorDiv, container.firstChild);
-            setTimeout(() => errorDiv.remove(), 5000);
-        }
-    }
-
-    startAutoRefresh() {
-        // Refresh every 5 minutes
-        this.updateInterval = setInterval(() => this.refreshData(), 300000);
-    }
-
-    stopAutoRefresh() {
-        if (this.updateInterval) {
-            clearInterval(this.updateInterval);
-            this.updateInterval = null;
-        }
-    }
-}
-
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', () => {
-    const symbolElement = document.getElementById('symbolData');
-    if (symbolElement) {
-        const symbol = symbolElement.dataset.symbol;
-        window.newsAnalysis = new NewsAnalysis(symbol);
+    // Reset button handler
+    const resetButton = searchForm.querySelector('button[type="reset"]');
+    if (resetButton) {
+        resetButton.addEventListener('click', function() {
+            // Clear all form fields
+            searchForm.reset();
+            // Optionally trigger a new search with empty parameters
+            searchForm.dispatchEvent(new Event('submit'));
+        });
     }
 });
+
+function renderSearchResults(articles) {
+    const searchResults = document.getElementById('searchResults');
+    if (!searchResults) return;
+
+    searchResults.innerHTML = articles.map(article => `
+        <div class="border-b border-gray-200 pb-4 last:border-b-0">
+            <div class="flex justify-between items-start mb-2">
+                <h3 class="text-lg font-medium">
+                    <a href="${article.url}" target="_blank" class="text-blue-600 hover:text-blue-800">
+                        ${article.title}
+                    </a>
+                </h3>
+                <span class="text-sm text-gray-500">${article.published_at}</span>
+            </div>
+            
+            <div class="mb-2">
+                <p class="text-gray-600">${article.summary.brief}</p>
+            </div>
+
+            ${article.summary.key_points ? `
+                <div class="mb-2">
+                    <h4 class="text-sm font-semibold text-gray-700">Key Points:</h4>
+                    <p class="text-sm text-gray-600">${article.summary.key_points}</p>
+                </div>
+            ` : ''}
+
+            ${article.summary.market_impact ? `
+                <div class="mb-2">
+                    <h4 class="text-sm font-semibold text-gray-700">Market Impact:</h4>
+                    <p class="text-sm text-gray-600">${article.summary.market_impact}</p>
+                </div>
+            ` : ''}
+
+            <div class="flex flex-wrap gap-2">
+                ${article.symbols.map(symbol => `
+                    <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm">${symbol}</span>
+                `).join('')}
+                
+                <span class="bg-${article.sentiment.overall_sentiment.toLowerCase()}-100 
+                           text-${article.sentiment.overall_sentiment.toLowerCase()}-700 
+                           px-2 py-1 rounded text-sm">
+                    ${article.sentiment.overall_sentiment}
+                    (${(article.sentiment.confidence * 100).toFixed(1)}%)
+                </span>
+                
+                <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm">
+                    ${article.source}
+                </span>
+            </div>
+        </div>
+    `).join('');
+}
