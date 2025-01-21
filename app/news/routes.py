@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required
-from app.utils.analysis.analysis_service import NewsAnalysisService
+from app.utils.analysis.news_service import NewsAnalysisService
 from datetime import datetime, timedelta
 import logging
 
