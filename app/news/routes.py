@@ -119,9 +119,9 @@ def search():
 def fetch_news():
     """Manually trigger news fetch for specific symbols"""
     try:
-        logger.debug("Received fetch news request")
+        logger.debug("Received fetch news request")  # Add debug logging
         data = request.get_json()
-        logger.debug(f"Request data: {data}")
+        logger.debug(f"Request data: {data}")  # Add debug logging
         
         symbols = data.get('symbols', [])
         limit = int(data.get('limit', 10))
@@ -144,7 +144,6 @@ def fetch_news():
     except Exception as e:
         logger.error(f"Error fetching news: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
-
 @bp.route('/api/sentiment')
 @login_required
 def get_sentiment():

@@ -567,3 +567,56 @@ class NewsApp {
 document.addEventListener('DOMContentLoaded', () => {
     window.newsApp = new NewsApp();
 });
+
+// Add this logging to see if the click event is being triggered
+fetchButton.addEventListener('click', async function() {
+    try {
+        console.log('Fetch button clicked');  // Debug log
+        
+        const symbol = document.getElementById('symbol').value;
+        console.log('Symbol value:', symbol);  // Debug log
+        
+        if (!symbol) {
+            alert('Please enter a stock symbol');
+            return;
+        }
+
+        setLoading(true);
+        console.log('Sending fetch request...'); // Debug log
+
+        const response = await fetch('/news/api/fetch', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                symbols: [symbol],
+                limit: 10
+            })
+        });
+
+        console.log('Fetch response:', response); // Debug log
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch news: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Fetch data:', data); // Debug log
+
+        alert(`Successfully fetched ${data.articles?.length || 0} articles. You can now search for them.`);
+        
+        // Update search results
+        const formData = new FormData(searchForm);
+        formData.set('symbol', symbol);
+        await performSearch(formData);
+
+    } catch (error) {
+        console.error('Fetch error:', error);
+        alert('Failed to fetch news: ' + error.message);
+    } finally {
+        setLoading(false);
+    }
+});
