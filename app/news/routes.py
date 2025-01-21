@@ -25,18 +25,18 @@ def fetch_news(symbol):
         # days = request.args.get('days', default=5, type=int)
 
         news_service = NewsAnalysisService()
-        symbols = [symbol]
+        # symbols = [symbol]
         try:
             # end_date = datetime.now()
             # start_date = end_date - timedelta(days=days)
             
             # Get news data
             articles = news_service.get_news(
-                symbols=symbols
-                
+                symbols=[symbol],
+                limit=3
                
             )
-            logger.info(f"Symbols: {symbols}")
+            logger.info(f"Symbols: {[symbol]}")
             logger.info(f"Articles: {articles}")
 
             return jsonify(articles)
