@@ -154,6 +154,7 @@ def fetch_news():
 def cleanup(exception):
     """Cleanup resources after each request"""
     try:
-        news_service.close()
+        if hasattr(news_service, 'close'):
+            news_service.close()
     except Exception as e:
         logger.error(f"Error in cleanup: {str(e)}")
