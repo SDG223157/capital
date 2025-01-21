@@ -9,28 +9,29 @@ class TestNewsService(unittest.TestCase):
     def setUp(self):
         """Set up test cases"""
         self.api_token = "test_token"
-        # Using patch.dict for environment variables
         with patch.dict('os.environ', {'APIFY_TOKEN': self.api_token}):
             self.news_service = NewsService()
 
-    @patch('apify_client.ApifyClient')
+    @patch('app.utils.news.news_service.ApifyClient')  # Change patch location
     def test_get_news(self, MockApifyClient):
         """Test successful news retrieval"""
         # Test data
         mock_data = [{'title': 'Test News'}]
         
-        # Create mock objects
-        mock_items = Mock()
-        mock_items.iterate_items = Mock(return_value=mock_data)
+        # Mock dataset
+        mock_dataset = Mock()
+        mock_dataset.iterate_items = Mock(return_value=mock_data)
         
-        # Mock the client
+        # Mock actor
+        mock_actor = Mock()
+        mock_actor.call = Mock(return_value={'defaultDatasetId': 'test_id'})
+        
+        # Mock client
         mock_client = Mock()
-        mock_client.actor = Mock()
-        mock_client.actor.return_value = Mock()
-        mock_client.actor.return_value.call = Mock(return_value={'defaultDatasetId': 'test_id'})
-        mock_client.dataset = Mock(return_value=mock_items)
+        mock_client.actor = Mock(return_value=mock_actor)
+        mock_client.dataset = Mock(return_value=mock_dataset)
         
-        # Set up the mock client
+        # Set up the main mock
         MockApifyClient.return_value = mock_client
 
         # Make the API call
@@ -39,10 +40,10 @@ class TestNewsService(unittest.TestCase):
         # Verify results
         self.assertEqual(result, mock_data)
         
-        # Verify mock calls
+        # Verify mock calls were made correctly
         MockApifyClient.assert_called_once_with(self.api_token)
-        mock_client.actor.assert_called_once()
-        mock_client.actor.return_value.call.assert_called_once_with(
+        mock_client.actor.assert_called_once_with("mscraper/tradingview-news-scraper")
+        mock_actor.call.assert_called_once_with(
             run_input={
                 "symbols": ["AAPL"],
                 "proxy": {"useApifyProxy": True},
@@ -50,6 +51,7 @@ class TestNewsService(unittest.TestCase):
             }
         )
         mock_client.dataset.assert_called_once_with('test_id')
+        mock_dataset.iterate_items.assert_called_once()
 
     def test_no_api_token(self):
         """Test initialization without API token"""
@@ -57,10 +59,9 @@ class TestNewsService(unittest.TestCase):
             with self.assertRaises(ValueError):
                 NewsService()
 
-    @patch('apify_client.ApifyClient')
+    @patch('app.utils.news.news_service.ApifyClient')  # Change patch location
     def test_api_error(self, MockApifyClient):
         """Test error handling during API call"""
-        # Mock API error
         mock_client = Mock()
         mock_client.actor = Mock(side_effect=Exception("API Error"))
         MockApifyClient.return_value = mock_client
@@ -68,18 +69,18 @@ class TestNewsService(unittest.TestCase):
         result = self.news_service.get_news("AAPL")
         self.assertEqual(result, [])
 
-    @patch('apify_client.ApifyClient')
-    def test_empty_response(self, MockApifyClient):
-        """Test handling of empty response"""
-        # Mock empty response
-        mock_items = Mock()
-        mock_items.iterate_items = Mock(return_value=[])
+    @patch('app.utils.news.news_service.ApifyClient')  # Change patch location
+    def test_empty_dataset(self, MockApifyClient):
+        """Test handling of empty dataset"""
+        mock_dataset = Mock()
+        mock_dataset.iterate_items = Mock(return_value=[])
+        
+        mock_actor = Mock()
+        mock_actor.call = Mock(return_value={'defaultDatasetId': 'test_id'})
         
         mock_client = Mock()
-        mock_client.actor = Mock()
-        mock_client.actor.return_value = Mock()
-        mock_client.actor.return_value.call = Mock(return_value={'defaultDatasetId': 'test_id'})
-        mock_client.dataset = Mock(return_value=mock_items)
+        mock_client.actor = Mock(return_value=mock_actor)
+        mock_client.dataset = Mock(return_value=mock_dataset)
         
         MockApifyClient.return_value = mock_client
 

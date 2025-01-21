@@ -7,16 +7,6 @@ import os
 
 class NewsService:
     def __init__(self, api_token: Optional[str] = None):
-        """
-        Initialize the NewsService
-        
-        Args:
-            api_token (str, optional): Apify API token. If not provided,
-                                     will use APIFY_TOKEN environment variable.
-        
-        Raises:
-            ValueError: If no API token is provided or found in environment.
-        """
         self.api_token = api_token or os.getenv('APIFY_TOKEN')
         if not self.api_token:
             raise ValueError("API token must be provided or set in APIFY_TOKEN environment variable")
@@ -25,18 +15,12 @@ class NewsService:
         self.logger = logging.getLogger(__name__)
 
     def get_news(self, symbol: str) -> List[Dict]:
-        """
-        Get news articles for a given symbol
-        
-        Args:
-            symbol (str): Stock symbol to get news for
-            
-        Returns:
-            List[Dict]: List of news articles. Empty list if error occurs.
-        """
         try:
+            # Get the actor instance
+            actor = self.client.actor("mscraper/tradingview-news-scraper")
+            
             # Run the actor
-            run = self.client.actor("mscraper/tradingview-news-scraper").call(
+            run = actor.call(
                 run_input={
                     "symbols": [symbol],
                     "proxy": {"useApifyProxy": True},
@@ -50,10 +34,6 @@ class NewsService:
 
             # Get the dataset items
             dataset = self.client.dataset(run['defaultDatasetId'])
-            if not dataset:
-                self.logger.error("Could not get dataset")
-                return []
-
             return list(dataset.iterate_items())
 
         except Exception as e:
