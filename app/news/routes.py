@@ -4,6 +4,8 @@ from app.utils.analysis.news_service import NewsAnalysisService
 from datetime import datetime, timedelta
 import logging
 
+from app.utils.config.news_config import NewsConfig
+
 logger = logging.getLogger(__name__)
 bp = Blueprint('news', __name__, url_prefix='/news')
 
@@ -179,36 +181,42 @@ def cleanup(exception):
         
 # Add this to your routes.py temporarily for testing
 
-@bp.route('/test-fetch', methods=['GET'])
-@login_required
+# In app/news/routes.py
+
+@bp.route('/test-fetch')
 def test_fetch():
-    """Test endpoint to fetch and store news"""
+    """Test the news fetching functionality"""
     try:
-        logger.debug("Starting news fetch test...")
+        # Check if APIFY_TOKEN is set
+        logger.debug(f"APIFY_TOKEN configured: {'yes' if NewsConfig.APIFY_TOKEN else 'no'}")
         
-        # Check if API token is configured
-        if not hasattr(news_service.analyzer, 'client') or not news_service.analyzer.client:
-            logger.error("API client not properly initialized")
-            return jsonify({'error': 'API client not configured'}), 500
-            
-        # Fetch news for Apple
-        logger.debug("Attempting to fetch news for NASDAQ:AAPL")
+        # Test fetching news
         articles = news_service.fetch_and_analyze_news(
             symbols=["NASDAQ:AAPL"],
-            limit=10
+            limit=5
         )
         
-        logger.debug(f"Fetch complete. Articles retrieved: {len(articles)}")
+        # Log results
         if articles:
-            logger.debug(f"Sample article title: {articles[0].get('title', 'No title')}")
+            logger.debug(f"Successfully fetched {len(articles)} articles")
+            # Log first article details
+            if len(articles) > 0:
+                logger.debug(f"First article: {articles[0].get('title', 'No title')}")
+        else:
+            logger.error("No articles fetched")
         
         return jsonify({
-            'message': f'Successfully fetched {len(articles)} articles',
-            'articles': articles
+            'success': bool(articles),
+            'article_count': len(articles),
+            'first_article': articles[0] if articles else None
         })
+        
     except Exception as e:
         logger.error(f"Error in test fetch: {str(e)}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
     
 # In app/news/routes.py
 

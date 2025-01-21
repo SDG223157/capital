@@ -14,7 +14,7 @@ class NewsAnalysisService:
         self.logger = logging.getLogger(__name__)
         
         # Initialize components
-        self.analyzer = NewsAnalyzer(NewsConfig.APIFY_TOKEN)
+        self.analyzer = NewsAnalyzer("apify_api_ewwcE7264pu0eRgeUBL2RaFk6rmCdy4AaAU9")
         self.db = NewsService()
         
         # Initialize database
