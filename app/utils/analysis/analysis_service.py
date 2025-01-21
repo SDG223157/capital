@@ -722,12 +722,12 @@ class NewsAnalysisService:
             self.logger.error(f"Error initializing VADER: {e}")
             self.vader = None
 
-    def get_news(self, symbols: List[str],  days: int = 5) -> List[Dict]:
+    def get_news(self, symbols: List[str], limit: int = 10) -> List[Dict]:
         """Fetch news from TradingView via Apify"""
         run_input = {
             "symbols": symbols,
             "proxy": {"useApifyProxy": True, "apifyProxyCountry": "US"},
-            "resultsLimit": 10,
+            "resultsLimit": limit,
         }
         
         try:
