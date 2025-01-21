@@ -1,127 +1,164 @@
 {% extends "base.html" %}
 
+{% block title %}News Search{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/news.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <!-- Search Form -->
-    <div class="bg-white shadow rounded-lg p-6 mb-8">
-        <h2 class="text-2xl font-bold mb-4">News Search</h2>
-        <form method="GET" action="{{ url_for('search_news') }}" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h1 class="text-2xl font-bold mb-6">News Search</h1>
+        <form id="searchForm" method="GET" action="{{ url_for('news.search') }}" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Keyword Search -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Symbol</label>
-                    <input type="text" name="symbol" value="{{ symbol }}"
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    <label for="keyword" class="block text-sm font-medium text-gray-700">Keyword</label>
+                    <input type="text" name="keyword" id="keyword" 
+                           value="{{ search_params.keyword }}"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
+
+                <!-- Symbol Search -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Start Date</label>
-                    <input type="date" name="start_date" value="{{ start_date }}"
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    <label for="symbol" class="block text-sm font-medium text-gray-700">Symbol</label>
+                    <input type="text" name="symbol" id="symbol" 
+                           value="{{ search_params.symbol }}"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
+
+                <!-- Sentiment Filter -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">End Date</label>
-                    <input type="date" name="end_date" value="{{ end_date }}"
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    <label for="sentiment" class="block text-sm font-medium text-gray-700">Sentiment</label>
+                    <select name="sentiment" id="sentiment" 
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="">All</option>
+                        <option value="POSITIVE" {% if search_params.sentiment == 'POSITIVE' %}selected{% endif %}>Positive</option>
+                        <option value="NEUTRAL" {% if search_params.sentiment == 'NEUTRAL' %}selected{% endif %}>Neutral</option>
+                        <option value="NEGATIVE" {% if search_params.sentiment == 'NEGATIVE' %}selected{% endif %}>Negative</option>
+                    </select>
                 </div>
-                <div class="flex items-end">
-                    <button type="submit"
-                            class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
-                        Search
-                    </button>
+
+                <!-- Date Range -->
+                <div>
+                    <label for="start_date" class="block text-sm font-medium text-gray-700">Start Date</label>
+                    <input type="date" name="start_date" id="start_date" 
+                           value="{{ search_params.start_date }}"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
+
+                <div>
+                    <label for="end_date" class="block text-sm font-medium text-gray-700">End Date</label>
+                    <input type="date" name="end_date" id="end_date" 
+                           value="{{ search_params.end_date }}"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3">
+                <button type="reset" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                    Reset
+                </button>
+                <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+                    Search
+                </button>
             </div>
         </form>
     </div>
 
-    <!-- Sentiment Summary -->
-    {% if sentiment_summary %}
-    <div class="bg-white shadow rounded-lg p-6 mb-8">
-        <h3 class="text-xl font-bold mb-4">Sentiment Analysis</h3>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="text-center">
-                <div class="text-2xl font-bold">{{ sentiment_summary.total_articles }}</div>
-                <div class="text-gray-600">Total Articles</div>
-            </div>
-            <div class="text-center">
-                <div class="text-2xl font-bold text-green-600">
-                    {{ sentiment_summary.sentiment_distribution.positive }}
-                </div>
-                <div class="text-gray-600">Positive</div>
-            </div>
-            <div class="text-center">
-                <div class="text-2xl font-bold text-red-600">
-                    {{ sentiment_summary.sentiment_distribution.negative }}
-                </div>
-                <div class="text-gray-600">Negative</div>
-            </div>
-            <div class="text-center">
-                <div class="text-2xl font-bold text-gray-600">
-                    {{ sentiment_summary.sentiment_distribution.neutral }}
-                </div>
-                <div class="text-gray-600">Neutral</div>
-            </div>
+    <!-- Search Results -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-semibold">Search Results</h2>
+            <span class="text-gray-600">{{ total }} articles found</span>
         </div>
-    </div>
-    {% endif %}
 
-    <!-- Results -->
-    {% if articles %}
-    <div class="bg-white shadow rounded-lg p-6">
-        <h3 class="text-xl font-bold mb-4">Search Results</h3>
-        
-        <!-- Articles List -->
-        <div class="space-y-6">
+        <!-- Results List -->
+        <div id="searchResults" class="space-y-6">
             {% for article in articles %}
-            <div class="border-b border-gray-200 pb-6 last:border-b-0">
-                <h4 class="text-lg font-semibold">{{ article.title }}</h4>
-                <div class="flex items-center space-x-4 text-sm text-gray-600 my-2">
-                    <span>{{ article.source }}</span>
-                    <span>{{ article.published_at }}</span>
-                    <span class="
-                        {% if article.sentiment.overall_sentiment == 'POSITIVE' %}text-green-600
-                        {% elif article.sentiment.overall_sentiment == 'NEGATIVE' %}text-red-600
-                        {% else %}text-gray-600{% endif %}
-                    ">
-                        {{ article.sentiment.overall_sentiment }}
-                    </span>
+            <div class="border-b border-gray-200 pb-4 last:border-b-0">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-lg font-medium">
+                        <a href="{{ article.url }}" target="_blank" class="text-blue-600 hover:text-blue-800">
+                            {{ article.title }}
+                        </a>
+                    </h3>
+                    <span class="text-sm text-gray-500">{{ article.published_at }}</span>
                 </div>
-                <p class="text-gray-700 mb-2">{{ article.summary.brief }}</p>
-                {% if article.metrics.percentages %}
-                <div class="text-sm text-gray-600">
-                    <strong>Key Metrics:</strong>
-                    {% for metric in article.metrics.percentages %}
-                    <span class="inline-block bg-gray-100 rounded px-2 py-1 mr-2 mb-2">
-                        {{ metric.value }}%
-                    </span>
-                    {% endfor %}
+                
+                <!-- Article Summary -->
+                <div class="mb-2">
+                    <p class="text-gray-600">{{ article.summary.brief }}</p>
+                </div>
+
+                <!-- Key Points -->
+                {% if article.summary.key_points %}
+                <div class="mb-2">
+                    <h4 class="text-sm font-semibold text-gray-700">Key Points:</h4>
+                    <p class="text-sm text-gray-600">{{ article.summary.key_points }}</p>
                 </div>
                 {% endif %}
+
+                <!-- Market Impact -->
+                {% if article.summary.market_impact %}
+                <div class="mb-2">
+                    <h4 class="text-sm font-semibold text-gray-700">Market Impact:</h4>
+                    <p class="text-sm text-gray-600">{{ article.summary.market_impact }}</p>
+                </div>
+                {% endif %}
+
+                <!-- Tags and Metadata -->
+                <div class="flex flex-wrap gap-2">
+                    {% for symbol in article.symbols %}
+                    <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm">{{ symbol }}</span>
+                    {% endfor %}
+                    
+                    <span class="bg-{{ article.sentiment.overall_sentiment|lower }}-100 text-{{ article.sentiment.overall_sentiment|lower }}-700 px-2 py-1 rounded text-sm">
+                        {{ article.sentiment.overall_sentiment|title }}
+                        ({{ "%.1f"|format(article.sentiment.confidence * 100) }}%)
+                    </span>
+                    
+                    <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm">
+                        {{ article.source }}
+                    </span>
+                </div>
             </div>
             {% endfor %}
         </div>
 
         <!-- Pagination -->
-        {% if pagination.total_pages > 1 %}
-        <div class="flex justify-center items-center space-x-2 mt-8">
-            {% if pagination.has_prev %}
-            <a href="{{ url_for('search_news', symbol=symbol, start_date=start_date, end_date=end_date, page=pagination.page-1) }}"
-               class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">Previous</a>
-            {% endif %}
-            
-            <span class="px-4 py-2">
-                Page {{ pagination.page }} of {{ pagination.total_pages }}
-            </span>
-
-            {% if pagination.has_next %}
-            <a href="{{ url_for('search_news', symbol=symbol, start_date=start_date, end_date=end_date, page=pagination.page+1) }}"
-               class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">Next</a>
-            {% endif %}
-        </div>
-        {% endif %}
-    </div>
-    {% else %}
-    <div class="bg-white shadow rounded-lg p-6">
-        <p class="text-center text-gray-600">No articles found for the specified criteria.</p>
-    </div>
-    {% endif %}
-</div>
-{% endblock %}
+        {% if total > search_params.per_page %}
+        <div class="mt-6">
+            <nav class="flex items-center justify-between">
+                <div class="flex-1 flex justify-between sm:hidden">
+                    {% if search_params.page > 1 %}
+                    <a href="{{ url_for('news.search', page=search_params.page-1, **search_params) }}" 
+                       class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        Previous
+                    </a>
+                    {% endif %}
+                    
+                    {% if total > search_params.page * search_params.per_page %}
+                    <a href="{{ url_for('news.search', page=search_params.page+1, **search_params) }}"
+                       class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        Next
+                    </a>
+                    {% endif %}
+                </div>
+                
+                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            Showing
+                            <span class="font-medium">{{ (search_params.page - 1) * search_params.per_page + 1 }}</span>
+                            to
+                            <span class="font-medium">{{ min(search_params.page * search_params.per_page, total) }}</span>
+                            of
+                            <span class="font-medium">{{ total }}</span>
+                            results
+                        </p>
+                    </div>
+                </div>
+            </nav>
