@@ -738,7 +738,51 @@ class NewsAnalysisService:
         except Exception as e:
             self.logger.error(f"Error fetching news: {str(e)}")
             return []
+    def format_articles(self, articles: List[Dict]) -> List[Dict]:
+        """Format and analyze articles"""
+        formatted = []
+        
+        for article in articles:
+            try:
+                # Get the full content
+                content = article.get("descriptionText", "")
+                if not content:
+                    # Try alternate field names that might contain the content
+                    content = (article.get("description", "") or 
+                             article.get("text", "") or 
+                             article.get("content", ""))
+                
+                self.logger.info(f"Content length: {len(content)} characters")
+                
+                published_date = datetime.fromtimestamp(
+                    article.get("published", 0) / 1000
+                ).strftime("%Y-%m-%d %H:%M:%S")
 
+                # Run analyses
+                sentiment = self.analyze_sentiment(content)
+                metrics = self.extract_metrics_with_context(content)
+                
+                formatted_article = {
+                    "title": article.get("title", ""),
+                    "content": content,  # Full content
+                    "summary": self.generate_summary(content),  # Add summary
+                    "url": article.get("storyPath", ""),
+                    "published_at": published_date,
+                    "source": article.get("source", "Unknown"),
+                    "symbols": [symbol["symbol"] for symbol in article.get("relatedSymbols", [])],
+                    "sentiment": sentiment,
+                    "metrics": metrics
+                }
+                
+                formatted.append(formatted_article)
+                
+            except Exception as e:
+                self.logger.error(f"Error formatting article: {str(e)}")
+                continue
+                
+        return formatted
+
+    
     def analyze_sentiment(self, text: str) -> Dict:
         """Analyze text sentiment"""
         try:

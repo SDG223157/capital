@@ -36,10 +36,11 @@ def fetch_news(symbol):
                 limit=3
                
             )
+            formatted_articles = news_service.format_articles(articles)
             logger.info(f"Symbols: {[symbol]}")
-            logger.info(f"Articles: {articles}")
+            logger.info(f"Articles: {formatted_articles}")
 
-            return jsonify(articles)
+            return jsonify(formatted_articles)
 
         except Exception as e:
             logger.error(f"Error getting news: {str(e)}")
