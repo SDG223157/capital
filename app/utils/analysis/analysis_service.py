@@ -10,6 +10,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 from app.utils.data.data_service import DataService
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -738,6 +739,271 @@ class NewsAnalysisService:
         except Exception as e:
             self.logger.error(f"Error fetching news: {str(e)}")
             return []
+    def truncate_text(self, text: str, max_length: int = 5000) -> str:  # Increased max_length to 5000
+        """
+        Truncate text to specified length (if needed)
+        Default is now 5000 characters to ensure we get full content
+        """
+        if not text:
+            return ""
+            
+        # Just return the full text without truncation
+        return text
+
+    def analyze_sentiment(self, text: str) -> Dict:
+        """
+        Analyze sentiment using TextBlob and VADER
+        """
+        try:
+            # TextBlob analysis
+            blob = TextBlob(text)
+            textblob_polarity = blob.sentiment.polarity
+            textblob_subjectivity = blob.sentiment.subjectivity
+            
+            # VADER analysis
+            vader_scores = self.vader.polarity_scores(text)
+            compound_score = vader_scores['compound']
+            
+            # Determine overall sentiment
+            if compound_score >= 0.05:
+                sentiment = "POSITIVE"
+                if compound_score > 0.5:
+                    explanation = "Strong positive sentiment"
+                else:
+                    explanation = "Moderately positive sentiment"
+            elif compound_score <= -0.05:
+                sentiment = "NEGATIVE"
+                if compound_score < -0.5:
+                    explanation = "Strong negative sentiment"
+                else:
+                    explanation = "Moderately negative sentiment"
+            else:
+                sentiment = "NEUTRAL"
+                explanation = "Neutral or mixed sentiment"
+            
+            # Calculate confidence
+            confidence = (abs(compound_score) + abs(textblob_polarity)) / 2
+            
+            return {
+                "overall_sentiment": sentiment,
+                "explanation": explanation,
+                "confidence": confidence,
+                "scores": {
+                    "textblob_polarity": textblob_polarity,
+                    "textblob_subjectivity": textblob_subjectivity,
+                    "vader_compound": compound_score,
+                    "vader_pos": vader_scores['pos'],
+                    "vader_neg": vader_scores['neg'],
+                    "vader_neu": vader_scores['neu']
+                }
+            }
+        except Exception as e:
+            self.logger.error(f"Error in sentiment analysis: {str(e)}")
+            return {
+                "overall_sentiment": "NEUTRAL",
+                "explanation": "Error in analysis",
+                "confidence": 0,
+                "scores": {}
+            }
+
+    def extract_metrics_with_context(self, text: str) -> Dict:
+        """
+        Extract key financial metrics with surrounding context
+        """
+        metrics = {
+            "percentages": [],
+            "percentage_contexts": [],
+            "currencies": [],
+            "currency_contexts": [],
+            "dates": []
+        }
+        
+        try:
+            # Find percentages with context - improved pattern
+            # This pattern now handles multiple percentages in a sentence and complex sentence structures
+            percentage_matches = re.finditer(r'([^.!?\n]*?\b(\d+\.?\d*)%[^.!?\n]*)', text)
+            
+            for match in percentage_matches:
+                full_context = match.group(1).strip()
+                percentage = float(match.group(2))
+                
+                # Clean up the context
+                context = full_context
+                if context.startswith('and '):
+                    context = context[4:]
+                if context.startswith(', '):
+                    context = context[2:]
+                    
+                metrics["percentages"].append(percentage)
+                metrics["percentage_contexts"].append(context)
+            
+            # Find currency amounts with context - improved pattern
+            currency_matches = re.finditer(r'([^.!?\n]*?\$(\d+(?:\.\d{1,2})?(?:\s*(?:million|billion|trillion))?)[^.!?\n]*)', text)
+            for match in currency_matches:
+                context = match.group(1).strip()
+                amount = match.group(2)
+                
+                # Clean up the context
+                if context.startswith('and '):
+                    context = context[4:]
+                if context.startswith(', '):
+                    context = context[2:]
+                    
+                metrics["currencies"].append(amount)
+                metrics["currency_contexts"].append(context)
+            
+            # Find dates
+            dates = re.findall(r'\d{1,2}[-/]\d{1,2}[-/]\d{2,4}', text)
+            metrics["dates"] = dates
+            
+        except Exception as e:
+            self.logger.error(f"Error extracting metrics: {str(e)}")
+            self.logger.error(f"Text being processed: {text[:200]}...")  # Log the beginning of the text
+            
+        return metrics
+        
+    def generate_summary(self, text: str, max_sentences: int = 3) -> Dict:
+        """
+        Generate multiple types of summaries of the text
+        
+        Args:
+            text (str): Text to summarize
+            max_sentences (int): Maximum number of sentences in summary
+            
+        Returns:
+            Dict: Different types of summaries
+        """
+        try:
+            if not text:
+                return {
+                    "key_points": "",
+                    "market_impact": "",
+                    "brief": ""
+                }
+                
+            # Create TextBlob object
+            blob = TextBlob(text)
+            sentences = blob.sentences
+            
+            if not sentences:
+                return {
+                    "key_points": text,
+                    "market_impact": text,
+                    "brief": text
+                }
+                
+            # Get word frequencies
+            word_frequencies = {}
+            important_words = set(['increased', 'decreased', 'growth', 'decline', 'up', 'down',
+                                'rising', 'falling', 'higher', 'lower', 'profit', 'loss',
+                                'revenue', 'earnings', 'guidance', 'forecast', 'outlook',
+                                'announced', 'reported', 'launched', 'acquired', 'merger'])
+                                
+            for word in blob.words:
+                word = word.lower()
+                if word.isalnum():
+                    word_frequencies[word] = word_frequencies.get(word, 0) + 1
+                    
+            # Score sentences
+            sentence_scores = []
+            market_related_sentences = []
+            for sentence in sentences:
+                # General importance score
+                score = sum(word_frequencies.get(word.lower(), 0) 
+                          for word in sentence.words if word.lower().isalnum())
+                          
+                # Market impact score
+                market_words = sum(1 for word in sentence.words 
+                                 if word.lower() in important_words)
+                
+                sentence_str = str(sentence)
+                sentence_scores.append((score, sentence_str))
+                
+                if market_words > 0:
+                    market_related_sentences.append((market_words, sentence_str))
+            
+            # Generate different types of summaries
+            
+            # 1. Key Points (based on word frequency)
+            top_sentences = sorted(sentence_scores, reverse=True)[:max_sentences]
+            key_points = ' '.join(sent[1] for sent in sorted(top_sentences,
+                                key=lambda x: text.find(x[1])))
+            
+            # 2. Market Impact (focusing on market-related sentences)
+            market_sentences = sorted(market_related_sentences, reverse=True)[:2]
+            market_impact = ' '.join(sent[1] for sent in sorted(market_sentences,
+                                   key=lambda x: text.find(x[1])))
+            
+            # 3. Brief Summary (first and last sentences)
+            brief = str(sentences[0])
+            if len(sentences) > 1:
+                brief += ' ' + str(sentences[-1])
+            
+            return {
+                "key_points": key_points,
+                "market_impact": market_impact,
+                "brief": brief
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Error generating summary: {str(e)}")
+            return {
+                "key_points": "Unable to generate summary.",
+                "market_impact": "Unable to analyze market impact.",
+                "brief": "Unable to generate brief summary."
+            }
+        metrics = {
+            "percentages": [],
+            "percentage_contexts": [],
+            "currencies": [],
+            "currency_contexts": [],
+            "dates": []
+        }
+        
+        try:
+            # Find percentages with context - improved pattern
+            # This pattern now handles multiple percentages in a sentence and complex sentence structures
+            percentage_matches = re.finditer(r'([^.!?\n]*?\b(\d+\.?\d*)%[^.!?\n]*)', text)
+            
+            for match in percentage_matches:
+                full_context = match.group(1).strip()
+                percentage = float(match.group(2))
+                
+                # Clean up the context
+                context = full_context
+                if context.startswith('and '):
+                    context = context[4:]
+                if context.startswith(', '):
+                    context = context[2:]
+                    
+                metrics["percentages"].append(percentage)
+                metrics["percentage_contexts"].append(context)
+            
+            # Find currency amounts with context - improved pattern
+            currency_matches = re.finditer(r'([^.!?\n]*?\$(\d+(?:\.\d{1,2})?(?:\s*(?:million|billion|trillion))?)[^.!?\n]*)', text)
+            for match in currency_matches:
+                context = match.group(1).strip()
+                amount = match.group(2)
+                
+                # Clean up the context
+                if context.startswith('and '):
+                    context = context[4:]
+                if context.startswith(', '):
+                    context = context[2:]
+                    
+                metrics["currencies"].append(amount)
+                metrics["currency_contexts"].append(context)
+            
+            # Find dates
+            dates = re.findall(r'\d{1,2}[-/]\d{1,2}[-/]\d{2,4}', text)
+            metrics["dates"] = dates
+            
+        except Exception as e:
+            self.logger.error(f"Error extracting metrics: {str(e)}")
+            self.logger.error(f"Text being processed: {text[:200]}...")  # Log the beginning of the text
+            
+        return metrics
+
     def format_articles(self, articles: List[Dict]) -> List[Dict]:
         """Format and analyze articles"""
         formatted = []
