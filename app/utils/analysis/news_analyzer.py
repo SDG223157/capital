@@ -8,10 +8,11 @@ import re
 from typing import Dict, List
 import logging
 from apify_client import ApifyClient
+import os
 
 class NewsAnalyzer:
     def __init__(self, api_token: str):
-        self.client = ApifyClient(api_token)
+        self.client = ApifyClient(os.getenv('APIFY_TOKEN'))
         self.logger = logging.getLogger(__name__)
         
         try:
@@ -22,8 +23,11 @@ class NewsAnalyzer:
             self.logger.error(f"Error initializing VADER: {str(e)}")
             self.vader = None
 
-    def get_news(self, symbols: List[str], limit: int = 10) -> List[Dict]:
+    @classmethod
+    def get_news(cls, symbols: List[str], limit: int = 10) -> List[Dict]:
         """Fetch news from TradingView via Apify"""
+        logger.debug(f"Fetching news for symbols: {symbols}, limit: {limit}")
+        
         run_input = {
             "symbols": symbols,
             "proxy": {"useApifyProxy": True, "apifyProxyCountry": "US"},
@@ -31,12 +35,26 @@ class NewsAnalyzer:
         }
         
         try:
-            run = self.client.actor("mscraper/tradingview-news-scraper").call(run_input=run_input)
+            if not hasattr(cls, 'client') or not cls.client:
+                logger.error("Apify client not initialized. Check API token.")
+                return []
+                
+            logger.debug("Calling Apify actor")
+            run = cls.client.actor("mscraper/tradingview-news-scraper").call(run_input=run_input)
+            
+            if not run:
+                logger.error("No response from Apify actor")
+                return []
+                
             dataset_id = run["defaultDatasetId"]
-            self.logger.info(f"Dataset ID: {dataset_id}")
-            return list(self.client.dataset(dataset_id).iterate_items())
+            logger.debug(f"Dataset ID received: {dataset_id}")
+            
+            items = list(cls.client.dataset(dataset_id).iterate_items())
+            logger.debug(f"Retrieved {len(items)} items from dataset")
+            
+            return items
         except Exception as e:
-            self.logger.error(f"Error fetching news: {str(e)}")
+            logger.error(f"Error fetching news: {str(e)}", exc_info=True)
             return []
 
     def analyze_sentiment(self, text: str) -> Dict:

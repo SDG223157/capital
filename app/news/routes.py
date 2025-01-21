@@ -184,16 +184,28 @@ def cleanup(exception):
 def test_fetch():
     """Test endpoint to fetch and store news"""
     try:
+        logger.debug("Starting news fetch test...")
+        
+        # Check if API token is configured
+        if not hasattr(news_service.analyzer, 'client') or not news_service.analyzer.client:
+            logger.error("API client not properly initialized")
+            return jsonify({'error': 'API client not configured'}), 500
+            
         # Fetch news for Apple
+        logger.debug("Attempting to fetch news for NASDAQ:AAPL")
         articles = news_service.fetch_and_analyze_news(
             symbols=["NASDAQ:AAPL"],
             limit=10
         )
+        
+        logger.debug(f"Fetch complete. Articles retrieved: {len(articles)}")
+        if articles:
+            logger.debug(f"Sample article title: {articles[0].get('title', 'No title')}")
         
         return jsonify({
             'message': f'Successfully fetched {len(articles)} articles',
             'articles': articles
         })
     except Exception as e:
-        logger.error(f"Error in test fetch: {str(e)}")
+        logger.error(f"Error in test fetch: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
