@@ -49,27 +49,37 @@ def search():
     """Search news articles"""
     try:
         logger.debug(f"Search request received with params: {request.args}")
+        
+        # Get and validate parameters
         keyword = request.args.get('keyword', '').strip()
         symbol = request.args.get('symbol', '').strip()
-        start_date = request.args.get('start_date', '')
-        end_date = request.args.get('end_date', '')
-        sentiment = request.args.get('sentiment', '')
-        page = int(request.args.get('page', 1))
-        per_page = int(request.args.get('per_page', 20))
+        start_date = request.args.get('start_date', '').strip()
+        end_date = request.args.get('end_date', '').strip()
+        sentiment = request.args.get('sentiment', '').strip()
         
-        # Only perform search if we have at least one search parameter
-        if any([keyword, symbol, start_date, end_date, sentiment]):
-            articles, total = news_service.search_news(
-                keyword=keyword,
-                symbol=symbol,
-                start_date=start_date,
-                end_date=end_date,
-                sentiment=sentiment,
-                page=page,
-                per_page=per_page
-            )
-        else:
-            articles, total = [], 0
+        try:
+            page = int(request.args.get('page', 1))
+            per_page = int(request.args.get('per_page', 20))
+        except (TypeError, ValueError):
+            page = 1
+            per_page = 20
+            
+        logger.debug(f"Processed search parameters: keyword='{keyword}', symbol='{symbol}', "
+                    f"start_date='{start_date}', end_date='{end_date}', "
+                    f"sentiment='{sentiment}', page={page}, per_page={per_page}")
+        
+        # Search articles
+        articles, total = news_service.search_news(
+            keyword=keyword if keyword else None,
+            symbol=symbol if symbol else None,
+            start_date=start_date if start_date else None,
+            end_date=end_date if end_date else None,
+            sentiment=sentiment if sentiment else None,
+            page=page,
+            per_page=per_page
+        )
+        
+        logger.debug(f"Search complete. Found {total} articles, returning {len(articles)} for current page")
             
         # Handle AJAX requests
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -96,6 +106,7 @@ def search():
                 'per_page': per_page
             }
         )
+            
     except Exception as e:
         logger.error(f"Error in search route: {str(e)}", exc_info=True)
         error_response = {'status': 'error', 'message': 'Search failed. Please try again.'}
