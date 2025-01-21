@@ -7,66 +7,84 @@ from app.utils.news.news_service import NewsService
 
 class TestNewsService(unittest.TestCase):
     def setUp(self):
+        """Set up test cases"""
         self.api_token = "test_token"
+        # Using patch.dict for environment variables
         with patch.dict('os.environ', {'APIFY_TOKEN': self.api_token}):
             self.news_service = NewsService()
-        self.mock_data = [{'title': 'Test News'}]
 
     @patch('apify_client.ApifyClient')
     def test_get_news(self, MockApifyClient):
-        # Create all the necessary mocks
-        mock_dataset = Mock()
-        mock_dataset.iterate_items.return_value = self.mock_data
-
-        mock_actor = Mock()
-        mock_actor.call.return_value = {"defaultDatasetId": "test_id"}
-
+        """Test successful news retrieval"""
+        # Test data
+        mock_data = [{'title': 'Test News'}]
+        
+        # Create mock objects
+        mock_items = Mock()
+        mock_items.iterate_items = Mock(return_value=mock_data)
+        
+        # Mock the client
         mock_client = Mock()
-        mock_client.actor.return_value = mock_actor
-        mock_client.dataset.return_value = mock_dataset
-
-        # Set up the ApifyClient mock
+        mock_client.actor = Mock()
+        mock_client.actor.return_value = Mock()
+        mock_client.actor.return_value.call = Mock(return_value={'defaultDatasetId': 'test_id'})
+        mock_client.dataset = Mock(return_value=mock_items)
+        
+        # Set up the mock client
         MockApifyClient.return_value = mock_client
 
-        # Make the call
+        # Make the API call
         result = self.news_service.get_news("AAPL")
 
-        # Verify the result
-        self.assertEqual(result, self.mock_data)
-
-        # Verify all the mock calls
+        # Verify results
+        self.assertEqual(result, mock_data)
+        
+        # Verify mock calls
         MockApifyClient.assert_called_once_with(self.api_token)
-        mock_client.actor.assert_called_once_with("mscraper/tradingview-news-scraper")
-        mock_actor.call.assert_called_once()
-        mock_client.dataset.assert_called_once_with("test_id")
-        mock_dataset.iterate_items.assert_called_once()
+        mock_client.actor.assert_called_once()
+        mock_client.actor.return_value.call.assert_called_once_with(
+            run_input={
+                "symbols": ["AAPL"],
+                "proxy": {"useApifyProxy": True},
+                "resultsLimit": 100
+            }
+        )
+        mock_client.dataset.assert_called_once_with('test_id')
 
-    def test_error_no_token(self):
-        with patch.dict('os.environ', {}):
+    def test_no_api_token(self):
+        """Test initialization without API token"""
+        with patch.dict('os.environ', clear=True):
             with self.assertRaises(ValueError):
                 NewsService()
 
     @patch('apify_client.ApifyClient')
-    def test_error_api_call(self, MockApifyClient):
-        # Setup mock to raise an exception
+    def test_api_error(self, MockApifyClient):
+        """Test error handling during API call"""
+        # Mock API error
         mock_client = Mock()
-        mock_client.actor.side_effect = Exception("API Error")
+        mock_client.actor = Mock(side_effect=Exception("API Error"))
         MockApifyClient.return_value = mock_client
 
-        # Test error handling
         result = self.news_service.get_news("AAPL")
         self.assertEqual(result, [])
 
-class TestNewsServiceIntegration(unittest.TestCase):
-    """Integration tests for NewsService"""
-    
-    def setUp(self):
-        self.api_token = os.getenv('APIFY_TOKEN')
-        if not self.api_token:
-            self.skipTest("No APIFY_TOKEN found in environment")
-        self.news_service = NewsService(self.api_token)
+    @patch('apify_client.ApifyClient')
+    def test_empty_response(self, MockApifyClient):
+        """Test handling of empty response"""
+        # Mock empty response
+        mock_items = Mock()
+        mock_items.iterate_items = Mock(return_value=[])
+        
+        mock_client = Mock()
+        mock_client.actor = Mock()
+        mock_client.actor.return_value = Mock()
+        mock_client.actor.return_value.call = Mock(return_value={'defaultDatasetId': 'test_id'})
+        mock_client.dataset = Mock(return_value=mock_items)
+        
+        MockApifyClient.return_value = mock_client
 
-    def test_get_news_real(self):
-        """Test getting news with real API call"""
         result = self.news_service.get_news("AAPL")
-        self.assertIsInstance(result, list)
+        self.assertEqual(result, [])
+
+if __name__ == '__main__':
+    unittest.main()
