@@ -25,20 +25,21 @@ def fetch_news(symbol):
         # days = request.args.get('days', default=5, type=int)
 
         news_service = NewsAnalysisService()
+        symbols = [symbol]
         try:
             # end_date = datetime.now()
             # start_date = end_date - timedelta(days=days)
             
             # Get news data
             articles = news_service.get_news(
-                symbols=list(symbol)
+                symbols=symbols
+                
                
             )
+            logger.info(f"Symbols: {symbols}")
+            logger.info(f"Articles: {articles}")
 
-            return jsonify({
-                'status': 'success',
-                'data': articles
-            })
+            return articles
 
         except Exception as e:
             logger.error(f"Error getting news: {str(e)}")
