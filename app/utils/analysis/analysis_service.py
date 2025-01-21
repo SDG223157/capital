@@ -722,23 +722,21 @@ class NewsAnalysisService:
             self.logger.error(f"Error initializing VADER: {e}")
             self.vader = None
 
-    def get_news(self, symbol: str, days: int = 7) -> List[Dict]:
-        """Fetch news for a symbol"""
+    def get_news(self, symbols: List[str], limit: int = 10) -> List[Dict]:
+        """Fetch news from TradingView via Apify"""
+        run_input = {
+            "symbols": symbols,
+            "proxy": {"useApifyProxy": True, "apifyProxyCountry": "US"},
+            "resultsLimit": limit,
+        }
+        
         try:
-            run_input = {
-                "symbols": [symbol],
-                "proxy": {"useApifyProxy": True},
-                "resultsLimit": AnalyzeConfig.MAX_NEWS_ARTICLES
-            }
-            
-            # Run the Actor
-            run = self.client.actor("mscraper/tradingview-news-scraper").call(
-                run_input=run_input
-            )
-            
-            return list(self.client.dataset(run["defaultDatasetId"]).iterate_items())
+            run = self.client.actor("mscraper/tradingview-news-scraper").call(run_input=run_input)
+            dataset_id = run["defaultDatasetId"]
+            self.logger.info(f"Dataset ID: {dataset_id}")
+            return list(self.client.dataset(dataset_id).iterate_items())
         except Exception as e:
-            self.logger.error(f"Error fetching news: {e}")
+            self.logger.error(f"Error fetching news: {str(e)}")
             return []
 
     def analyze_sentiment(self, text: str) -> Dict:
