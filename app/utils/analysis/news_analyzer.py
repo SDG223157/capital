@@ -199,21 +199,46 @@ class NewsAnalyzer:
     def analyze_article(self, article: Dict) -> Dict:
         """Analyze a single article"""
         try:
-            content = article.get("descriptionText", "")
+            # Debug log the input structure
+            self.logger.debug(f"Analyzing article with structure: {article}")
             
-            return {
-                "title": article.get("title", ""),
-                "content": content,
-                "url": article.get("storyPath", ""),
-                "published_at": datetime.fromtimestamp(
-                    article.get("published", 0) / 1000
-                ).strftime("%Y-%m-%d %H:%M:%S"),
-                "source": article.get("source", "Unknown"),
-                "symbols": [symbol["symbol"] for symbol in article.get("relatedSymbols", [])],
+            # Extract fields - handle both string and list types for flexibility
+            content = article.get("descriptionText", "") if isinstance(article, dict) else article[1] if len(article) > 1 else ""
+            title = article.get("title", "") if isinstance(article, dict) else article[0] if len(article) > 0 else ""
+            
+            # Check if we're dealing with a list instead of dict
+            if isinstance(article, list):
+                analyzed = {
+                    "title": title,
+                    "content": content,
+                    "url": article[2] if len(article) > 2 else "",
+                    "published_at": article[3] if len(article) > 3 else "",
+                    "source": article[4] if len(article) > 4 else "Unknown",
+                    "symbols": [{"symbol": s} for s in article[5].split(",")] if len(article) > 5 and article[5] else [],
+                }
+            else:
+                analyzed = {
+                    "title": article.get("title", ""),
+                    "content": content,
+                    "url": article.get("storyPath", ""),
+                    "published_at": datetime.fromtimestamp(
+                        article.get("published", 0) / 1000
+                    ).strftime("%Y-%m-%d %H:%M:%S"),
+                    "source": article.get("source", "Unknown"),
+                    "symbols": [{"symbol": s["symbol"]} for s in article.get("relatedSymbols", [])],
+                }
+                
+            # Add analysis results
+            analyzed.update({
                 "sentiment": self.analyze_sentiment(content),
                 "summary": self.generate_summary(content),
                 "metrics": self.extract_metrics(content)
-            }
+            })
+            
+            # Debug log the output structure
+            self.logger.debug(f"Analysis result structure: {analyzed}")
+            
+            return analyzed
         except Exception as e:
-            self.logger.error(f"Error analyzing article: {str(e)}")
+            self.logger.error(f"Error analyzing article: {str(e)}", exc_info=True)
             return None

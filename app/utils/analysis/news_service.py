@@ -20,7 +20,7 @@ class NewsAnalysisService:
         # Initialize database
         self.db.initialize_tables()
         
-    def fetch_and_analyze_news(self, symbols: List[str], limit: int = NewsConfig.MAX_ARTICLES) -> List[Dict]:
+    def fetch_and_analyze_news(self, symbols: List[str], limit: int = 10) -> List[Dict]:
         """
         Fetch news articles from Apify, analyze them, and store in database
         
@@ -32,41 +32,96 @@ class NewsAnalysisService:
             List[Dict]: List of analyzed news articles
         """
         try:
+            # Log start of fetch process
+            self.logger.info(f"Starting news fetch for symbols: {symbols}")
+            
+            # Validate input parameters
+            if not symbols:
+                self.logger.error("No symbols provided")
+                return []
+                
+            if not isinstance(symbols, list):
+                self.logger.error(f"Invalid symbols format: {type(symbols)}")
+                return []
+                
+            if not isinstance(limit, int) or limit <= 0:
+                self.logger.error(f"Invalid limit: {limit}")
+                return []
+
             # 1. Fetch raw news from Apify
-            self.logger.info(f"Fetching news for symbols: {symbols}")
+            self.logger.info(f"Fetching news from Apify for {len(symbols)} symbols, limit: {limit}")
             raw_articles = self.analyzer.get_news(symbols, limit)
             
             if not raw_articles:
                 self.logger.warning(f"No articles found for symbols: {symbols}")
                 return []
-                
-            self.logger.info(f"Fetched {len(raw_articles)} articles")
+            
+            self.logger.info(f"Successfully fetched {len(raw_articles)} raw articles")
             
             # 2. Process and analyze each article
             analyzed_articles = []
-            for article in raw_articles:
+            
+            for idx, article in enumerate(raw_articles, 1):
                 try:
+                    # Log progress
+                    self.logger.debug(f"Processing article {idx}/{len(raw_articles)}")
+                    
+                    # Skip if article is None or empty
+                    if not article:
+                        self.logger.warning(f"Skipping empty article at index {idx}")
+                        continue
+                    
+                    # Log raw article structure for debugging
+                    self.logger.debug(f"Raw article structure: {type(article)} - {article}")
+                    
                     # Analyze the article
                     analyzed = self.analyzer.analyze_article(article)
-                    if analyzed:
-                        # Save to database
-                        article_id = self.db.save_article(analyzed)
-                        if article_id:
-                            analyzed['id'] = article_id
-                            analyzed_articles.append(analyzed)
-                        else:
-                            self.logger.error(f"Failed to save article: {article.get('title', 'Unknown')}")
+                    
+                    if not analyzed:
+                        self.logger.warning(f"Analysis failed for article at index {idx}")
+                        continue
+                    
+                    # Validate required fields
+                    required_fields = ['title', 'content', 'published_at']
+                    missing_fields = [field for field in required_fields if not analyzed.get(field)]
+                    
+                    if missing_fields:
+                        self.logger.warning(f"Article missing required fields: {missing_fields}")
+                        continue
+                    
+                    # Log analyzed structure for debugging
+                    self.logger.debug(f"Analyzed article structure: {analyzed}")
+                    
+                    # Save to database
+                    self.logger.debug(f"Attempting to save article: {analyzed.get('title')}")
+                    article_id = self.db.save_article(analyzed)
+                    
+                    if article_id:
+                        self.logger.debug(f"Successfully saved article with ID: {article_id}")
+                        analyzed['id'] = article_id
+                        analyzed_articles.append(analyzed)
+                    else:
+                        self.logger.error(f"Failed to save article: {analyzed.get('title', 'Unknown')}")
+                        
                 except Exception as e:
-                    self.logger.error(f"Error processing article: {str(e)}")
+                    self.logger.error(f"Error processing article {idx}: {str(e)}")
+                    self.logger.error(f"Traceback: {traceback.format_exc()}")
                     continue
             
-            self.logger.info(f"Successfully processed {len(analyzed_articles)} articles")
+            # Log final results
+            success_rate = len(analyzed_articles) / len(raw_articles) * 100 if raw_articles else 0
+            self.logger.info(f"Processing complete: {len(analyzed_articles)} of {len(raw_articles)} " 
+                        f"articles processed successfully ({success_rate:.1f}%)")
+            
             return analyzed_articles
             
         except Exception as e:
-            self.logger.error(f"Error in fetch_and_analyze_news: {str(e)}")
+            self.logger.error(f"Fatal error in fetch_and_analyze_news: {str(e)}")
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
             return []
-
+        finally:
+            # Clean up any resources if needed
+            self.logger.info("Fetch and analyze process completed")
     def get_news_by_date_range(
         self,
         start_date: str,
