@@ -22,9 +22,7 @@ bp = Blueprint('news', __name__, url_prefix='/news')
 @login_required
 def fetch_news(symbol):
     try:
-        days = request.args.get('days', default=7, type=int)
-        page = request.args.get('page', default=1, type=int)
-        per_page = request.args.get('per_page', default=20, type=int)
+        days = request.args.get('days', default=5, type=int)
 
         news_service = NewsAnalysisService()
         try:
@@ -33,11 +31,8 @@ def fetch_news(symbol):
             
             # Get news data
             articles = news_service.get_news(
-                symbol=symbol,
-                start_date=start_date.strftime('%Y-%m-%d'),
-                end_date=end_date.strftime('%Y-%m-%d'),
-                page=page,
-                per_page=per_page
+                symbols=[symbol],
+                days=days
             )
 
             return jsonify({
@@ -45,15 +40,16 @@ def fetch_news(symbol):
                 'data': articles
             })
 
-        finally:
-            news_service.close()
-
+        except Exception as e:
+            logger.error(f"Error getting news: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': str(e)
+            }), 500
     except Exception as e:
-        logger.error(f"Error getting news: {str(e)}")
-        return jsonify({
-            'status': 'error',
-            'message': str(e)
-        }), 500
+        logger.error(f"Error in fetch_news view: {str(e)}")
+        return jsonify({"error": "Failed to fetch news"}), 500
+
 @bp.route('/<symbol>')
 @login_required
 def news_analysis(symbol):
