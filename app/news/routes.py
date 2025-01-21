@@ -25,7 +25,7 @@ def fetch_news(symbol):
         # days = request.args.get('days', default=5, type=int)
 
         news_service = NewsAnalysisService()
-        symbols = list(symbol)
+        symbols = [symbol]
         try:
             # end_date = datetime.now()
             # start_date = end_date - timedelta(days=days)
