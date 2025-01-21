@@ -18,7 +18,7 @@ bp = Blueprint('news', __name__, url_prefix='/news')
 #     return render_template('index.html')
 # app/routes.py
 
-@bp.route('/news/<symbol>/fetch')
+@bp.route('/<symbol>/fetch')
 @login_required
 def fetch_news(symbol):
     try:
@@ -54,7 +54,7 @@ def fetch_news(symbol):
             'status': 'error',
             'message': str(e)
         }), 500
-@bp.route('/news/<symbol>')
+@bp.route('/<symbol>')
 @login_required
 def news_analysis(symbol):
     try:
@@ -101,7 +101,7 @@ def news_analysis(symbol):
         logger.error(f"Error in news analysis view: {str(e)}")
         return render_template('error.html', error="Failed to analyze news data")
 
-@bp.route('/api/news/<symbol>/timeline')
+@bp.route('/<symbol>/timeline')
 @login_required
 def news_sentiment_timeline(symbol):
     try:
@@ -116,7 +116,7 @@ def news_sentiment_timeline(symbol):
         logger.error(f"Error getting sentiment timeline: {str(e)}")
         return jsonify({"error": "Failed to get sentiment timeline"}), 500
 
-@bp.route('/api/news/<symbol>/analysis')
+@bp.route('/<symbol>/analysis')
 @login_required
 def news_analysis_data(symbol):
     try:
@@ -131,7 +131,7 @@ def news_analysis_data(symbol):
         logger.error(f"Error getting news analysis: {str(e)}")
         return jsonify({"error": "Failed to get news analysis"}), 500
 
-@bp.route('/api/news/search')
+@bp.route('/search')
 @login_required
 def search_news():
     try:
@@ -166,7 +166,7 @@ def search_news():
         logger.error(f"Error searching news: {str(e)}")
         return jsonify({"error": "Failed to search news"}), 500
 
-@bp.route('/api/news/<symbol>/export')
+@bp.route('/<symbol>/export')
 @login_required
 def export_news(symbol):
     try:
