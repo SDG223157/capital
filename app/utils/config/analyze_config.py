@@ -9,11 +9,11 @@ import os
 
 class AnalyzeConfig:
     # API Configuration
-    APIFY_TOKEN = os.getenv('APIFY_TOKEN')
+    APIFY_TOKEN = "apify_api_ewwcE7264pu0eRgeUBL2RaFk6rmCdy4AaAU9"
     
     # Analysis Parameters
     MAX_NEWS_ARTICLES = 10
-    DEFAULT_DAYS = 7
+    DEFAULT_DAYS = 5
     MIN_ARTICLES = 3
     
     # Sentiment Thresholds
