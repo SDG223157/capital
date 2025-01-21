@@ -7,6 +7,7 @@ import os
 
 class NewsService:
     def __init__(self, api_token: Optional[str] = None):
+        """Initialize NewsService with API token"""
         self.api_token = api_token or os.getenv('APIFY_TOKEN')
         if not self.api_token:
             raise ValueError("API token must be provided or set in APIFY_TOKEN environment variable")
@@ -15,11 +16,14 @@ class NewsService:
         self.logger = logging.getLogger(__name__)
 
     def get_news(self, symbol: str) -> List[Dict]:
-        try:
-            # Get the actor instance
-            actor = self.client.actor("mscraper/tradingview-news-scraper")
+        """Get news articles for a specific symbol"""
+        if not symbol:
+            self.logger.error("Symbol cannot be empty")
+            return []
             
-            # Run the actor
+        try:
+            # Get actor and run it
+            actor = self.client.actor("mscraper/tradingview-news-scraper")
             run = actor.call(
                 run_input={
                     "symbols": [symbol],
@@ -28,12 +32,13 @@ class NewsService:
                 }
             )
 
-            if not run or 'defaultDatasetId' not in run:
-                self.logger.error("Invalid response from Apify actor")
+            # Get dataset and items
+            dataset_id = run.get('defaultDatasetId')
+            if not dataset_id:
+                self.logger.error("No dataset ID in response")
                 return []
 
-            # Get the dataset items
-            dataset = self.client.dataset(run['defaultDatasetId'])
+            dataset = self.client.dataset(dataset_id)
             return list(dataset.iterate_items())
 
         except Exception as e:
