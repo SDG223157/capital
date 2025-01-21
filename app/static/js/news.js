@@ -1,4 +1,47 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // Add fetch button handler
+    const fetchButton = document.getElementById('fetchNews');
+    if (fetchButton) {
+        fetchButton.addEventListener('click', async function() {
+            try {
+                const symbol = document.getElementById('symbol').value;
+                if (!symbol) {
+                    alert('Please enter a stock symbol');
+                    return;
+                }
+
+                fetchButton.disabled = true;
+                fetchButton.textContent = 'Fetching...';
+
+                const response = await fetch('/news/api/fetch', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        symbols: [symbol],
+                        limit: 10
+                    })
+                });
+
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                alert(`Successfully fetched ${data.articles.length} articles. You can now search for them.`);
+                // Optionally trigger a new search
+                searchForm.dispatchEvent(new Event('submit'));
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to fetch news: ' + error.message);
+            } finally {
+                fetchButton.disabled = false;
+                fetchButton.textContent = 'Fetch Latest News';
+            }
+        });
+    }
     const searchForm = document.getElementById('searchForm');
     const searchResults = document.getElementById('searchResults');
 
