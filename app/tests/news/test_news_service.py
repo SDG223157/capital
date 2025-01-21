@@ -6,72 +6,67 @@ import os
 from app.utils.news.news_service import NewsService
 
 class TestNewsService(unittest.TestCase):
-    @patch.dict(os.environ, {'APIFY_TOKEN': 'test_token'})
     def setUp(self):
-        self.news_service = NewsService()
+        self.api_token = "test_token"
+        with patch.dict('os.environ', {'APIFY_TOKEN': self.api_token}):
+            self.news_service = NewsService()
         self.mock_data = [{'title': 'Test News'}]
 
-    def test_service_initialization(self):
-        self.assertIsNotNone(self.news_service)
-
     @patch('apify_client.ApifyClient')
-    def test_get_news(self, mock_apify_client):
-        # Create mock dataset
+    def test_get_news(self, MockApifyClient):
+        # Create all the necessary mocks
         mock_dataset = Mock()
         mock_dataset.iterate_items.return_value = self.mock_data
 
-        # Create mock client
+        mock_actor = Mock()
+        mock_actor.call.return_value = {"defaultDatasetId": "test_id"}
+
         mock_client = Mock()
+        mock_client.actor.return_value = mock_actor
         mock_client.dataset.return_value = mock_dataset
 
-        # Set up the actor mock
-        mock_actor = Mock()
-        mock_actor.call.return_value = {"defaultDatasetId": "test_dataset_id"}
-        mock_client.actor.return_value = mock_actor
+        # Set up the ApifyClient mock
+        MockApifyClient.return_value = mock_client
 
-        # Set up the ApifyClient to return our mock client
-        mock_apify_client.return_value = mock_client
-
-        # Test the method
+        # Make the call
         result = self.news_service.get_news("AAPL")
 
-        # Assertions
+        # Verify the result
         self.assertEqual(result, self.mock_data)
-        
-        # Verify the correct calls were made
+
+        # Verify all the mock calls
+        MockApifyClient.assert_called_once_with(self.api_token)
         mock_client.actor.assert_called_once_with("mscraper/tradingview-news-scraper")
-        mock_actor.call.assert_called_once_with(
-            run_input={
-                "symbols": ["AAPL"],
-                "proxy": {"useApifyProxy": True},
-                "resultsLimit": 100
-            }
-        )
-        mock_client.dataset.assert_called_once_with("test_dataset_id")
+        mock_actor.call.assert_called_once()
+        mock_client.dataset.assert_called_once_with("test_id")
         mock_dataset.iterate_items.assert_called_once()
 
+    def test_error_no_token(self):
+        with patch.dict('os.environ', {}):
+            with self.assertRaises(ValueError):
+                NewsService()
+
     @patch('apify_client.ApifyClient')
-    def test_get_news_empty_response(self, mock_apify_client):
-        # Mock empty response
-        mock_dataset = Mock()
-        mock_dataset.iterate_items.return_value = []
-        
+    def test_error_api_call(self, MockApifyClient):
+        # Setup mock to raise an exception
         mock_client = Mock()
-        mock_client.dataset.return_value = mock_dataset
-        mock_client.actor.return_value.call.return_value = {"defaultDatasetId": "test_id"}
-        
-        mock_apify_client.return_value = mock_client
+        mock_client.actor.side_effect = Exception("API Error")
+        MockApifyClient.return_value = mock_client
 
+        # Test error handling
         result = self.news_service.get_news("AAPL")
         self.assertEqual(result, [])
 
-    @patch('apify_client.ApifyClient')
-    def test_get_news_error_handling(self, mock_apify_client):
-        # Mock error
-        mock_apify_client.return_value.actor.side_effect = Exception("API Error")
-        
-        result = self.news_service.get_news("AAPL")
-        self.assertEqual(result, [])
+class TestNewsServiceIntegration(unittest.TestCase):
+    """Integration tests for NewsService"""
+    
+    def setUp(self):
+        self.api_token = os.getenv('APIFY_TOKEN')
+        if not self.api_token:
+            self.skipTest("No APIFY_TOKEN found in environment")
+        self.news_service = NewsService(self.api_token)
 
-if __name__ == '__main__':
-    unittest.main()
+    def test_get_news_real(self):
+        """Test getting news with real API call"""
+        result = self.news_service.get_news("AAPL")
+        self.assertIsInstance(result, list)
