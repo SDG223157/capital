@@ -709,12 +709,13 @@ from apify_client import ApifyClient
 from textblob import TextBlob
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import nltk
+import os
 
 class NewsAnalysisService:
     def __init__(self):
         """Initialize news analysis service"""
         self.logger = logging.getLogger(__name__)
-        self.client = ApifyClient("apify_api_ewwcE7264pu0eRgeUBL2RaFk6rmCdy4AaAU9")
+        self.client = ApifyClient(os.getenv('APIFY_TOKEN'))
         
         try:
             nltk.download('vader_lexicon')
