@@ -31,7 +31,7 @@ def fetch_news(symbol):
             
             # Get news data
             articles = news_service.get_news(
-                symbols=[symbol],
+                symbols=symbol,
                 days=days
             )
 
