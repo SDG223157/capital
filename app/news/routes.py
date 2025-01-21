@@ -39,7 +39,7 @@ def fetch_news(symbol):
             logger.info(f"Symbols: {symbols}")
             logger.info(f"Articles: {articles}")
 
-            return articles
+            return jsonify(articles)
 
         except Exception as e:
             logger.error(f"Error getting news: {str(e)}")
