@@ -1,3 +1,4 @@
+// news.js
 document.addEventListener('DOMContentLoaded', function() {
     // Get DOM elements
     const searchForm = document.getElementById('searchForm');
@@ -11,6 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set default dates if not set
     const endDateInput = document.getElementById('end_date');
     const startDateInput = document.getElementById('start_date');
+    
     if (!endDateInput.value) {
         const today = new Date().toISOString().split('T')[0];
         endDateInput.value = today;
@@ -37,13 +39,36 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Helper function to show error message
-    function showError(message) {
-        searchResults.innerHTML = `
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                <strong class="font-bold">Error!</strong>
-                <span class="block sm:inline"> ${message}</span>
-            </div>
+    function showError(message, duration = 5000) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4';
+        errorDiv.role = 'alert';
+        errorDiv.innerHTML = `
+            <strong class="font-bold">Error!</strong>
+            <span class="block sm:inline"> ${message}</span>
+            <span class="absolute top-0 bottom-0 right-0 px-4 py-3">
+                <svg class="fill-current h-6 w-6 text-red-500" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <title>Close</title>
+                    <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/>
+                </svg>
+            </span>
         `;
+        
+        // Add click handler to close button
+        const closeButton = errorDiv.querySelector('svg');
+        closeButton.onclick = () => errorDiv.remove();
+        
+        // Insert error at the top of search results
+        searchResults.insertBefore(errorDiv, searchResults.firstChild);
+        
+        // Automatically remove after duration
+        if (duration) {
+            setTimeout(() => {
+                if (errorDiv.parentNode) {
+                    errorDiv.remove();
+                }
+            }, duration);
+        }
     }
 
     // Function to render a single article
@@ -106,11 +131,13 @@ document.addEventListener('DOMContentLoaded', function() {
     async function performSearch(formData) {
         try {
             setLoading(true);
+            console.log('Performing search with data:', Object.fromEntries(formData));
             
             const searchParams = new URLSearchParams(formData);
             const response = await fetch(`/news/search?${searchParams.toString()}`, {
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
                 }
             });
 
@@ -119,6 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             const data = await response.json();
+            console.log('Search response:', data);
 
             // Update results count
             if (resultsCount) {
@@ -191,32 +219,53 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
 
+                console.log('Fetching news for symbol:', symbol);
+                
+                const requestData = {
+                    symbols: [symbol],
+                    limit: 10
+                };
+                
+                console.log('Sending request with data:', requestData);
+
                 const response = await fetch('/news/api/fetch', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
                     },
-                    body: JSON.stringify({
-                        symbols: [symbol],
-                        limit: 10
-                    })
+                    body: JSON.stringify(requestData)
                 });
 
+                console.log('Response status:', response.status);
+                
+                const responseText = await response.text();
+                console.log('Response text:', responseText);
+                
                 if (!response.ok) {
-                    throw new Error(`Failed to fetch news: ${response.status}`);
+                    throw new Error(`Failed to fetch news: ${response.status} - ${responseText}`);
                 }
 
-                const data = await response.json();
-                
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                    console.log('Parsed response data:', data);
+                } catch (e) {
+                    console.error('Failed to parse response:', e);
+                    throw new Error('Invalid response format from server');
+                }
+
                 if (data.error) {
                     throw new Error(data.error);
                 }
 
-                alert(`Successfully fetched ${data.articles?.length || 0} articles. You can now search for them.`);
+                const articleCount = data.articles?.length || 0;
+                alert(`Successfully fetched ${articleCount} articles. You can now search for them.`);
                 
-                // Perform search with current form data
+                // Update the form with the current symbol and dates
                 const formData = new FormData(searchForm);
+                formData.set('symbol', symbol);  // Set the symbol
                 await performSearch(formData);
 
             } catch (error) {
@@ -226,17 +275,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 setLoading(false);
             }
         });
-    }
 
-    // Handle pagination buttons
-    document.querySelectorAll('[data-page]').forEach(button => {
-        button.addEventListener('click', async () => {
-            const page = button.dataset.page;
-            const formData = new FormData(searchForm);
-            formData.set('page', page);
-            await performSearch(formData);
-            // Scroll to top of results
-            searchResults.scrollIntoView({ behavior: 'smooth' });
+        // Handle pagination buttons
+        document.querySelectorAll('[data-page]').forEach(button => {
+            button.addEventListener('click', async () => {
+                const page = button.dataset.page;
+                const formData = new FormData(searchForm);
+                formData.set('page', page);
+                await performSearch(formData);
+                // Scroll to top of results
+                searchResults.scrollIntoView({ behavior: 'smooth' });
+            });
         });
-    });
+    }
 });
