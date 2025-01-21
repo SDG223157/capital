@@ -85,6 +85,16 @@ def create_app(config_class=Config):
         from app.user.routes import bp as user_bp
         logger.debug(f"Registering user blueprint: {user_bp.name}")
         app.register_blueprint(user_bp, url_prefix='/user')
+        
+        # Register news blueprint
+        try:
+            from app.news.routes import bp as news_bp
+            logger.debug(f"Registering news blueprint: {news_bp.name}")
+            app.register_blueprint(news_bp, url_prefix='/news')
+        except Exception as e:
+            logger.error(f"Error registering news blueprint: {str(e)}")
+            raise
+
 
         @app.context_processor
         def utility_processor():
