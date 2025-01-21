@@ -8,7 +8,7 @@ import os
 class NewsService:
     def __init__(self, api_token: Optional[str] = None):
         """Initialize NewsService with API token"""
-        self.api_token = api_token or os.getenv('APIFY_TOKEN')
+        self.api_token = "apify_api_ewwcE7264pu0eRgeUBL2RaFk6rmCdy4AaAU9"
         if not self.api_token:
             raise ValueError("API token must be provided or set in APIFY_TOKEN environment variable")
         
@@ -38,7 +38,7 @@ class NewsService:
             run = actor.call(
                 run_input={
                     "symbols": [symbol],
-                    "proxy": {"useApifyProxy": True},
+                    "proxy": {"useApifyProxy": True,"apifyProxyCountry": "US"},
                     "resultsLimit": 10
                 }
             )
