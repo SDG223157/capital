@@ -19,15 +19,15 @@ class NewsService:
             self.logger.error(f"Error initializing ApifyClient: {e}")
             raise
 
-    def get_news(self, symbol: str) -> List[Dict]:
+    def get_news(self, symbols: str) -> List[Dict]:
         """Get news articles for a specific symbol"""
-        if not symbol:
+        if not symbols:
             self.logger.error("Symbol cannot be empty")
             return []
             
         try:
             # Configure logging for debugging
-            self.logger.debug(f"Getting news for symbol: {symbol}")
+            self.logger.debug(f"Getting news for symbols: {symbols}")
             self.logger.debug(f"Using API token: {self.api_token[:5]}...")
 
             # Get actor
@@ -37,7 +37,7 @@ class NewsService:
             self.logger.debug("Calling Apify actor")
             run = actor.call(
                 run_input={
-                    "symbols": [symbol],
+                    "symbols": symbols,
                     "proxy": {"useApifyProxy": True,"apifyProxyCountry": "US"},
                     "resultsLimit": 10
                 }
