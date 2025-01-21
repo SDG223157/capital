@@ -22,17 +22,17 @@ bp = Blueprint('news', __name__, url_prefix='/news')
 @login_required
 def fetch_news(symbol):
     try:
-        days = request.args.get('days', default=5, type=int)
+        # days = request.args.get('days', default=5, type=int)
 
         news_service = NewsAnalysisService()
         try:
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=days)
+            # end_date = datetime.now()
+            # start_date = end_date - timedelta(days=days)
             
             # Get news data
             articles = news_service.get_news(
-                symbols=symbol,
-                days=days
+                symbols=symbol
+                
             )
 
             return jsonify({
