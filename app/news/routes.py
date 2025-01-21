@@ -1,18 +1,15 @@
+# app/news/routes.py
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required
 from app.utils.analysis.news_service import NewsAnalysisService
 from datetime import datetime, timedelta
 import logging
 
-from app.utils.config.news_config import NewsConfig
-
 logger = logging.getLogger(__name__)
-bp = Blueprint('news', __name__, url_prefix='/news')
-
-# Initialize news service
+bp = Blueprint('news', __name__)
 news_service = NewsAnalysisService()
 
-@bp.route('/', methods=['GET'])
+@bp.route('/')
 @login_required
 def index():
     """News dashboard home page"""
@@ -46,13 +43,12 @@ def index():
         logger.error(f"Error in news index route: {str(e)}")
         return render_template('news/analysis.html', error="Failed to load news dashboard")
 
-@bp.route('/search', methods=['GET'])
+@bp.route('/search')
 @login_required
 def search():
     """Search news articles"""
-    logger.debug(f"Search request received with params: {request.args}")
     try:
-        # Get search parameters
+        logger.debug(f"Search request received with params: {request.args}")
         keyword = request.args.get('keyword', '').strip()
         symbol = request.args.get('symbol', '').strip()
         start_date = request.args.get('start_date', '')
@@ -75,17 +71,6 @@ def search():
         else:
             articles, total = [], 0
             
-        # Prepare search parameters for template
-        search_params = {
-            'keyword': keyword,
-            'symbol': symbol,
-            'start_date': start_date,
-            'end_date': end_date,
-            'sentiment': sentiment,
-            'page': page,
-            'per_page': per_page
-        }
-        
         # Handle AJAX requests
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({
@@ -96,12 +81,20 @@ def search():
                 'per_page': per_page
             })
             
-        # Handle regular requests
+        # Handle regular page load
         return render_template(
             'news/search.html',
             articles=articles,
             total=total,
-            search_params=search_params
+            search_params={
+                'keyword': keyword,
+                'symbol': symbol,
+                'start_date': start_date,
+                'end_date': end_date,
+                'sentiment': sentiment,
+                'page': page,
+                'per_page': per_page
+            }
         )
     except Exception as e:
         logger.error(f"Error in search route: {str(e)}", exc_info=True)
@@ -109,41 +102,6 @@ def search():
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify(error_response), 500
         return render_template('news/search.html', error=error_response['message'])
-    except Exception as e:
-        logger.error(f"Error in news search route: {str(e)}")
-        return jsonify({'error': 'Search failed'}), 500
-
-@bp.route('/api/sentiment', methods=['GET'])
-@login_required
-def get_sentiment():
-    """Get sentiment analysis summary"""
-    try:
-        date = request.args.get('date')
-        symbol = request.args.get('symbol')
-        days = int(request.args.get('days', 7))
-        
-        summary = news_service.get_sentiment_summary(
-            date=date,
-            symbol=symbol,
-            days=days
-        )
-        
-        return jsonify(summary)
-    except Exception as e:
-        logger.error(f"Error getting sentiment summary: {str(e)}")
-        return jsonify({'error': 'Failed to get sentiment summary'}), 500
-
-@bp.route('/api/trending', methods=['GET'])
-@login_required
-def get_trending():
-    """Get trending topics"""
-    try:
-        days = int(request.args.get('days', 7))
-        topics = news_service.get_trending_topics(days=days)
-        return jsonify(topics)
-    except Exception as e:
-        logger.error(f"Error getting trending topics: {str(e)}")
-        return jsonify({'error': 'Failed to get trending topics'}), 500
 
 @bp.route('/api/fetch', methods=['POST'])
 @login_required
@@ -168,9 +126,41 @@ def fetch_news():
         })
     except Exception as e:
         logger.error(f"Error fetching news: {str(e)}")
-        return jsonify({'error': 'Failed to fetch news'}), 500
+        return jsonify({'error': str(e)}), 500
 
-@bp.teardown_app_request
+@bp.route('/api/sentiment')
+@login_required
+def get_sentiment():
+    """Get sentiment analysis summary"""
+    try:
+        date = request.args.get('date')
+        symbol = request.args.get('symbol')
+        days = int(request.args.get('days', 7))
+        
+        summary = news_service.get_sentiment_summary(
+            date=date,
+            symbol=symbol,
+            days=days
+        )
+        
+        return jsonify(summary)
+    except Exception as e:
+        logger.error(f"Error getting sentiment summary: {str(e)}")
+        return jsonify({'error': 'Failed to get sentiment summary'}), 500
+
+@bp.route('/api/trending')
+@login_required
+def get_trending():
+    """Get trending topics"""
+    try:
+        days = int(request.args.get('days', 7))
+        topics = news_service.get_trending_topics(days=days)
+        return jsonify(topics)
+    except Exception as e:
+        logger.error(f"Error getting trending topics: {str(e)}")
+        return jsonify({'error': 'Failed to get trending topics'}), 500
+
+@bp.teardown_request
 def cleanup(exception):
     """Cleanup resources after each request"""
     try:
@@ -178,61 +168,3 @@ def cleanup(exception):
             news_service.close()
     except Exception as e:
         logger.error(f"Error in cleanup: {str(e)}")
-        
-# Add this to your routes.py temporarily for testing
-
-# In app/news/routes.py
-
-@bp.route('/test-fetch')
-def test_fetch():
-    """Test the news fetching functionality"""
-    try:
-        # Check if APIFY_TOKEN is set
-        logger.debug(f"APIFY_TOKEN configured: {'yes' if NewsConfig.APIFY_TOKEN else 'no'}")
-        
-        # Test fetching news
-        articles = news_service.fetch_and_analyze_news(
-            symbols=["NASDAQ:AAPL"],
-            limit=5
-        )
-        
-        # Log results
-        if articles:
-            logger.debug(f"Successfully fetched {len(articles)} articles")
-            # Log first article details
-            if len(articles) > 0:
-                logger.debug(f"First article: {articles[0].get('title', 'No title')}")
-        else:
-            logger.error("No articles fetched")
-        
-        return jsonify({
-            'success': bool(articles),
-            'article_count': len(articles),
-            'first_article': articles[0] if articles else None
-        })
-        
-    except Exception as e:
-        logger.error(f"Error in test fetch: {str(e)}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        })
-    
-# In app/news/routes.py
-
-@bp.route('/test')
-def test():
-    return 'News blueprint is working!'
-# Add this to your routes.py
-
-@bp.route('/debug-routes')
-def debug_routes():
-    """List all registered routes"""
-    output = []
-    for rule in bp.url_map.iter_rules():
-        output.append({
-            "endpoint": rule.endpoint,
-            "methods": list(rule.methods),
-            "path": str(rule)
-        })
-    return jsonify(output)
