@@ -22,15 +22,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 const data = await response.json();
                 
-                // Update the results count
-                const resultsCount = document.querySelector('.results-count');
+                // Update results count
+                const resultsCount = document.querySelector('.text-gray-600');
                 if (resultsCount) {
                     resultsCount.textContent = `${data.total} articles found`;
                 }
-                
-                // Update the results container
+
+                // Clear and update results container
                 if (searchResults && data.articles) {
-                    renderSearchResults(data.articles);
+                    if (data.articles.length === 0) {
+                        searchResults.innerHTML = `
+                            <div class="text-center py-8 text-gray-500">
+                                No articles found matching your search criteria
+                            </div>
+                        `;
+                    } else {
+                        renderSearchResults(data.articles);
+                    }
+                }
+
+                // Show error if status is error
+                if (data.status === 'error') {
+                    searchResults.innerHTML = `
+                        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+                            ${data.message}
+                        </div>
+                    `;
                 }
                 
                 // Update URL with search parameters without reloading

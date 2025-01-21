@@ -42,8 +42,43 @@ class NewsService:
         per_page: int = 20
     ) -> Tuple[List[Dict], int]:
         """Search articles with various filters"""
-        # Implement search logic
-        return [], 0
+        try:
+            # For demonstration, creating sample data
+            # In production, this would query your database
+            sample_articles = [
+                {
+                    'title': f'Sample Article about {keyword} for {symbol}',
+                    'url': '#',
+                    'published_at': '2025-01-15 10:00:00',
+                    'source': 'Financial News',
+                    'symbols': [symbol] if symbol else ['NASDAQ:AAPL'],
+                    'content': 'Sample article content...',
+                    'summary': {
+                        'brief': f'This is a sample article about {keyword} with key details about market performance.',
+                        'key_points': 'Key point 1. Key point 2.',
+                        'market_impact': 'Positive market impact expected.'
+                    },
+                    'sentiment': {
+                        'overall_sentiment': sentiment or 'POSITIVE',
+                        'confidence': 0.85,
+                        'explanation': 'Strong positive indicators'
+                    }
+                }
+                for _ in range(3)  # Generate 3 sample articles
+            ]
+            
+            total = len(sample_articles)
+            
+            # Apply pagination
+            start_idx = (page - 1) * per_page
+            end_idx = start_idx + per_page
+            paginated_articles = sample_articles[start_idx:end_idx]
+            
+            return paginated_articles, total
+            
+        except Exception as e:
+            self.logger.error(f"Error in search_articles: {str(e)}", exc_info=True)
+            return [], 0
 
     def get_daily_sentiment_summary(self, date: str, symbol: str = None) -> Dict:
         """Get sentiment summary for a specific date"""

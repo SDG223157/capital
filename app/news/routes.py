@@ -50,46 +50,63 @@ def search():
     """Search news articles"""
     logger.debug(f"Search request received with params: {request.args}")
     try:
-        keyword = request.args.get('keyword')
-        symbol = request.args.get('symbol')
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
-        sentiment = request.args.get('sentiment')
+        # Get search parameters
+        keyword = request.args.get('keyword', '').strip()
+        symbol = request.args.get('symbol', '').strip()
+        start_date = request.args.get('start_date', '')
+        end_date = request.args.get('end_date', '')
+        sentiment = request.args.get('sentiment', '')
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 20))
         
-        articles, total = news_service.search_news(
-            keyword=keyword,
-            symbol=symbol,
-            start_date=start_date,
-            end_date=end_date,
-            sentiment=sentiment,
-            page=page,
-            per_page=per_page
-        )
+        # Only perform search if we have at least one search parameter
+        if any([keyword, symbol, start_date, end_date, sentiment]):
+            articles, total = news_service.search_news(
+                keyword=keyword,
+                symbol=symbol,
+                start_date=start_date,
+                end_date=end_date,
+                sentiment=sentiment,
+                page=page,
+                per_page=per_page
+            )
+        else:
+            articles, total = [], 0
+            
+        # Prepare search parameters for template
+        search_params = {
+            'keyword': keyword,
+            'symbol': symbol,
+            'start_date': start_date,
+            'end_date': end_date,
+            'sentiment': sentiment,
+            'page': page,
+            'per_page': per_page
+        }
         
+        # Handle AJAX requests
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({
+                'status': 'success',
                 'articles': articles,
                 'total': total,
                 'page': page,
                 'per_page': per_page
             })
             
+        # Handle regular requests
         return render_template(
             'news/search.html',
             articles=articles,
             total=total,
-            search_params={
-                'keyword': keyword,
-                'symbol': symbol,
-                'start_date': start_date,
-                'end_date': end_date,
-                'sentiment': sentiment,
-                'page': page,
-                'per_page': per_page
-            }
+            search_params=search_params
         )
+    except Exception as e:
+        logger.error(f"Error in search route: {str(e)}", exc_info=True)
+        error_response = {'status': 'error', 'message': 'Search failed. Please try again.'}
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify(error_response), 500
+        return render_template('news/search.html', error=error_response['message'])
     except Exception as e:
         logger.error(f"Error in news search route: {str(e)}")
         return jsonify({'error': 'Search failed'}), 500
