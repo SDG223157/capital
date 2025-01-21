@@ -11,17 +11,35 @@ from apify_client import ApifyClient
 import os
 
 class NewsAnalyzer:
+    # In news_analyzer.py
+
     def __init__(self, api_token: str):
-        self.client = ApifyClient("apify_api_ewwcE7264pu0eRgeUBL2RaFk6rmCdy4AaAU9")
+        self.client = ApifyClient(api_token)
         self.logger = logging.getLogger(__name__)
         
+        # Download required NLTK data
         try:
-            nltk.download('vader_lexicon')
+            import nltk
+            from textblob.download_corpora import download_lite
+            
+            # Download required NLTK packages
+            nltk_packages = ['punkt', 'averaged_perceptron_tagger', 'vader_lexicon', 'brown', 'wordnet']
+            for package in nltk_packages:
+                try:
+                    nltk.data.find(f'tokenizers/{package}')
+                except LookupError:
+                    nltk.download(package, quiet=True)
+            
+            # Download TextBlob corpora
+            download_lite()
+            
+            # Initialize VADER
             self.vader = SentimentIntensityAnalyzer()
-            self.logger.info("Successfully initialized VADER analyzer")
+            self.logger.info("Successfully initialized NLTK and TextBlob resources")
+            
         except Exception as e:
-            self.logger.error(f"Error initializing VADER: {str(e)}")
-            self.vader = None
+            self.logger.error(f"Error initializing NLTK resources: {str(e)}")
+            raise
 
     # In news_analyzer.py
 
