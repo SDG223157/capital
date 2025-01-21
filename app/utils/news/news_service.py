@@ -39,7 +39,7 @@ class NewsService:
                 run_input={
                     "symbols": [symbol],
                     "proxy": {"useApifyProxy": True},
-                    "resultsLimit": 100
+                    "resultsLimit": 10
                 }
             )
 

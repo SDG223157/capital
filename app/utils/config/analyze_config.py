@@ -12,7 +12,7 @@ class AnalyzeConfig:
     APIFY_TOKEN = os.getenv('APIFY_TOKEN')
     
     # Analysis Parameters
-    MAX_NEWS_ARTICLES = 50
+    MAX_NEWS_ARTICLES = 10
     DEFAULT_DAYS = 7
     MIN_ARTICLES = 3
     
