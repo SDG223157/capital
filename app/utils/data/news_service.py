@@ -267,6 +267,7 @@ class NewsService:
             self.logger.error(f"Error getting articles by date range: {str(e)}")
             return [], 0
 
+    
     def search_articles(
         self,
         keyword: str = None,
@@ -280,73 +281,70 @@ class NewsService:
         """Search articles with various filters"""
         try:
             with self.engine.connect() as conn:
-                query = text('''
-                    SELECT DISTINCT 
-                        na.*, 
-                        GROUP_CONCAT(DISTINCT as_.symbol) as symbols,
-                        GROUP_CONCAT(DISTINCT CONCAT(am.metric_type, ':', am.metric_value, '|', am.metric_context)) as metrics
+                # Build base query
+                base_query = '''
                     FROM news_articles na
                     LEFT JOIN article_symbols as_ ON na.id = as_.article_id
                     LEFT JOIN article_metrics am ON na.id = am.article_id
                     WHERE 1=1
-                ''')
+                '''
                 params = {}
 
-                filters = []
+                # Add filters
                 if keyword:
-                    filters.append('(na.title LIKE :keyword OR na.content LIKE :keyword)')
+                    base_query += ' AND (na.title LIKE :keyword OR na.content LIKE :keyword)'
                     params['keyword'] = f'%{keyword}%'
 
                 if symbol:
-                    filters.append('as_.symbol = :symbol')
+                    base_query += ' AND as_.symbol = :symbol'
                     params['symbol'] = symbol
 
                 if start_date:
-                    filters.append('na.published_at >= :start_date')
+                    base_query += ' AND na.published_at >= :start_date'
                     params['start_date'] = start_date
 
                 if end_date:
-                    filters.append('na.published_at <= :end_date')
+                    base_query += ' AND na.published_at <= :end_date'
                     params['end_date'] = end_date
 
                 if sentiment:
-                    filters.append('na.sentiment_label = :sentiment')
+                    base_query += ' AND na.sentiment_label = :sentiment'
                     params['sentiment'] = sentiment
 
-                if filters:
-                    query = text(query.text + ' AND ' + ' AND '.join(filters))
-
                 # Get total count
-                count_query = text('''
-                    SELECT COUNT(DISTINCT na.id) as count 
-                    FROM news_articles na 
-                    LEFT JOIN article_symbols as_ ON na.id = as_.article_id
-                    WHERE 1=1 ''' + (' AND ' + ' AND '.join(filters) if filters else ''))
-                
+                count_query = text(f'SELECT COUNT(DISTINCT na.id) as count {base_query}')
                 result = conn.execute(count_query, params)
                 total = result.scalar()
 
-                # Add grouping and pagination
-                query = text(query.text + '''
-                    GROUP BY na.id 
-                    ORDER BY na.published_at DESC 
+                # Build main query with group by and pagination
+                main_query = text(f'''
+                    SELECT 
+                        na.*,
+                        GROUP_CONCAT(DISTINCT as_.symbol) as symbols,
+                        GROUP_CONCAT(DISTINCT CONCAT(am.metric_type, ':', am.metric_value, '|', am.metric_context)) as metrics
+                    {base_query}
+                    GROUP BY na.id
+                    ORDER BY na.published_at DESC
                     LIMIT :limit OFFSET :offset
                 ''')
+
+                # Add pagination parameters
                 params['limit'] = per_page
                 params['offset'] = (page - 1) * per_page
 
                 # Execute main query
-                result = conn.execute(query, params)
+                result = conn.execute(main_query, params)
                 articles = []
-                
-                for row in result:
+
+                for row in result.mappings():
                     article = dict(row)
+                    
                     # Process symbols
                     article['symbols'] = (
-                        article['symbols'].split(',') 
-                        if article['symbols'] else []
+                        article['symbols'].split(',') if article['symbols']
+                        else []
                     )
-                    
+
                     # Process metrics
                     metrics = {}
                     if article['metrics']:
@@ -363,15 +361,16 @@ class NewsService:
                             except:
                                 continue
                     article['metrics'] = metrics
-                    
+
                     articles.append(article)
 
+                self.logger.debug(f"Found {total} articles, returning {len(articles)} for current page")
                 return articles, total
 
         except Exception as e:
             self.logger.error(f"Error searching articles: {str(e)}")
             return [], 0
-
+    
     def close(self):
         """Close database connection"""
         try:
