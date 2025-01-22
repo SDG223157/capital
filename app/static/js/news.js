@@ -626,27 +626,25 @@ fetchButton.addEventListener('click', async function() {
 function setupArticleExpansion() {
     document.querySelectorAll('.expand-button').forEach(button => {
         button.addEventListener('click', () => {
-            const content = button.previousElementSibling;  // Get the article-content div
-            const article = button.closest('.article-card');
+            const content = button.previousElementSibling; // Get the article-content div
             const isExpanded = button.getAttribute('aria-expanded') === 'true';
             
-            // Toggle the content visibility
             if (isExpanded) {
                 // Collapse
-                content.classList.remove('max-h-96', 'opacity-100');  // Using standard Tailwind classes
+                content.classList.remove('max-h-96', 'opacity-100');
                 content.classList.add('max-h-0', 'opacity-0');
                 button.textContent = 'Show More';
                 button.setAttribute('aria-expanded', 'false');
-                
-                // Scroll article into view if it's now partially hidden
-                article.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             } else {
                 // Expand
                 content.classList.remove('max-h-0', 'opacity-0');
-                content.classList.add('max-h-96', 'opacity-100');  // Using standard Tailwind classes
+                content.classList.add('max-h-96', 'opacity-100');
                 button.textContent = 'Show Less';
                 button.setAttribute('aria-expanded', 'true');
             }
         });
     });
 }
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', setupArticleExpansion);

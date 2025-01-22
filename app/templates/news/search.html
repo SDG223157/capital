@@ -126,10 +126,19 @@
                         <span class="text-sm text-gray-500">{{ article.published_at }}</span>
                     </div>
 
+                    <!-- Initial Summary (Always Visible) -->
+                    <p class="text-gray-600">
+                        {% if article.brief_summary %}
+                            {{ article.brief_summary[:200] + '...' if article.brief_summary|length > 200 else article.brief_summary }}
+                        {% else %}
+                            {{ article.content[:200] + '...' if article.content|length > 200 else article.content }}
+                        {% endif %}
+                    </p>
+
                     <!-- Expandable Content -->
                     <div class="article-content max-h-0 opacity-0 overflow-hidden transition-all duration-500 ease-out">
-                        <!-- Summary -->
-                        <p class="text-gray-600">
+                        <!-- Full Content -->
+                        <p class="text-gray-600 mt-4">
                             {% if article.brief_summary %}
                                 {{ article.brief_summary }}
                             {% else %}
