@@ -231,6 +231,7 @@ class NewsAnalyzer:
             # Check if we're dealing with a list instead of dict
             if isinstance(article, list):
                 analyzed = {
+                    "external_id": article[0] if len(article) > 0 else None,  # Use first element as ID if list
                     "title": title,
                     "content": content,
                     "url": article[2] if len(article) > 2 else "",
@@ -240,6 +241,7 @@ class NewsAnalyzer:
                 }
             else:
                 analyzed = {
+                    "external_id": article.get("id"),  # Extract external ID from dictionary
                     "title": article.get("title", ""),
                     "content": content,
                     "url": article.get("storyPath", ""),

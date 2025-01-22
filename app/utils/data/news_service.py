@@ -35,6 +35,7 @@ class NewsService:
                 conn.execute(text('''
                     CREATE TABLE IF NOT EXISTS news_articles (
                         id INT AUTO_INCREMENT PRIMARY KEY,
+                        external_id VARCHAR(100) UNIQUE NOT NULL,
                         title VARCHAR(255) NOT NULL,
                         content TEXT,
                         url VARCHAR(512),
@@ -46,7 +47,9 @@ class NewsService:
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         brief_summary TEXT,
                         key_points TEXT,
-                        market_impact TEXT
+                        market_impact_summary TEXT,
+                        INDEX idx_external_id (external_id),
+                        INDEX idx_published_at (published_at)
                     ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
                 '''))
 
@@ -56,7 +59,8 @@ class NewsService:
                         article_id INT,
                         symbol VARCHAR(20),
                         FOREIGN KEY (article_id) REFERENCES news_articles(id) ON DELETE CASCADE,
-                        PRIMARY KEY (article_id, symbol)
+                        PRIMARY KEY (article_id, symbol),
+                        INDEX idx_symbol (symbol)
                     ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
                 '''))
 
@@ -84,7 +88,9 @@ class NewsService:
         try:
             with self.engine.connect() as conn:
                 # Check if article already exists by external_id
-                external_id = article.get('id')
+                external_id = article.get('external_id')
+                self.logger.debug(f"Processing article with external_id: {external_id}")
+
                 if not external_id:
                     self.logger.error("Article missing external ID")
                     return None
@@ -113,7 +119,6 @@ class NewsService:
                             :sentiment_label, :sentiment_score, :sentiment_explanation,
                             :brief_summary, :key_points, :market_impact_summary
                         )
-                        RETURNING id
                     '''), {
                         'external_id': external_id,
                         'title': article.get('title'),
@@ -129,10 +134,11 @@ class NewsService:
                         'market_impact_summary': article.get('summary', {}).get('market_impact')
                     })
                     
-                    article_id = result.fetchone()[0]
+                    article_id = result.lastrowid
 
-                    # Insert symbols - Handle both dictionary and string formats
+                    # Insert symbols
                     if article.get('symbols'):
+                        self.logger.debug(f"Processing symbols: {article['symbols']}")
                         symbol_values = []
                         for symbol_data in article['symbols']:
                             # Handle both formats: {'symbol': 'NASDAQ:TSLA'} and 'NASDAQ:TSLA'
@@ -141,11 +147,15 @@ class NewsService:
                                 symbol_values.append({'article_id': article_id, 'symbol': symbol})
                         
                         if symbol_values:
-                            conn.execute(text('''
-                                INSERT INTO article_symbols (article_id, symbol)
-                                VALUES (:article_id, :symbol)
-                                ON CONFLICT (article_id, symbol) DO NOTHING
-                            '''), symbol_values)
+                            self.logger.debug(f"Inserting symbols: {symbol_values}")
+                            for value in symbol_values:
+                                try:
+                                    conn.execute(text('''
+                                        INSERT INTO article_symbols (article_id, symbol)
+                                        VALUES (:article_id, :symbol)
+                                    '''), value)
+                                except Exception as e:
+                                    self.logger.error(f"Error inserting symbol {value}: {str(e)}")
 
                     # Insert metrics
                     if article.get('metrics'):
@@ -154,16 +164,19 @@ class NewsService:
                                 values = metric_data.get('values', [])
                                 contexts = metric_data.get('contexts', [])
                                 for value, context in zip(values, contexts):
-                                    conn.execute(text('''
-                                        INSERT INTO article_metrics 
-                                        (article_id, metric_type, value, context)
-                                        VALUES (:article_id, :metric_type, :value, :context)
-                                    '''), {
-                                        'article_id': article_id,
-                                        'metric_type': metric_type,
-                                        'value': value,
-                                        'context': context
-                                    })
+                                    try:
+                                        conn.execute(text('''
+                                            INSERT INTO article_metrics 
+                                            (article_id, metric_type, metric_value, metric_context)
+                                            VALUES (:article_id, :metric_type, :value, :context)
+                                        '''), {
+                                            'article_id': article_id,
+                                            'metric_type': metric_type,
+                                            'value': value,
+                                            'context': context
+                                        })
+                                    except Exception as e:
+                                        self.logger.error(f"Error inserting metric: {str(e)}")
 
                     return article_id
 
@@ -183,7 +196,7 @@ class NewsService:
         try:
             with self.engine.connect() as conn:
                 # Build base query
-                query = '''
+                query = text('''
                     SELECT DISTINCT 
                         na.*, 
                         GROUP_CONCAT(DISTINCT as_.symbol) as symbols,
@@ -192,30 +205,35 @@ class NewsService:
                     LEFT JOIN article_symbols as_ ON na.id = as_.article_id
                     LEFT JOIN article_metrics am ON na.id = am.article_id
                     WHERE na.published_at BETWEEN :start_date AND :end_date
-                '''
+                ''')
                 params = {'start_date': start_date, 'end_date': end_date}
 
                 if symbol:
-                    query += ' AND as_.symbol = :symbol'
+                    query = query.text(query.text + ' AND as_.symbol = :symbol')
                     params['symbol'] = symbol
 
                 # Get total count
-                count_query = query.replace(
-                    'SELECT DISTINCT \n                        na.*', 
-                    'SELECT COUNT(DISTINCT na.id) as count'
-                )
-                count_query = count_query.split('GROUP BY')[0]
+                count_query = text('''
+                    SELECT COUNT(DISTINCT na.id) as count 
+                    FROM news_articles na 
+                    LEFT JOIN article_symbols as_ ON na.id = as_.article_id
+                    WHERE na.published_at BETWEEN :start_date AND :end_date
+                    ''' + (' AND as_.symbol = :symbol' if symbol else ''))
                 
-                result = conn.execute(text(count_query), params)
-                total = result.fetchone()[0]
+                result = conn.execute(count_query, params)
+                total = result.scalar()
 
                 # Add grouping and pagination
-                query += ' GROUP BY na.id ORDER BY na.published_at DESC LIMIT :limit OFFSET :offset'
+                query = text(query.text + '''
+                    GROUP BY na.id 
+                    ORDER BY na.published_at DESC 
+                    LIMIT :limit OFFSET :offset
+                ''')
                 params['limit'] = per_page
                 params['offset'] = (page - 1) * per_page
 
                 # Execute main query
-                result = conn.execute(text(query), params)
+                result = conn.execute(query, params)
                 articles = []
                 
                 for row in result:
@@ -264,7 +282,7 @@ class NewsService:
         """Search articles with various filters"""
         try:
             with self.engine.connect() as conn:
-                query = '''
+                query = text('''
                     SELECT DISTINCT 
                         na.*, 
                         GROUP_CONCAT(DISTINCT as_.symbol) as symbols,
@@ -273,50 +291,54 @@ class NewsService:
                     LEFT JOIN article_symbols as_ ON na.id = as_.article_id
                     LEFT JOIN article_metrics am ON na.id = am.article_id
                     WHERE 1=1
-                '''
+                ''')
                 params = {}
 
+                filters = []
                 if keyword:
-                    query += ' AND (na.title LIKE :keyword OR na.content LIKE :keyword)'
+                    filters.append('(na.title LIKE :keyword OR na.content LIKE :keyword)')
                     params['keyword'] = f'%{keyword}%'
 
                 if symbol:
-                    query += ' AND as_.symbol = :symbol'
+                    filters.append('as_.symbol = :symbol')
                     params['symbol'] = symbol
 
                 if start_date:
-                    query += ' AND na.published_at >= :start_date'
+                    filters.append('na.published_at >= :start_date')
                     params['start_date'] = start_date
 
                 if end_date:
-                    query += ' AND na.published_at <= :end_date'
+                    filters.append('na.published_at <= :end_date')
                     params['end_date'] = end_date
 
                 if sentiment:
-                    query += ' AND na.sentiment_label = :sentiment'
+                    filters.append('na.sentiment_label = :sentiment')
                     params['sentiment'] = sentiment
 
+                if filters:
+                    query = text(query.text + ' AND ' + ' AND '.join(filters))
+
                 # Get total count
-                count_query = query.replace(
-                    'SELECT DISTINCT \n                        na.*', 
-                    'SELECT COUNT(DISTINCT na.id) as count'
-                )
-                count_query = count_query.split('GROUP BY')[0]
+                count_query = text('''
+                    SELECT COUNT(DISTINCT na.id) as count 
+                    FROM news_articles na 
+                    LEFT JOIN article_symbols as_ ON na.id = as_.article_id
+                    WHERE 1=1 ''' + (' AND ' + ' AND '.join(filters) if filters else ''))
                 
-                result = conn.execute(text(count_query), params)
-                total = result.fetchone()[0]
+                result = conn.execute(count_query, params)
+                total = result.scalar()
 
                 # Add grouping and pagination
-                query += ''' 
+                query = text(query.text + '''
                     GROUP BY na.id 
                     ORDER BY na.published_at DESC 
                     LIMIT :limit OFFSET :offset
-                '''
+                ''')
                 params['limit'] = per_page
                 params['offset'] = (page - 1) * per_page
 
                 # Execute main query
-                result = conn.execute(text(query), params)
+                result = conn.execute(query, params)
                 articles = []
                 
                 for row in result:
