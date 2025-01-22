@@ -114,7 +114,7 @@ class NewsService:
                             sentiment_label, sentiment_score, sentiment_explanation,
                             brief_summary, key_points, market_impact_summary
                         ) VALUES (
-                            :external_id, :title, :content, :url, :published_at, :source,
+                            :external_id, :title,  :url, :published_at, :source,
                             :sentiment_label, :sentiment_score, :sentiment_explanation,
                             :brief_summary, :key_points, :market_impact_summary
                         )
