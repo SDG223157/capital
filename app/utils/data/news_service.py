@@ -83,65 +83,92 @@ class NewsService:
         """Save article and related data to database"""
         try:
             with self.engine.connect() as conn:
-                # Insert main article data
-                result = conn.execute(text('''
-                    INSERT INTO news_articles (
-                        title, content, url, published_at, source,
-                        sentiment_label, sentiment_score, sentiment_explanation,
-                        brief_summary, key_points, market_impact
-                    ) VALUES (:title, :content, :url, :published_at, :source,
+                # Check if article already exists by external_id
+                external_id = article.get('id')
+                if not external_id:
+                    self.logger.error("Article missing external ID")
+                    return None
+
+                # Begin transaction
+                with conn.begin():
+                    # Check for existing article
+                    result = conn.execute(
+                        text("SELECT id FROM news_articles WHERE external_id = :external_id"),
+                        {"external_id": external_id}
+                    )
+                    existing_article = result.fetchone()
+
+                    if existing_article:
+                        self.logger.debug(f"Article with external_id {external_id} already exists")
+                        return existing_article[0]
+
+                    # Insert new article
+                    result = conn.execute(text('''
+                        INSERT INTO news_articles (
+                            external_id, title, content, url, published_at, source,
+                            sentiment_label, sentiment_score, sentiment_explanation,
+                            brief_summary, key_points, market_impact_summary
+                        ) VALUES (
+                            :external_id, :title, :content, :url, :published_at, :source,
                             :sentiment_label, :sentiment_score, :sentiment_explanation,
-                            :brief_summary, :key_points, :market_impact)
-                '''), {
-                    'title': article.get('title'),
-                    'content': article.get('content'),
-                    'url': article.get('url'),
-                    'published_at': article.get('published_at'),
-                    'source': article.get('source'),
-                    'sentiment_label': article.get('sentiment', {}).get('overall_sentiment'),
-                    'sentiment_score': article.get('sentiment', {}).get('confidence'),
-                    'sentiment_explanation': article.get('sentiment', {}).get('explanation'),
-                    'brief_summary': article.get('summary', {}).get('brief'),
-                    'key_points': article.get('summary', {}).get('key_points'),
-                    'market_impact': article.get('summary', {}).get('market_impact')
-                })
-                
-                article_id = result.lastrowid
+                            :brief_summary, :key_points, :market_impact_summary
+                        )
+                        RETURNING id
+                    '''), {
+                        'external_id': external_id,
+                        'title': article.get('title'),
+                        'content': article.get('content'),
+                        'url': article.get('url'),
+                        'published_at': article.get('published_at'),
+                        'source': article.get('source'),
+                        'sentiment_label': article.get('sentiment', {}).get('overall_sentiment'),
+                        'sentiment_score': article.get('sentiment', {}).get('confidence'),
+                        'sentiment_explanation': article.get('sentiment', {}).get('explanation'),
+                        'brief_summary': article.get('summary', {}).get('brief'),
+                        'key_points': article.get('summary', {}).get('key_points'),
+                        'market_impact_summary': article.get('summary', {}).get('market_impact')
+                    })
+                    
+                    article_id = result.fetchone()[0]
 
-                # Insert symbols
-                if article.get('symbols'):
-                    for symbol in article['symbols']:
-                        conn.execute(text('''
-                            INSERT INTO article_symbols (article_id, symbol)
-                            VALUES (:article_id, :symbol)
-                        '''), {'article_id': article_id, 'symbol': symbol})
+                    # Insert symbols - Handle both dictionary and string formats
+                    if article.get('symbols'):
+                        symbol_values = []
+                        for symbol_data in article['symbols']:
+                            # Handle both formats: {'symbol': 'NASDAQ:TSLA'} and 'NASDAQ:TSLA'
+                            symbol = symbol_data.get('symbol') if isinstance(symbol_data, dict) else symbol_data
+                            if symbol:
+                                symbol_values.append({'article_id': article_id, 'symbol': symbol})
+                        
+                        if symbol_values:
+                            conn.execute(text('''
+                                INSERT INTO article_symbols (article_id, symbol)
+                                VALUES (:article_id, :symbol)
+                                ON CONFLICT (article_id, symbol) DO NOTHING
+                            '''), symbol_values)
 
-                # Insert metrics
-                if article.get('metrics'):
-                    for metric_type, metric_data in article['metrics'].items():
-                        if isinstance(metric_data, (list, tuple)) and len(metric_data) > 0:
-                            for value, context in zip(
-                                metric_data.get('values', []), 
-                                metric_data.get('contexts', [])
-                            ):
-                                conn.execute(text('''
-                                    INSERT INTO article_metrics 
-                                    (article_id, metric_type, metric_value, metric_context)
-                                    VALUES (:article_id, :metric_type, :value, :context)
-                                '''), {
-                                    'article_id': article_id,
-                                    'metric_type': metric_type,
-                                    'value': value,
-                                    'context': context
-                                })
+                    # Insert metrics
+                    if article.get('metrics'):
+                        for metric_type, metric_data in article['metrics'].items():
+                            if isinstance(metric_data, dict):
+                                values = metric_data.get('values', [])
+                                contexts = metric_data.get('contexts', [])
+                                for value, context in zip(values, contexts):
+                                    conn.execute(text('''
+                                        INSERT INTO article_metrics 
+                                        (article_id, metric_type, value, context)
+                                        VALUES (:article_id, :metric_type, :value, :context)
+                                    '''), {
+                                        'article_id': article_id,
+                                        'metric_type': metric_type,
+                                        'value': value,
+                                        'context': context
+                                    })
 
-                conn.commit()
-                return article_id
+                    return article_id
 
         except Exception as e:
-            self.logger.error(f"Error saving article: {str(e)}")
-            if 'conn' in locals():
-                conn.rollback()
+            self.logger.error(f"Error saving article: {str(e)}", exc_info=True)
             return None
 
     def get_articles_by_date_range(
