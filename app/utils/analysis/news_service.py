@@ -7,6 +7,7 @@ from ..config.news_config import NewsConfig
 from .news_analyzer import NewsAnalyzer
 from ..data.news_service import NewsService
 from apify_client import ApifyClient
+import traceback
 
 class NewsAnalysisService:
     def __init__(self):
@@ -116,7 +117,7 @@ class NewsAnalysisService:
             return analyzed_articles
             
         except Exception as e:
-            self.logger.error(f"Fatal error in fetch_and_analyze_news: {str(e)}")
+            self.logger.error(f"Error in fetch_and_analyze_news: {str(e)}")
             self.logger.error(f"Traceback: {traceback.format_exc()}")
             return []
         finally:

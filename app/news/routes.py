@@ -184,3 +184,24 @@ def cleanup(exception):
             news_service.close()
     except Exception as e:
         logger.error(f"Error in cleanup: {str(e)}")
+        
+# Add this to your routes.py temporarily for testing
+
+@bp.route('/test-fetch', methods=['GET'])
+@login_required
+def test_fetch():
+    """Test endpoint to fetch and store news"""
+    try:
+        # Fetch news for Apple
+        articles = news_service.fetch_and_analyze_news(
+            symbols=["NASDAQ:AAPL"],
+            limit=10
+        )
+        
+        return jsonify({
+            'message': f'Successfully fetched {len(articles)} articles',
+            'articles': articles
+        })
+    except Exception as e:
+        logger.error(f"Error in test fetch: {str(e)}")
+        return jsonify({'error': str(e)}), 500
