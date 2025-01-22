@@ -2,13 +2,9 @@ from app import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
-
-# app/models.py
-
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey, Enum, UniqueConstraint, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
-from datetime import datetime
 
 Base = declarative_base()
 
@@ -16,6 +12,7 @@ class NewsArticle(Base):
     __tablename__ = 'news_articles'
 
     id = Column(Integer, primary_key=True)
+    external_id = Column(String(100), unique=True, nullable=False, index=True)
     title = Column(String(500))
     content = Column(Text)
     url = Column(String(500))
@@ -23,51 +20,77 @@ class NewsArticle(Base):
     source = Column(String(100))
     sentiment_label = Column(String(50))
     sentiment_score = Column(Float)
+    sentiment_explanation = Column(Text)
     brief_summary = Column(Text)
     key_points = Column(Text)
     market_impact_summary = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
-    symbols = relationship("ArticleSymbol", back_populates="article")
-    metrics = relationship("ArticleMetric", back_populates="article")
+    symbols = relationship("ArticleSymbol", back_populates="article", cascade="all, delete-orphan")
+    metrics = relationship("ArticleMetric", back_populates="article", cascade="all, delete-orphan")
+
+    # Add unique constraint for external_id
+    __table_args__ = (UniqueConstraint('external_id', name='uq_news_external_id'),)
 
     def to_dict(self):
         return {
             'id': self.id,
+            'external_id': self.external_id,
             'title': self.title,
             'content': self.content,
             'url': self.url,
             'published_at': self.published_at.strftime("%Y-%m-%d %H:%M:%S") if self.published_at else None,
             'source': self.source,
-            'sentiment_label': self.sentiment_label,
-            'sentiment_score': self.sentiment_score,
-            'brief_summary': self.brief_summary,
-            'key_points': self.key_points,
-            'market_impact_summary': self.market_impact_summary,
+            'sentiment': {
+                'label': self.sentiment_label,
+                'score': self.sentiment_score,
+                'explanation': self.sentiment_explanation
+            },
+            'summary': {
+                'brief': self.brief_summary,
+                'key_points': self.key_points,
+                'market_impact': self.market_impact_summary
+            },
             'symbols': [symbol.symbol for symbol in self.symbols],
             'metrics': {
                 'percentages': [m.to_dict() for m in self.metrics if m.metric_type == 'percentage'],
                 'currencies': [m.to_dict() for m in self.metrics if m.metric_type == 'currency']
-            }
+            },
+            'created_at': self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None
         }
+
+    @classmethod
+    def get_by_external_id(cls, session, external_id):
+        """Get article by external ID"""
+        return session.query(cls).filter_by(external_id=external_id).first()
 
 class ArticleSymbol(Base):
     __tablename__ = 'article_symbols'
 
     id = Column(Integer, primary_key=True)
-    article_id = Column(Integer, ForeignKey('news_articles.id'))
+    article_id = Column(Integer, ForeignKey('news_articles.id', ondelete='CASCADE'))
     symbol = Column(String(50), index=True)
 
     # Relationship
     article = relationship("NewsArticle", back_populates="symbols")
 
+    # Add unique constraint to prevent duplicate symbols for the same article
+    __table_args__ = (UniqueConstraint('article_id', 'symbol', name='uq_article_symbol'),)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'article_id': self.article_id,
+            'symbol': self.symbol
+        }
+
 class ArticleMetric(Base):
     __tablename__ = 'article_metrics'
 
     id = Column(Integer, primary_key=True)
-    article_id = Column(Integer, ForeignKey('news_articles.id'))
-    metric_type = Column(Enum('percentage', 'currency'))
+    article_id = Column(Integer, ForeignKey('news_articles.id', ondelete='CASCADE'))
+    metric_type = Column(Enum('percentage', 'currency', name='metric_type_enum'))
     value = Column(Float)
     context = Column(Text)
 
@@ -76,6 +99,8 @@ class ArticleMetric(Base):
 
     def to_dict(self):
         return {
+            'id': self.id,
+            'article_id': self.article_id,
             'value': self.value,
             'context': self.context,
             'type': self.metric_type
@@ -111,6 +136,21 @@ class User(UserMixin, db.Model):
     def is_administrator(self):
         """Check if user has admin privileges"""
         return self.is_admin or self.role == 'admin'
+        
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'email': self.email,
+            'username': self.username,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'created_at': self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None,
+            'last_login': self.last_login.strftime("%Y-%m-%d %H:%M:%S") if self.last_login else None,
+            'is_active': self.is_active,
+            'is_admin': self.is_admin,
+            'role': self.role,
+            'is_google_user': self.is_google_user
+        }
 
     def __repr__(self):
         return f'<User {self.username}>'
