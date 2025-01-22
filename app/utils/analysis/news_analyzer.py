@@ -45,7 +45,7 @@ class NewsAnalyzer:
 
     # In news_analyzer.py
 
-    def get_news(self, symbols: List[str], limit: int = 10, retries: int = 5, delay: int = 3) -> List[Dict]:
+    def get_news(self, symbols: List[str], limit: int = 10, retries: int = 10, delay: int = 5) -> List[Dict]:
         """Fetch news from TradingView via Apify with retry logic."""
         self.logger.debug(f"Fetching news for symbols: {symbols}, limit: {limit}")
 
