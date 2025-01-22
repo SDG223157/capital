@@ -164,12 +164,12 @@
 
                             <!-- Sentiment Tag -->
                             <span class="sentiment-tag inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                                {% if article.sentiment.overall_sentiment == 'POSITIVE' %}bg-green-100 text-green-800
-                                {% elif article.sentiment.overall_sentiment == 'NEGATIVE' %}bg-red-100 text-red-800
+                                {% if article.sentiment_label == 'POSITIVE' %}bg-green-100 text-green-800
+                                {% elif article.sentiment_label == 'NEGATIVE' %}bg-red-100 text-red-800
                                 {% else %}bg-gray-100 text-gray-800{% endif %}">
-                                {{ article.sentiment.overall_sentiment }}
-                                {% if article.sentiment.confidence %}
-                                    ({{ (article.sentiment.confidence * 100) | round(1) }}%)
+                                {{ article.sentiment_label }}
+                                {% if article.sentiment_score %}
+                                    ({{ (article.sentiment_score * 100) | round(1) }}%)
                                 {% endif %}
                             </span>
                         </div>
