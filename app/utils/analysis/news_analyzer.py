@@ -9,6 +9,8 @@ from typing import Dict, List
 import logging
 from apify_client import ApifyClient
 import os
+import time
+import random
 
 class NewsAnalyzer:
     # In news_analyzer.py
@@ -43,38 +45,58 @@ class NewsAnalyzer:
 
     # In news_analyzer.py
 
-    def get_news(self, symbols: List[str], limit: int = 10) -> List[Dict]:
-        """Fetch news from TradingView via Apify"""
+    def get_news(self, symbols: List[str], limit: int = 10, retries: int = 5, delay: int = 3) -> List[Dict]:
+        """Fetch news from TradingView via Apify with retry logic."""
         self.logger.debug(f"Fetching news for symbols: {symbols}, limit: {limit}")
-        
+
         run_input = {
             "symbols": symbols,
             "proxy": {"useApifyProxy": True, "apifyProxyCountry": "US"},
             "resultsLimit": limit,
         }
-        
-        try:
-            if not self.client:
-                self.logger.error("Apify client not initialized. Check API token.")
-                return []
-                
-            self.logger.debug("Calling Apify actor")
-            run = self.client.actor("mscraper/tradingview-news-scraper").call(run_input=run_input)
-            
-            if not run:
-                self.logger.error("No response from Apify actor")
-                return []
-                
-            dataset_id = run["defaultDatasetId"]
-            self.logger.debug(f"Dataset ID received: {dataset_id}")
-            
-            items = list(self.client.dataset(dataset_id).iterate_items())
-            self.logger.debug(f"Retrieved {len(items)} items from dataset")
-            
-            return items
-        except Exception as e:
-            self.logger.error(f"Error fetching news: {str(e)}", exc_info=True)
-            return []
+
+        attempt = 0
+        while attempt < retries:
+            try:
+                if not self.client:
+                    self.logger.error("Apify client not initialized. Check API token.")
+                    return []
+
+                self.logger.debug(f"Attempt {attempt + 1} of {retries} - Calling Apify actor")
+                run = self.client.actor("mscraper/tradingview-news-scraper").call(run_input=run_input)
+
+                if not run:
+                    self.logger.error("No response from Apify actor")
+                    return []
+
+                # Safely access the dataset_id and check if it exists
+                dataset_id = run.get("defaultDatasetId")
+                if not dataset_id:
+                    self.logger.error("Dataset ID not found in the response.")
+                    return []
+
+                self.logger.debug(f"Dataset ID received: {dataset_id}")
+
+                # Retrieve and iterate over the dataset
+                items = list(self.client.dataset(dataset_id).iterate_items())
+                self.logger.debug(f"Retrieved {len(items)} items from dataset")
+
+                return items
+
+            except Exception as e:
+                self.logger.error(f"Error fetching news on attempt {attempt + 1}: {str(e)}", exc_info=True)
+
+                attempt += 1
+                if attempt < retries:
+                    # Introduce an exponential backoff with some randomness (to avoid hitting rate limits)
+                    sleep_time = delay * (2 ** (attempt - 1)) + random.uniform(0, 2)
+                    self.logger.debug(f"Retrying in {sleep_time:.2f} seconds...")
+                    time.sleep(sleep_time)
+                else:
+                    self.logger.error("Maximum retries reached. Could not fetch news.")
+                    return []
+
+        return []
 
     def analyze_sentiment(self, text: str) -> Dict:
         """Analyze sentiment using TextBlob and VADER"""
