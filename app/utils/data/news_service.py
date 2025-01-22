@@ -37,7 +37,6 @@ class NewsService:
                         id INT AUTO_INCREMENT PRIMARY KEY,
                         external_id VARCHAR(100) UNIQUE NOT NULL,
                         title VARCHAR(255) NOT NULL,
-                        content TEXT,
                         url VARCHAR(512),
                         published_at DATETIME,
                         source VARCHAR(100),
@@ -111,7 +110,7 @@ class NewsService:
                     # Insert new article
                     result = conn.execute(text('''
                         INSERT INTO news_articles (
-                            external_id, title, content, url, published_at, source,
+                            external_id, title, url, published_at, source,
                             sentiment_label, sentiment_score, sentiment_explanation,
                             brief_summary, key_points, market_impact_summary
                         ) VALUES (
@@ -122,7 +121,6 @@ class NewsService:
                     '''), {
                         'external_id': external_id,
                         'title': article.get('title'),
-                        'content': article.get('content'),
                         'url': article.get('url'),
                         'published_at': article.get('published_at'),
                         'source': article.get('source'),

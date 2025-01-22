@@ -14,7 +14,7 @@ class NewsArticle(Base):
     id = Column(Integer, primary_key=True)
     external_id = Column(String(100), unique=True, nullable=False, index=True)
     title = Column(String(500))
-    content = Column(Text)
+    # content = Column(Text)
     url = Column(String(500))
     published_at = Column(DateTime)
     source = Column(String(100))
@@ -38,7 +38,7 @@ class NewsArticle(Base):
             'id': self.id,
             'external_id': self.external_id,
             'title': self.title,
-            'content': self.content,
+            # 'content': self.content,
             'url': self.url,
             'published_at': self.published_at.strftime("%Y-%m-%d %H:%M:%S") if self.published_at else None,
             'source': self.source,
