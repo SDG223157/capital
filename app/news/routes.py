@@ -43,6 +43,7 @@ def index():
         logger.error(f"Error in news index route: {str(e)}")
         return render_template('news/analysis.html', error="Failed to load news dashboard")
 
+
 @bp.route('/search')
 @login_required
 def search():
@@ -67,6 +68,12 @@ def search():
         logger.debug(f"Processed search parameters: keyword='{keyword}', symbol='{symbol}', "
                     f"start_date='{start_date}', end_date='{end_date}', "
                     f"sentiment='{sentiment}', page={page}, per_page={per_page}")
+
+        # Set default dates if not provided
+        if not end_date:
+            end_date = datetime.now().strftime("%Y-%m-%d")
+        if not start_date:
+            start_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
         
         # Search articles
         articles, total = news_service.search_news(
@@ -80,6 +87,17 @@ def search():
         )
         
         logger.debug(f"Search complete. Found {total} articles, returning {len(articles)} for current page")
+
+        # Always include search_params in the template context
+        search_params = {
+            'keyword': keyword,
+            'symbol': symbol,
+            'start_date': start_date,
+            'end_date': end_date,
+            'sentiment': sentiment,
+            'page': page,
+            'per_page': per_page,
+        }
             
         # Handle AJAX requests
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -96,23 +114,36 @@ def search():
             'news/search.html',
             articles=articles,
             total=total,
-            search_params={
-                'keyword': keyword,
-                'symbol': symbol,
-                'start_date': start_date,
-                'end_date': end_date,
-                'sentiment': sentiment,
-                'page': page,
-                'per_page': per_page
-            }
+            search_params=search_params,
+            error=None
         )
             
     except Exception as e:
         logger.error(f"Error in search route: {str(e)}", exc_info=True)
         error_response = {'status': 'error', 'message': 'Search failed. Please try again.'}
+        
+        # Always include search_params even in error case
+        search_params = {
+            'keyword': request.args.get('keyword', ''),
+            'symbol': request.args.get('symbol', ''),
+            'start_date': request.args.get('start_date', ''),
+            'end_date': request.args.get('end_date', ''),
+            'sentiment': request.args.get('sentiment', ''),
+            'page': 1,
+            'per_page': 20,
+        }
+        
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify(error_response), 500
-        return render_template('news/search.html', error=error_response['message'])
+            
+        return render_template(
+            'news/search.html', 
+            error=error_response['message'],
+            search_params=search_params,
+            articles=[],
+            total=0
+        )
+
 
 @bp.route('/api/fetch', methods=['POST'])
 @login_required

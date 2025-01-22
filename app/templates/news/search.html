@@ -3,7 +3,7 @@
 {% block title %}News Search{% endblock %}
 
 {% block head %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/news.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/news.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -22,7 +22,7 @@
                 <div>
                     <label for="keyword" class="block text-sm font-medium text-gray-700">Keyword</label>
                     <input type="text" name="keyword" id="keyword" 
-                           value="{{ search_params.keyword }}"
+                           value="{{ search_params.get('keyword', '') }}"
                            placeholder="Enter keywords..."
                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
@@ -31,7 +31,7 @@
                 <div>
                     <label for="symbol" class="block text-sm font-medium text-gray-700">Stock Symbol</label>
                     <input type="text" name="symbol" id="symbol" 
-                           value="{{ search_params.symbol }}"
+                           value="{{ search_params.get('symbol', '') }}"
                            placeholder="e.g., NASDAQ:AAPL"
                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
@@ -42,9 +42,9 @@
                     <select name="sentiment" id="sentiment" 
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                         <option value="">All Sentiments</option>
-                        <option value="POSITIVE" {% if search_params.sentiment == 'POSITIVE' %}selected{% endif %}>Positive</option>
-                        <option value="NEUTRAL" {% if search_params.sentiment == 'NEUTRAL' %}selected{% endif %}>Neutral</option>
-                        <option value="NEGATIVE" {% if search_params.sentiment == 'NEGATIVE' %}selected{% endif %}>Negative</option>
+                        <option value="POSITIVE" {% if search_params.get('sentiment') == 'POSITIVE' %}selected{% endif %}>Positive</option>
+                        <option value="NEUTRAL" {% if search_params.get('sentiment') == 'NEUTRAL' %}selected{% endif %}>Neutral</option>
+                        <option value="NEGATIVE" {% if search_params.get('sentiment') == 'NEGATIVE' %}selected{% endif %}>Negative</option>
                     </select>
                 </div>
 
@@ -53,13 +53,13 @@
                     <div>
                         <label for="start_date" class="block text-sm font-medium text-gray-700">Start Date</label>
                         <input type="date" name="start_date" id="start_date"
-                               value="{{ search_params.start_date }}"
+                               value="{{ search_params.get('start_date', '') }}"
                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                     </div>
                     <div>
                         <label for="end_date" class="block text-sm font-medium text-gray-700">End Date</label>
                         <input type="date" name="end_date" id="end_date"
-                               value="{{ search_params.end_date }}"
+                               value="{{ search_params.get('end_date', '') }}"
                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                     </div>
                 </div>
@@ -87,13 +87,12 @@
             </div>
         </form>
     </div>
-
     <!-- Results Section -->
     <div class="bg-white rounded-lg shadow-md p-6">
         <!-- Results Header -->
         <div class="flex justify-between items-center mb-6">
             <h2 class="text-xl font-semibold text-gray-900">Search Results</h2>
-            <span id="resultsCount" class="text-sm text-gray-600">{{ total }} articles found</span>
+            <span id="resultsCount" class="text-sm text-gray-600">{{ total if total is defined else 0 }} articles found</span>
         </div>
 
         <!-- Error Message -->
@@ -103,97 +102,132 @@
         </div>
         {% endif %}
 
+        <!-- Loading Indicator -->
+        <div id="loadingIndicator" class="hidden">
+            <div class="flex justify-center items-center py-8">
+                <div class="spinner"></div>
+                <span class="ml-3 text-gray-600">Loading results...</span>
+            </div>
+        </div>
+
         <!-- Results List -->
         <div id="searchResults" class="space-y-6">
-            {% for article in articles %}
-            <div class="article-card opacity-0 translate-y-4 border-b border-gray-200 pb-6 last:border-b-0">
-                <div class="flex justify-between items-start mb-2">
-                    <h3 class="text-lg font-medium text-gray-900">
-                        <a href="{{ article.url }}" target="_blank" class="text-blue-600 hover:text-blue-800">
-                            {{ article.title }}
-                        </a>
-                    </h3>
-                    <span class="text-sm text-gray-500">{{ article.published_at }}</span>
-                </div>
-
-                <div class="article-content max-h-0 overflow-hidden">
-                    <p class="text-gray-600">{{ article.summary.brief or article.content }}</p>
-
-                    {% if article.summary.key_points %}
-                    <div class="mt-3 mb-3">
-                        <h4 class="text-sm font-semibold text-gray-700">Key Points:</h4>
-                        <p class="text-sm text-gray-600">{{ article.summary.key_points }}</p>
+            {% if articles %}
+                {% for article in articles %}
+                <div class="article-card opacity-0 translate-y-4 border-b border-gray-200 pb-6 last:border-b-0 mb-4 transition-all duration-500 ease-out">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex-1">
+                            <div class="flex items-start">
+                                <h3 class="text-lg font-medium text-gray-900">
+                                    <a href="{{ article.get('url', '#') }}" target="_blank" class="text-blue-600 hover:text-blue-800">
+                                        {{ article.get('title', 'Untitled') }}
+                                    </a>
+                                </h3>
+                                <div class="flex ml-2 space-x-1">
+                                    <button class="copy-button p-1 text-gray-400 hover:text-gray-600 focus:outline-none" 
+                                            title="Copy article">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                        </svg>
+                                    </button>
+                                    <button class="share-button p-1 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                            title="Share article">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="text-sm text-gray-500 mt-1">
+                                {{ article.get('source', 'Unknown Source') }} · {{ article.get('published_at', '') }}
+                            </div>
+                        </div>
                     </div>
-                    {% endif %}
 
-                    {% if article.summary.market_impact %}
-                    <div class="mb-3">
-                        <h4 class="text-sm font-semibold text-gray-700">Market Impact:</h4>
-                        <p class="text-sm text-gray-600">{{ article.summary.market_impact }}</p>
-                    </div>
-                    {% endif %}
-
-                    <div class="flex flex-wrap gap-2 mt-3">
-                        {% for symbol in article.symbols %}
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                            {{ symbol }}
-                        </span>
-                        {% endfor %}
-
-                        <span class="sentiment-tag inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                            {% if article.sentiment.overall_sentiment == 'POSITIVE' %}sentiment-positive
-                            {% elif article.sentiment.overall_sentiment == 'NEGATIVE' %}sentiment-negative
-                            {% else %}sentiment-neutral{% endif %}">
-                            {{ article.sentiment.overall_sentiment or 'NEUTRAL' }}
-                            {% if article.sentiment.confidence %}
-                            ({{ "%.1f"|format(article.sentiment.confidence * 100) }}%)
+                    <div class="article-content max-h-0 overflow-hidden transition-all duration-500 ease-out">
+                        <!-- Article Content -->
+                        <p class="text-gray-600">
+                            {% if article.get('summary', {}).get('brief') %}
+                                {{ article.summary.brief }}
+                            {% else %}
+                                {{ article.get('content', '') }}
                             {% endif %}
-                        </span>
+                        </p>
 
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {{ article.source or 'Unknown' }}
-                        </span>
+                        <!-- Key Points -->
+                        {% if article.get('summary', {}).get('key_points') %}
+                        <div class="mt-3 mb-3">
+                            <h4 class="text-sm font-semibold text-gray-700">Key Points:</h4>
+                            <p class="text-sm text-gray-600">{{ article.summary.key_points }}</p>
+                        </div>
+                        {% endif %}
+
+                        <!-- Market Impact -->
+                        {% if article.get('summary', {}).get('market_impact') %}
+                        <div class="mb-3">
+                            <h4 class="text-sm font-semibold text-gray-700">Market Impact:</h4>
+                            <p class="text-sm text-gray-600">{{ article.summary.market_impact }}</p>
+                        </div>
+                        {% endif %}
+
+                        <!-- Tags -->
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            {% for symbol in article.get('symbols', []) %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                {{ symbol }}
+                            </span>
+                            {% endfor %}
+
+                            {% set sentiment = article.get('sentiment', {}).get('overall_sentiment', 'NEUTRAL') %}
+                            {% set confidence = article.get('sentiment', {}).get('confidence', 0) %}
+                            <span class="sentiment-tag inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                {% if sentiment == 'POSITIVE' %}bg-green-100 text-green-800
+                                {% elif sentiment == 'NEGATIVE' %}bg-red-100 text-red-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ sentiment }}
+                                {% if confidence %}
+                                    ({{ (confidence * 100) | round(1) }}%)
+                                {% endif %}
+                            </span>
+                        </div>
                     </div>
+                    
+                    <button class="expand-button mt-2 text-sm text-blue-600 hover:text-blue-800 focus:outline-none"
+                            aria-expanded="false">
+                        Show More
+                    </button>
                 </div>
-                <button class="expand-button mt-2 text-sm text-blue-600 hover:text-blue-800 focus:outline-none">
-                    Show More
-                </button>
-            </div>
-            {% endfor %}
-
-            {% if not articles %}
-            <div class="text-center py-8">
-                <p class="text-gray-500">No articles found matching your search criteria</p>
-            </div>
+                {% endfor %}
+            {% else %}
+                <!-- No Results State -->
+                <div class="text-center py-8">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01" />
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">No articles found</h3>
+                    <p class="mt-1 text-sm text-gray-500">Try adjusting your search parameters</p>
+                </div>
             {% endif %}
         </div>
 
         <!-- Pagination -->
-        {% if total > search_params.per_page %}
+        {% if total and total > search_params.get('per_page', 20) %}
         <div class="mt-6">
-            <nav class="flex items-center justify-between border-t border-gray-200 px-4 sm:px-0">
-                <div class="flex w-0 flex-1">
-                    {% if search_params.page > 1 %}
-                    <button type="button" data-page="{{ search_params.page - 1 }}"
-                            class="inline-flex items-center border-t-2 border-transparent pt-4 pr-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700">
-                        <svg class="mr-3 h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M7.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l2.293 2.293a1 1 0 010 1.414z" clip-rule="evenodd" />
-                        </svg>
+            <nav class="flex items-center justify-between">
+                <!-- Previous/Next Page Buttons -->
+                <div class="flex-1 flex justify-between">
+                    {% if search_params.get('page', 1) > 1 %}
+                    <button type="button" data-page="{{ search_params.get('page', 1) - 1 }}"
+                            class="btn-hover-effect relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                         Previous
                     </button>
                     {% endif %}
-                </div>
-                <div class="hidden md:-mt-px md:flex">
-                    <!-- Page numbers -->
-                </div>
-                <div class="flex w-0 flex-1 justify-end">
-                    {% if total > search_params.page * search_params.per_page %}
-                    <button type="button" data-page="{{ search_params.page + 1 }}"
-                            class="inline-flex items-center border-t-2 border-transparent pt-4 pl-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700">
+                    
+                    {% if total > search_params.get('page', 1) * search_params.get('per_page', 20) %}
+                    <button type="button" data-page="{{ search_params.get('page', 1) + 1 }}"
+                            class="btn-hover-effect relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                         Next
-                        <svg class="ml-3 h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />
-                        </svg>
                     </button>
                     {% endif %}
                 </div>
@@ -224,6 +258,4 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/news.js') }}"></script>
-<script src="{{ url_for('static', filename='js/main.js') }}"></script>
-
 {% endblock %}
