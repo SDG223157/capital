@@ -130,26 +130,26 @@
                     <div class="article-content max-h-0 opacity-0 overflow-hidden transition-all duration-500 ease-out">
                         <!-- Summary -->
                         <p class="text-gray-600">
-                            {% if article.summary.brief %}
-                                {{ article.summary.brief }}
+                            {% if article.brief_summary %}
+                                {{ article.brief_summary }}
                             {% else %}
                                 {{ article.content }}
                             {% endif %}
                         </p>
 
                         <!-- Key Points -->
-                        {% if article.summary.key_points %}
+                        {% if article.key_points %}
                         <div class="mt-3 mb-3">
                             <h4 class="text-sm font-semibold text-gray-700">Key Points:</h4>
-                            <p class="text-sm text-gray-600">{{ article.summary.key_points }}</p>
+                            <p class="text-sm text-gray-600">{{ article.key_points }}</p>
                         </div>
                         {% endif %}
 
                         <!-- Market Impact -->
-                        {% if article.summary.market_impact %}
+                        {% if article.market_impact_summary %}
                         <div class="mb-3">
                             <h4 class="text-sm font-semibold text-gray-700">Market Impact:</h4>
-                            <p class="text-sm text-gray-600">{{ article.summary.market_impact }}</p>
+                            <p class="text-sm text-gray-600">{{ article.market_impact_summary }}</p>
                         </div>
                         {% endif %}
 
