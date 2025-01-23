@@ -11,8 +11,16 @@ class NewsService:
     """Service class for handling news article operations"""
     
     def __init__(self):
-        """Initialize NewsService with logger"""
         self.logger = logging.getLogger(__name__)
+        
+    def close(self):
+        """Clean up resources"""
+        try:
+            if hasattr(self, 'engine'):
+                self.engine.dispose()
+        except Exception as e:
+            self.logger.error(f"Error disposing engine: {str(e)}")
+
 
     def save_article(self, article_data: Dict) -> Optional[int]:
         """

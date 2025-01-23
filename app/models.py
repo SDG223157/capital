@@ -56,20 +56,23 @@ class NewsArticle(db.Model):
 
 class ArticleSymbol(db.Model):
     __tablename__ = 'article_symbols'
-
-    id = db.Column(db.Integer, primary_key=True)
-    article_id = db.Column(db.Integer, db.ForeignKey('news_articles.id', ondelete='CASCADE'))
-    symbol = db.Column(db.String(20))
+    
+    # Remove the id column since it's not in our database
+    article_id = db.Column(db.Integer, db.ForeignKey('news_articles.id', ondelete='CASCADE'), primary_key=True)
+    symbol = db.Column(db.String(20), primary_key=True)  # Make symbol part of primary key
 
     # Relationship
-    article = relationship('NewsArticle', back_populates='symbols')
+    article = db.relationship('NewsArticle', back_populates='symbols')
 
-    __table_args__ = (db.UniqueConstraint('article_id', 'symbol'),)
+    __table_args__ = (
+        db.UniqueConstraint('article_id', 'symbol'),
+    )
 
     def to_dict(self):
         return {
             'symbol': self.symbol
         }
+    
 
 class ArticleMetric(db.Model):
     __tablename__ = 'article_metrics'
