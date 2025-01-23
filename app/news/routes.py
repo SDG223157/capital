@@ -139,90 +139,121 @@ def fetch_news():
             'message': 'Failed to fetch news',
             'error': str(e)
         }), HTTPStatus.INTERNAL_SERVER_ERROR
-
-@bp.route('/api/news/sentiment')
+@bp.route('/api/sentiment')
 @login_required
 def get_sentiment():
-    """Get sentiment analysis for specified parameters"""
+    """Get sentiment analysis summary"""
     try:
-        analytics = init_analytics()
-        
+        date = request.args.get('date')
         symbol = request.args.get('symbol')
-        days = min(int(request.args.get('days', 7)), 90)  # Cap at 90 days
-        include_metrics = request.args.get('include_metrics', 'true').lower() == 'true'
+        days = int(request.args.get('days', 7))
         
-        analysis = analytics.get_sentiment_analysis(
-            symbol=symbol,
-            days=days,
-            include_metrics=include_metrics
-        )
-        
-        return jsonify({
-            'status': 'success',
-            'data': analysis
-        })
-        
-    except Exception as e:
-        logger.error(f"Error getting sentiment analysis: {str(e)}", exc_info=True)
-        return jsonify({
-            'status': 'error',
-            'message': 'Failed to get sentiment analysis'
-        }), HTTPStatus.INTERNAL_SERVER_ERROR
-
-@bp.route('/api/news/trending')
-@login_required
-def get_trending():
-    """Get trending topics analysis"""
-    try:
-        analytics = init_analytics()
-        days = min(int(request.args.get('days', 7)), 30)  # Cap at 30 days
-        
-        topics = analytics.get_trending_topics(days=days)
-        
-        return jsonify({
-            'status': 'success',
-            'data': topics
-        })
-        
-    except Exception as e:
-        logger.error(f"Error getting trending topics: {str(e)}", exc_info=True)
-        return jsonify({
-            'status': 'error',
-            'message': 'Failed to get trending topics'
-        }), HTTPStatus.INTERNAL_SERVER_ERROR
-
-@bp.route('/api/news/correlations')
-@login_required
-def get_correlations():
-    """Get symbol correlations"""
-    try:
-        analytics = init_analytics()
-        
-        symbol = request.args.get('symbol')
-        if not symbol:
-            return jsonify({
-                'status': 'error',
-                'message': 'Symbol is required'
-            }), HTTPStatus.BAD_REQUEST
-            
-        days = min(int(request.args.get('days', 30)), 90)  # Cap at 90 days
-        
-        correlations = analytics.get_symbol_correlations(
+        summary = news_service.get_sentiment_summary(
+            date=date,
             symbol=symbol,
             days=days
         )
         
-        return jsonify({
-            'status': 'success',
-            'data': correlations
-        })
-        
+        return jsonify(summary)
     except Exception as e:
-        logger.error(f"Error getting correlations: {str(e)}", exc_info=True)
-        return jsonify({
-            'status': 'error',
-            'message': 'Failed to get correlations'
-        }), HTTPStatus.INTERNAL_SERVER_ERROR
+        logger.error(f"Error getting sentiment summary: {str(e)}")
+        return jsonify({'error': 'Failed to get sentiment summary'}), 500
+
+@bp.route('/api/trending')
+@login_required
+def get_trending():
+    """Get trending topics"""
+    try:
+        days = int(request.args.get('days', 7))
+        topics = news_service.get_trending_topics(days=days)
+        return jsonify(topics)
+    except Exception as e:
+        logger.error(f"Error getting trending topics: {str(e)}")
+        return jsonify({'error': 'Failed to get trending topics'}), 500
+
+# @bp.route('/api/news/sentiment')
+# @login_required
+# def get_sentiment():
+#     """Get sentiment analysis for specified parameters"""
+#     try:
+#         analytics = init_analytics()
+        
+#         symbol = request.args.get('symbol')
+#         days = min(int(request.args.get('days', 7)), 90)  # Cap at 90 days
+#         include_metrics = request.args.get('include_metrics', 'true').lower() == 'true'
+        
+#         analysis = analytics.get_sentiment_analysis(
+#             symbol=symbol,
+#             days=days,
+#             include_metrics=include_metrics
+#         )
+        
+#         return jsonify({
+#             'status': 'success',
+#             'data': analysis
+#         })
+        
+#     except Exception as e:
+#         logger.error(f"Error getting sentiment analysis: {str(e)}", exc_info=True)
+#         return jsonify({
+#             'status': 'error',
+#             'message': 'Failed to get sentiment analysis'
+#         }), HTTPStatus.INTERNAL_SERVER_ERROR
+
+# @bp.route('/api/news/trending')
+# @login_required
+# def get_trending():
+#     """Get trending topics analysis"""
+#     try:
+#         analytics = init_analytics()
+#         days = min(int(request.args.get('days', 7)), 30)  # Cap at 30 days
+        
+#         topics = analytics.get_trending_topics(days=days)
+        
+#         return jsonify({
+#             'status': 'success',
+#             'data': topics
+#         })
+        
+#     except Exception as e:
+#         logger.error(f"Error getting trending topics: {str(e)}", exc_info=True)
+#         return jsonify({
+#             'status': 'error',
+#             'message': 'Failed to get trending topics'
+#         }), HTTPStatus.INTERNAL_SERVER_ERROR
+
+# @bp.route('/api/news/correlations')
+# @login_required
+# def get_correlations():
+#     """Get symbol correlations"""
+#     try:
+#         analytics = init_analytics()
+        
+#         symbol = request.args.get('symbol')
+#         if not symbol:
+#             return jsonify({
+#                 'status': 'error',
+#                 'message': 'Symbol is required'
+#             }), HTTPStatus.BAD_REQUEST
+            
+#         days = min(int(request.args.get('days', 30)), 90)  # Cap at 90 days
+        
+#         correlations = analytics.get_symbol_correlations(
+#             symbol=symbol,
+#             days=days
+#         )
+        
+#         return jsonify({
+#             'status': 'success',
+#             'data': correlations
+#         })
+        
+#     except Exception as e:
+#         logger.error(f"Error getting correlations: {str(e)}", exc_info=True)
+#         return jsonify({
+#             'status': 'error',
+#             'message': 'Failed to get correlations'
+#         }), HTTPStatus.INTERNAL_SERVER_ERROR
 
 def _get_search_params():
     """Extract and validate search parameters from request"""
