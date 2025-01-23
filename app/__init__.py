@@ -5,11 +5,13 @@ from datetime import datetime
 import logging
 from app.config import Config
 from werkzeug.middleware.proxy_fix import ProxyFix
+from flask_migrate import Migrate
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 db = SQLAlchemy()
+migrate = Migrate()
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
 login_manager.login_message_category = 'error'
@@ -29,6 +31,7 @@ def create_app(config_class=Config):
 
     # Initialize extensions
     db.init_app(app)
+    migrate.init_app(app, db)
     login_manager.init_app(app)
 
     # Force HTTPS

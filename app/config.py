@@ -10,6 +10,9 @@ class Config:
         f"{os.getenv('MYSQL_DATABASE')}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_POOL_SIZE = 10
+    SQLALCHEMY_MAX_OVERFLOW = 20
+    SQLALCHEMY_POOL_TIMEOUT = 30
     
     # Secret key configuration
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev')

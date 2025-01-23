@@ -1,232 +1,329 @@
 # app/utils/analytics/news_analytics.py
 
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Set
 from sqlalchemy.orm import Session
-from ...models import NewsArticle, ArticleSymbol, ArticleMetric
-from sqlalchemy import func, desc, and_
+from sqlalchemy import func, desc, and_, or_, text
 from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 from textblob import TextBlob
+import logging
+from app.models import NewsArticle, ArticleSymbol, ArticleMetric
 
 class NewsAnalytics:
     def __init__(self, session: Session):
+        """Initialize NewsAnalytics with database session"""
         self.session = session
+        self.logger = logging.getLogger(__name__)
 
-    def get_sentiment_analysis(self, symbol: str, days: int = 30) -> Dict:
-        """Get detailed sentiment analysis for a symbol"""
-        start_date = datetime.now() - timedelta(days=days)
+    def get_sentiment_analysis(
+        self, 
+        symbol: Optional[str] = None, 
+        days: int = 30,
+        include_metrics: bool = True
+    ) -> Dict:
+        """
+        Get detailed sentiment analysis for a symbol or all articles
         
-        # Get all relevant articles
-        articles = (
-            self.session.query(NewsArticle)
-            .join(ArticleSymbol)
-            .filter(
-                ArticleSymbol.symbol == symbol,
-                NewsArticle.published_at >= start_date
-            )
-            .all()
-        )
-        
-        if not articles:
-            return {}
+        Args:
+            symbol (str, optional): Stock symbol to analyze
+            days (int): Number of days to analyze
+            include_metrics (bool): Whether to include detailed metrics
             
-        # Convert to DataFrame for analysis
-        df = pd.DataFrame([{
-            'date': article.published_at,
-            'sentiment_score': article.sentiment_score,
-            'sentiment_label': article.sentiment_label
-        } for article in articles])
-        
-        # Calculate metrics
-        analysis = {
-            'total_articles': len(articles),
-            'sentiment_distribution': {
-                'positive': len(df[df['sentiment_label'] == 'POSITIVE']),
-                'negative': len(df[df['sentiment_label'] == 'NEGATIVE']),
-                'neutral': len(df[df['sentiment_label'] == 'NEUTRAL'])
-            },
-            'average_sentiment': float(df['sentiment_score'].mean()),
-            'sentiment_volatility': float(df['sentiment_score'].std()),
-            'trend': self._calculate_trend(df)
-        }
-        
-        # Add moving averages
-        df['MA5'] = df['sentiment_score'].rolling(window=5).mean()
-        df['MA10'] = df['sentiment_score'].rolling(window=10).mean()
-        
-        analysis['moving_averages'] = {
-            'MA5': df['MA5'].dropna().tolist(),
-            'MA10': df['MA10'].dropna().tolist()
-        }
-        
-        return analysis
+        Returns:
+            Dict: Sentiment analysis results
+        """
+        try:
+            start_date = datetime.now() - timedelta(days=days)
+            
+            # Build base query
+            query = self.session.query(NewsArticle)
+            
+            if symbol:
+                query = query.join(ArticleSymbol).filter(ArticleSymbol.symbol == symbol)
+            
+            query = query.filter(NewsArticle.published_at >= start_date)
+            articles = query.all()
+            
+            if not articles:
+                self.logger.warning(f"No articles found for symbol {symbol} in last {days} days")
+                return self._empty_sentiment_analysis()
 
-    def _calculate_trend(self, df: pd.DataFrame) -> str:
-        """Calculate sentiment trend"""
-        if len(df) < 2:
-            return "Insufficient data"
-            
-        # Calculate linear regression
-        x = np.arange(len(df))
-        y = df['sentiment_score'].values
-        z = np.polyfit(x, y, 1)
-        slope = z[0]
-        
-        if slope > 0.01:
-            return "Improving"
-        elif slope < -0.01:
-            return "Declining"
-        else:
-            return "Stable"
+            # Convert to DataFrame for analysis
+            df = pd.DataFrame([{
+                'date': article.published_at,
+                'sentiment_score': article.sentiment_score,
+                'sentiment_label': article.sentiment_label,
+                'title': article.title
+            } for article in articles])
 
-    def get_entity_correlation(self, symbol: str, days: int = 30) -> Dict[str, List[Dict]]:
-        """Analyze correlations between entities and sentiment"""
-        start_date = datetime.now() - timedelta(days=days)
-        
-        articles = (
-            self.session.query(NewsArticle)
-            .join(ArticleSymbol)
-            .filter(
-                ArticleSymbol.symbol == symbol,
-                NewsArticle.published_at >= start_date
-            )
-            .all()
-        )
-        
-        entities = {
-            'companies': {},
-            'people': {},
-            'metrics': {}
-        }
-        
-        for article in articles:
-            sentiment = article.sentiment_score
-            blob = TextBlob(article.content)
-            
-            # Analyze noun phrases
-            for phrase in blob.noun_phrases:
-                if self._is_company(phrase):
-                    self._update_correlation(
-                        entities['companies'], 
-                        phrase, 
-                        sentiment
-                    )
-                elif self._is_person(phrase):
-                    self._update_correlation(
-                        entities['people'], 
-                        phrase, 
-                        sentiment
-                    )
-            
-            # Analyze metrics
-            for metric in article.metrics:
-                self._update_correlation(
-                    entities['metrics'],
-                    f"{metric.metric_type}:{metric.value}",
-                    sentiment
-                )
-        
-        # Process and sort correlations
-        return {
-            category: self._process_correlations(correlations)
-            for category, correlations in entities.items()
-        }
-
-    def _update_correlation(self, data: Dict, key: str, sentiment: float):
-        """Update correlation data"""
-        if key not in data:
-            data[key] = {
-                'count': 0,
-                'sentiment_sum': 0,
-                'sentiment_squares': 0
+            analysis = {
+                'total_articles': len(articles),
+                'sentiment_distribution': self._get_sentiment_distribution(df),
+                'sentiment_metrics': self._calculate_sentiment_metrics(df),
+                'timeline_analysis': self._analyze_timeline(df),
+                'latest_sentiment': self._get_latest_sentiment(df)
             }
-        
-        data[key]['count'] += 1
-        data[key]['sentiment_sum'] += sentiment
-        data[key]['sentiment_squares'] += sentiment * sentiment
 
-    def _process_correlations(self, correlations: Dict) -> List[Dict]:
-        """Process raw correlation data"""
-        results = []
-        for key, data in correlations.items():
-            if data['count'] >= 3:  # Minimum threshold
-                avg_sentiment = data['sentiment_sum'] / data['count']
-                variance = (
-                    data['sentiment_squares'] / data['count'] - 
-                    avg_sentiment * avg_sentiment
-                )
-                
-                results.append({
-                    'entity': key,
-                    'occurrences': data['count'],
-                    'avg_sentiment': avg_sentiment,
-                    'volatility': np.sqrt(max(0, variance))
+            if include_metrics:
+                analysis.update({
+                    'detailed_metrics': self._calculate_detailed_metrics(articles),
+                    'key_statistics': self._calculate_key_statistics(df)
                 })
-        
-        return sorted(results, key=lambda x: x['occurrences'], reverse=True)
 
-    def get_topic_impact(self, symbol: str, topic: str, days: int = 30) -> Dict:
-        """Analyze the impact of a specific topic on sentiment"""
-        start_date = datetime.now() - timedelta(days=days)
+            return analysis
+
+        except Exception as e:
+            self.logger.error(f"Error in get_sentiment_analysis: {str(e)}")
+            return self._empty_sentiment_analysis()
+
+    def get_symbol_correlations(self, symbol: str, days: int = 30) -> List[Dict]:
+        """
+        Analyze correlations between different symbols
         
-        # Get articles with and without the topic
-        with_topic = set(
-            article.id for article in
-            self.session.query(NewsArticle.id)
-            .join(ArticleSymbol)
-            .filter(
-                ArticleSymbol.symbol == symbol,
-                NewsArticle.published_at >= start_date,
-                or_(
-                    NewsArticle.content.ilike(f'%{topic}%'),
-                    NewsArticle.title.ilike(f'%{topic}%')
+        Args:
+            symbol (str): Base symbol to analyze correlations for
+            days (int): Number of days to analyze
+            
+        Returns:
+            List[Dict]: List of correlated symbols with metrics
+        """
+        try:
+            start_date = datetime.now() - timedelta(days=days)
+            
+            # Get articles for base symbol
+            base_articles = set(
+                article.id for article in
+                self.session.query(NewsArticle.id)
+                .join(ArticleSymbol)
+                .filter(
+                    ArticleSymbol.symbol == symbol,
+                    NewsArticle.published_at >= start_date
                 )
             )
-        )
+            
+            if not base_articles:
+                return []
+
+            # Find co-occurring symbols
+            correlations = []
+            
+            co_symbols = (
+                self.session.query(
+                    ArticleSymbol.symbol,
+                    func.count(ArticleSymbol.article_id).label('count')
+                )
+                .filter(
+                    ArticleSymbol.article_id.in_(base_articles),
+                    ArticleSymbol.symbol != symbol
+                )
+                .group_by(ArticleSymbol.symbol)
+                .having(func.count(ArticleSymbol.article_id) >= 2)
+                .all()
+            )
+
+            for co_symbol, count in co_symbols:
+                correlation = self._calculate_symbol_correlation(
+                    symbol, co_symbol, start_date
+                )
+                if correlation:
+                    correlations.append(correlation)
+
+            return sorted(correlations, key=lambda x: x['correlation'], reverse=True)
+
+        except Exception as e:
+            self.logger.error(f"Error in get_symbol_correlations: {str(e)}")
+            return []
+
+    def get_trending_topics(self, days: int = 7) -> List[Dict]:
+        """
+        Get trending topics from recent news
         
-        all_articles = (
-            self.session.query(NewsArticle)
+        Args:
+            days (int): Number of days to analyze
+            
+        Returns:
+            List[Dict]: Trending topics with statistics
+        """
+        try:
+            start_date = datetime.now() - timedelta(days=days)
+            
+            articles = (
+                self.session.query(NewsArticle)
+                .filter(NewsArticle.published_at >= start_date)
+                .all()
+            )
+
+            topics = {}
+            for article in articles:
+                blob = TextBlob(article.title + " " + (article.brief_summary or ""))
+                
+                for phrase in blob.noun_phrases:
+                    if len(phrase.split()) >= 2:  # Only multi-word phrases
+                        if phrase not in topics:
+                            topics[phrase] = {
+                                'count': 0,
+                                'sentiment_sum': 0,
+                                'first_seen': article.published_at
+                            }
+                        
+                        topics[phrase]['count'] += 1
+                        topics[phrase]['sentiment_sum'] += article.sentiment_score
+                        topics[phrase]['first_seen'] = min(
+                            topics[phrase]['first_seen'], 
+                            article.published_at
+                        )
+
+            # Process and sort topics
+            trending = []
+            for phrase, data in topics.items():
+                if data['count'] >= 3:  # Minimum occurrence threshold
+                    trending.append({
+                        'topic': phrase,
+                        'mentions': data['count'],
+                        'avg_sentiment': data['sentiment_sum'] / data['count'],
+                        'first_seen': data['first_seen'].strftime("%Y-%m-%d %H:%M:%S")
+                    })
+
+            return sorted(trending, key=lambda x: x['mentions'], reverse=True)[:20]
+
+        except Exception as e:
+            self.logger.error(f"Error in get_trending_topics: {str(e)}")
+            return []
+
+    def _empty_sentiment_analysis(self) -> Dict:
+        """Return empty sentiment analysis structure"""
+        return {
+            'total_articles': 0,
+            'sentiment_distribution': {'positive': 0, 'negative': 0, 'neutral': 0},
+            'sentiment_metrics': {'average': 0, 'volatility': 0},
+            'timeline_analysis': {'trend': 'Insufficient data'},
+            'latest_sentiment': None
+        }
+
+    def _get_sentiment_distribution(self, df: pd.DataFrame) -> Dict:
+        """Calculate sentiment distribution"""
+        distribution = df['sentiment_label'].value_counts()
+        return {
+            'positive': int(distribution.get('POSITIVE', 0)),
+            'negative': int(distribution.get('NEGATIVE', 0)),
+            'neutral': int(distribution.get('NEUTRAL', 0))
+        }
+
+    def _calculate_sentiment_metrics(self, df: pd.DataFrame) -> Dict:
+        """Calculate basic sentiment metrics"""
+        return {
+            'average': float(df['sentiment_score'].mean()),
+            'volatility': float(df['sentiment_score'].std()),
+            'median': float(df['sentiment_score'].median()),
+            'max': float(df['sentiment_score'].max()),
+            'min': float(df['sentiment_score'].min())
+        }
+
+    def _analyze_timeline(self, df: pd.DataFrame) -> Dict:
+        """Analyze sentiment timeline"""
+        if len(df) < 2:
+            return {'trend': 'Insufficient data'}
+
+        df = df.sort_values('date')
+        
+        # Calculate trend
+        z = np.polyfit(range(len(df)), df['sentiment_score'].values, 1)
+        slope = z[0]
+
+        # Calculate moving averages
+        df['MA5'] = df['sentiment_score'].rolling(window=5, min_periods=1).mean()
+        df['MA10'] = df['sentiment_score'].rolling(window=10, min_periods=1).mean()
+
+        return {
+            'trend': 'Improving' if slope > 0.01 else 'Declining' if slope < -0.01 else 'Stable',
+            'slope': float(slope),
+            'moving_averages': {
+                'MA5': df['MA5'].tolist(),
+                'MA10': df['MA10'].tolist()
+            }
+        }
+
+    def _get_latest_sentiment(self, df: pd.DataFrame) -> Optional[Dict]:
+        """Get latest sentiment data"""
+        if df.empty:
+            return None
+
+        latest = df.sort_values('date', ascending=False).iloc[0]
+        return {
+            'score': float(latest['sentiment_score']),
+            'label': latest['sentiment_label'],
+            'title': latest['title'],
+            'date': latest['date'].strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+    def _calculate_detailed_metrics(self, articles: List[NewsArticle]) -> Dict:
+        """Calculate detailed metrics from articles"""
+        metric_data = {
+            'percentage': {'values': [], 'contexts': []},
+            'currency': {'values': [], 'contexts': []}
+        }
+
+        for article in articles:
+            for metric in article.metrics:
+                if metric.metric_type in metric_data:
+                    metric_data[metric.metric_type]['values'].append(metric.metric_value)
+                    metric_data[metric.metric_type]['contexts'].append(metric.metric_context)
+
+        return metric_data
+
+    def _calculate_key_statistics(self, df: pd.DataFrame) -> Dict:
+        """Calculate key statistical measures"""
+        return {
+            'sentiment_percentiles': {
+                'p25': float(df['sentiment_score'].quantile(0.25)),
+                'p50': float(df['sentiment_score'].quantile(0.50)),
+                'p75': float(df['sentiment_score'].quantile(0.75))
+            },
+            'daily_volatility': float(
+                df.groupby(df['date'].dt.date)['sentiment_score'].std().mean()
+            )
+        }
+
+    def _calculate_symbol_correlation(
+        self, 
+        base_symbol: str, 
+        compare_symbol: str, 
+        start_date: datetime
+    ) -> Optional[Dict]:
+        """Calculate correlation between two symbols"""
+        try:
+            # Get sentiment scores for both symbols
+            base_scores = self._get_symbol_sentiment_scores(base_symbol, start_date)
+            compare_scores = self._get_symbol_sentiment_scores(compare_symbol, start_date)
+
+            if not base_scores or not compare_scores:
+                return None
+
+            # Calculate correlation
+            correlation = np.corrcoef(base_scores, compare_scores)[0, 1]
+
+            return {
+                'symbol': compare_symbol,
+                'correlation': float(correlation),
+                'sample_size': len(base_scores)
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error calculating symbol correlation: {str(e)}")
+            return None
+
+    def _get_symbol_sentiment_scores(self, symbol: str, start_date: datetime) -> List[float]:
+        """Get sentiment scores for a symbol"""
+        articles = (
+            self.session.query(NewsArticle.sentiment_score)
             .join(ArticleSymbol)
             .filter(
                 ArticleSymbol.symbol == symbol,
                 NewsArticle.published_at >= start_date
             )
+            .order_by(NewsArticle.published_at)
+            .all()
         )
         
-        without_topic = set(article.id for article in all_articles) - with_topic
-        
-        # Calculate statistics
-        topic_stats = self._calculate_stats(with_topic)
-        baseline_stats = self._calculate_stats(without_topic)
-        
-        return {
-            'topic_stats': topic_stats,
-            'baseline_stats': baseline_stats,
-            'impact': {
-                'sentiment_difference': topic_stats['avg_sentiment'] - baseline_stats['avg_sentiment'],
-                'relative_frequency': len(with_topic) / (len(with_topic) + len(without_topic))
-            }
-        }
-
-    def _calculate_stats(self, article_ids: set) -> Dict:
-        """Calculate statistics for a set of articles"""
-        if not article_ids:
-            return {
-                'count': 0,
-                'avg_sentiment': 0,
-                'sentiment_std': 0
-            }
-            
-        articles = (
-            self.session.query(NewsArticle)
-            .filter(NewsArticle.id.in_(article_ids))
-        )
-        
-        sentiments = [article.sentiment_score for article in articles]
-        
-        return {
-            'count': len(sentiments),
-            'avg_sentiment': np.mean(sentiments),
-            'sentiment_std': np.std(sentiments) if len(sentiments) > 1 else 0
-        }
+        return [article.sentiment_score for article in articles]

@@ -1,186 +1,122 @@
-# app/utils/data/news_service.py
+# app/data/news_service.py
 
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 import logging
 from datetime import datetime
-from sqlalchemy import create_engine, inspect, text
-import os
+from sqlalchemy.exc import SQLAlchemyError
+from app import db
+from app.models import NewsArticle, ArticleSymbol, ArticleMetric
 
 class NewsService:
+    """Service class for handling news article operations"""
+    
     def __init__(self):
+        """Initialize NewsService with logger"""
         self.logger = logging.getLogger(__name__)
-        # Initialize database connection using SQLAlchemy
-        self.engine = create_engine(
-            f"mysql+pymysql://{os.getenv('MYSQL_USER')}:"
-            f"{os.getenv('MYSQL_PASSWORD')}@"
-            f"{os.getenv('MYSQL_HOST')}:"
-            f"{os.getenv('MYSQL_PORT', '3306')}/"
-            f"{os.getenv('MYSQL_DATABASE')}"
-        )
 
-    def table_exists(self, table_name: str) -> bool:
-        """Check if table exists in database"""
+    def save_article(self, article_data: Dict) -> Optional[int]:
+        """
+        Save article and related data to database
+        
+        Args:
+            article_data (Dict): Dictionary containing article data including:
+                - external_id: Unique identifier for the article
+                - title: Article title
+                - url: Article URL
+                - published_at: Publication datetime
+                - source: News source
+                - sentiment: Dictionary with sentiment analysis results
+                - summary: Dictionary with article summaries
+                - symbols: List of stock symbols
+                - metrics: Dictionary of article metrics
+        
+        Returns:
+            Optional[int]: Article ID if successful, None if failed
+        """
         try:
-            inspector = inspect(self.engine)
-            return table_name in inspector.get_table_names()
-        except Exception as e:
-            self.logger.error(f"Error checking table existence: {e}")
-            return False
+            external_id = article_data.get('external_id')
+            if not external_id:
+                self.logger.error("Article missing external ID")
+                return None
 
-    def initialize_tables(self):
-        """Create necessary database tables if they don't exist"""
-        try:
-            with self.engine.connect() as conn:
-                # Create news articles table
-                conn.execute(text('''
-                    CREATE TABLE IF NOT EXISTS news_articles (
-                        id INT AUTO_INCREMENT PRIMARY KEY,
-                        external_id VARCHAR(100) UNIQUE NOT NULL,
-                        title VARCHAR(255) NOT NULL,
-                        url VARCHAR(512),
-                        published_at DATETIME,
-                        source VARCHAR(100),
-                        sentiment_label VARCHAR(20),
-                        sentiment_score FLOAT,
-                        sentiment_explanation TEXT,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        brief_summary TEXT,
-                        key_points TEXT,
-                        market_impact_summary TEXT,
-                        INDEX idx_external_id (external_id),
-                        INDEX idx_published_at (published_at)
-                    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
-                '''))
+            # Check for existing article
+            existing_article = NewsArticle.query.filter_by(external_id=external_id).first()
+            if existing_article:
+                self.logger.debug(f"Article with external_id {external_id} already exists")
+                return existing_article.id
 
-                # Create article symbols table
-                conn.execute(text('''
-                    CREATE TABLE IF NOT EXISTS article_symbols (
-                        article_id INT,
-                        symbol VARCHAR(20),
-                        FOREIGN KEY (article_id) REFERENCES news_articles(id) ON DELETE CASCADE,
-                        PRIMARY KEY (article_id, symbol),
-                        INDEX idx_symbol (symbol)
-                    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
-                '''))
+            # Create new article
+            article = NewsArticle(
+                external_id=external_id,
+                title=article_data.get('title'),
+                url=article_data.get('url'),
+                published_at=article_data.get('published_at'),
+                source=article_data.get('source'),
+                sentiment_label=article_data.get('sentiment', {}).get('overall_sentiment'),
+                sentiment_score=article_data.get('sentiment', {}).get('confidence'),
+                sentiment_explanation=article_data.get('sentiment', {}).get('explanation'),
+                brief_summary=article_data.get('summary', {}).get('brief'),
+                key_points=article_data.get('summary', {}).get('key_points'),
+                market_impact_summary=article_data.get('summary', {}).get('market_impact')
+            )
 
-                # Create article metrics table
-                conn.execute(text('''
-                    CREATE TABLE IF NOT EXISTS article_metrics (
-                        article_id INT,
-                        metric_type VARCHAR(50),
-                        metric_value FLOAT,
-                        metric_context TEXT,
-                        FOREIGN KEY (article_id) REFERENCES news_articles(id) ON DELETE CASCADE,
-                        PRIMARY KEY (article_id, metric_type)
-                    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
-                '''))
+            # Process symbols
+            if article_data.get('symbols'):
+                self._add_symbols(article, article_data['symbols'])
 
-                conn.commit()
-                self.logger.info("Database tables initialized successfully")
+            # Process metrics
+            if article_data.get('metrics'):
+                self._add_metrics(article, article_data['metrics'])
 
-        except Exception as e:
-            self.logger.error(f"Error initializing tables: {str(e)}")
-            raise
+            # Save to database
+            db.session.add(article)
+            db.session.commit()
+            
+            self.logger.info(f"Successfully saved article with external_id: {external_id}")
+            return article.id
 
-    def save_article(self, article: Dict) -> int:
-        """Save article and related data to database"""
-        try:
-            with self.engine.connect() as conn:
-                # Check if article already exists by external_id
-                external_id = article.get('external_id')
-                self.logger.debug(f"Processing article with external_id: {external_id}")
-
-                if not external_id:
-                    self.logger.error("Article missing external ID")
-                    return None
-
-                # Begin transaction
-                with conn.begin():
-                    # Check for existing article
-                    result = conn.execute(
-                        text("SELECT id FROM news_articles WHERE external_id = :external_id"),
-                        {"external_id": external_id}
-                    )
-                    existing_article = result.fetchone()
-
-                    if existing_article:
-                        self.logger.debug(f"Article with external_id {external_id} already exists")
-                        return existing_article[0]
-
-                    # Insert new article
-                    result = conn.execute(text('''
-                        INSERT INTO news_articles (
-                            external_id, title, url, published_at, source,
-                            sentiment_label, sentiment_score, sentiment_explanation,
-                            brief_summary, key_points, market_impact_summary
-                        ) VALUES (
-                            :external_id, :title,  :url, :published_at, :source,
-                            :sentiment_label, :sentiment_score, :sentiment_explanation,
-                            :brief_summary, :key_points, :market_impact_summary
-                        )
-                    '''), {
-                        'external_id': external_id,
-                        'title': article.get('title'),
-                        'url': article.get('url'),
-                        'published_at': article.get('published_at'),
-                        'source': article.get('source'),
-                        'sentiment_label': article.get('sentiment', {}).get('overall_sentiment'),
-                        'sentiment_score': article.get('sentiment', {}).get('confidence'),
-                        'sentiment_explanation': article.get('sentiment', {}).get('explanation'),
-                        'brief_summary': article.get('summary', {}).get('brief'),
-                        'key_points': article.get('summary', {}).get('key_points'),
-                        'market_impact_summary': article.get('summary', {}).get('market_impact')
-                    })
-                    
-                    article_id = result.lastrowid
-
-                    # Insert symbols
-                    if article.get('symbols'):
-                        self.logger.debug(f"Processing symbols: {article['symbols']}")
-                        symbol_values = []
-                        for symbol_data in article['symbols']:
-                            # Handle both formats: {'symbol': 'NASDAQ:TSLA'} and 'NASDAQ:TSLA'
-                            symbol = symbol_data.get('symbol') if isinstance(symbol_data, dict) else symbol_data
-                            if symbol:
-                                symbol_values.append({'article_id': article_id, 'symbol': symbol})
-                        
-                        if symbol_values:
-                            self.logger.debug(f"Inserting symbols: {symbol_values}")
-                            for value in symbol_values:
-                                try:
-                                    conn.execute(text('''
-                                        INSERT INTO article_symbols (article_id, symbol)
-                                        VALUES (:article_id, :symbol)
-                                    '''), value)
-                                except Exception as e:
-                                    self.logger.error(f"Error inserting symbol {value}: {str(e)}")
-
-                    # Insert metrics
-                    if article.get('metrics'):
-                        for metric_type, metric_data in article['metrics'].items():
-                            if isinstance(metric_data, dict):
-                                values = metric_data.get('values', [])
-                                contexts = metric_data.get('contexts', [])
-                                for value, context in zip(values, contexts):
-                                    try:
-                                        conn.execute(text('''
-                                            INSERT INTO article_metrics 
-                                            (article_id, metric_type, metric_value, metric_context)
-                                            VALUES (:article_id, :metric_type, :value, :context)
-                                        '''), {
-                                            'article_id': article_id,
-                                            'metric_type': metric_type,
-                                            'value': value,
-                                            'context': context
-                                        })
-                                    except Exception as e:
-                                        self.logger.error(f"Error inserting metric: {str(e)}")
-
-                    return article_id
-
-        except Exception as e:
-            self.logger.error(f"Error saving article: {str(e)}", exc_info=True)
+        except SQLAlchemyError as e:
+            self.logger.error(f"Database error while saving article: {str(e)}")
+            db.session.rollback()
             return None
+        except Exception as e:
+            self.logger.error(f"Unexpected error while saving article: {str(e)}")
+            db.session.rollback()
+            return None
+
+    def _add_symbols(self, article: NewsArticle, symbols_data: List) -> None:
+        """
+        Add symbols to article
+        
+        Args:
+            article (NewsArticle): Article object to add symbols to
+            symbols_data (List): List of symbols or symbol dictionaries
+        """
+        for symbol_data in symbols_data:
+            symbol = symbol_data.get('symbol') if isinstance(symbol_data, dict) else symbol_data
+            if symbol:
+                article.symbols.append(ArticleSymbol(symbol=symbol))
+
+    def _add_metrics(self, article: NewsArticle, metrics_data: Dict) -> None:
+        """
+        Add metrics to article
+        
+        Args:
+            article (NewsArticle): Article object to add metrics to
+            metrics_data (Dict): Dictionary of metric data
+        """
+        for metric_type, metric_data in metrics_data.items():
+            if isinstance(metric_data, dict):
+                values = metric_data.get('values', [])
+                contexts = metric_data.get('contexts', [])
+                for value, context in zip(values, contexts):
+                    article.metrics.append(
+                        ArticleMetric(
+                            metric_type=metric_type,
+                            metric_value=value,
+                            metric_context=context
+                        )
+                    )
 
     def get_articles_by_date_range(
         self,
@@ -190,84 +126,46 @@ class NewsService:
         page: int = 1,
         per_page: int = 20
     ) -> Tuple[List[Dict], int]:
-        """Get articles within date range with pagination"""
+        """
+        Get articles within date range with pagination
+        
+        Args:
+            start_date (str): Start date in ISO format
+            end_date (str): End date in ISO format
+            symbol (str, optional): Filter by stock symbol
+            page (int): Page number for pagination
+            per_page (int): Number of items per page
+            
+        Returns:
+            Tuple[List[Dict], int]: List of articles and total count
+        """
         try:
-            with self.engine.connect() as conn:
-                # Build base query
-                query = text('''
-                    SELECT DISTINCT 
-                        na.*, 
-                        GROUP_CONCAT(DISTINCT as_.symbol) as symbols,
-                        GROUP_CONCAT(DISTINCT CONCAT(am.metric_type, ':', am.metric_value, '|', am.metric_context)) as metrics
-                    FROM news_articles na
-                    LEFT JOIN article_symbols as_ ON na.id = as_.article_id
-                    LEFT JOIN article_metrics am ON na.id = am.article_id
-                    WHERE na.published_at BETWEEN :start_date AND :end_date
-                ''')
-                params = {'start_date': start_date, 'end_date': end_date}
+            query = NewsArticle.query
 
-                if symbol:
-                    query = query.text(query.text + ' AND as_.symbol = :symbol')
-                    params['symbol'] = symbol
+            # Apply date range filter
+            query = query.filter(
+                NewsArticle.published_at.between(start_date, end_date)
+            )
 
-                # Get total count
-                count_query = text('''
-                    SELECT COUNT(DISTINCT na.id) as count 
-                    FROM news_articles na 
-                    LEFT JOIN article_symbols as_ ON na.id = as_.article_id
-                    WHERE na.published_at BETWEEN :start_date AND :end_date
-                    ''' + (' AND as_.symbol = :symbol' if symbol else ''))
-                
-                result = conn.execute(count_query, params)
-                total = result.scalar()
+            # Apply symbol filter if provided
+            if symbol:
+                query = query.join(NewsArticle.symbols).filter(
+                    ArticleSymbol.symbol == symbol
+                )
 
-                # Add grouping and pagination
-                query = text(query.text + '''
-                    GROUP BY na.id 
-                    ORDER BY na.published_at DESC 
-                    LIMIT :limit OFFSET :offset
-                ''')
-                params['limit'] = per_page
-                params['offset'] = (page - 1) * per_page
+            # Get total count
+            total = query.count()
 
-                # Execute main query
-                result = conn.execute(query, params)
-                articles = []
-                
-                for row in result:
-                    article = dict(row)
-                    # Process symbols
-                    article['symbols'] = (
-                        article['symbols'].split(',') 
-                        if article['symbols'] else []
-                    )
-                    
-                    # Process metrics
-                    metrics = {}
-                    if article['metrics']:
-                        for metric_str in article['metrics'].split(','):
-                            try:
-                                metric_type, data = metric_str.split(':')
-                                value, context = data.split('|')
-                                if metric_type not in metrics:
-                                    metrics[metric_type] = {
-                                        'values': [], 'contexts': []
-                                    }
-                                metrics[metric_type]['values'].append(float(value))
-                                metrics[metric_type]['contexts'].append(context)
-                            except:
-                                continue
-                    article['metrics'] = metrics
-                    
-                    articles.append(article)
+            # Apply pagination and ordering
+            paginated_articles = query.order_by(NewsArticle.published_at.desc())\
+                                    .paginate(page=page, per_page=per_page, error_out=False)
 
-                return articles, total
+            return [article.to_dict() for article in paginated_articles.items], total
 
         except Exception as e:
             self.logger.error(f"Error getting articles by date range: {str(e)}")
             return [], 0
 
-    
     def search_articles(
         self,
         keyword: str = None,
@@ -278,102 +176,112 @@ class NewsService:
         page: int = 1,
         per_page: int = 20
     ) -> Tuple[List[Dict], int]:
-        """Search articles with various filters"""
+        """
+        Search articles with various filters
+        
+        Args:
+            keyword (str, optional): Search keyword for title and content
+            symbol (str, optional): Filter by stock symbol
+            start_date (str, optional): Start date in ISO format
+            end_date (str, optional): End date in ISO format
+            sentiment (str, optional): Filter by sentiment label
+            page (int): Page number for pagination
+            per_page (int): Number of items per page
+            
+        Returns:
+            Tuple[List[Dict], int]: List of articles and total count
+        """
         try:
-            with self.engine.connect() as conn:
-                # Build base query
-                base_query = '''
-                    FROM news_articles na
-                    LEFT JOIN article_symbols as_ ON na.id = as_.article_id
-                    LEFT JOIN article_metrics am ON na.id = am.article_id
-                    WHERE 1=1
-                '''
-                params = {}
+            query = NewsArticle.query
 
-                # Add filters
-                if keyword:
-                    base_query += ' AND (na.title LIKE :keyword OR na.content LIKE :keyword)'
-                    params['keyword'] = f'%{keyword}%'
-
-                if symbol:
-                    base_query += ' AND as_.symbol = :symbol'
-                    params['symbol'] = symbol
-
-                if start_date:
-                    base_query += ' AND na.published_at >= :start_date'
-                    params['start_date'] = start_date
-
-                if end_date:
-                    base_query += ' AND na.published_at <= :end_date'
-                    params['end_date'] = end_date
-
-                if sentiment:
-                    base_query += ' AND na.sentiment_label = :sentiment'
-                    params['sentiment'] = sentiment
-
-                # Get total count
-                count_query = text(f'SELECT COUNT(DISTINCT na.id) as count {base_query}')
-                result = conn.execute(count_query, params)
-                total = result.scalar()
-
-                # Build main query with group by and pagination
-                main_query = text(f'''
-                    SELECT 
-                        na.*,
-                        GROUP_CONCAT(DISTINCT as_.symbol) as symbols,
-                        GROUP_CONCAT(DISTINCT CONCAT(am.metric_type, ':', am.metric_value, '|', am.metric_context)) as metrics
-                    {base_query}
-                    GROUP BY na.id
-                    ORDER BY na.published_at DESC
-                    LIMIT :limit OFFSET :offset
-                ''')
-
-                # Add pagination parameters
-                params['limit'] = per_page
-                params['offset'] = (page - 1) * per_page
-
-                # Execute main query
-                result = conn.execute(main_query, params)
-                articles = []
-
-                for row in result.mappings():
-                    article = dict(row)
-                    
-                    # Process symbols
-                    article['symbols'] = (
-                        article['symbols'].split(',') if article['symbols']
-                        else []
+            # Apply filters
+            if keyword:
+                query = query.filter(
+                    db.or_(
+                        NewsArticle.title.ilike(f'%{keyword}%'),
+                        NewsArticle.brief_summary.ilike(f'%{keyword}%')
                     )
+                )
 
-                    # Process metrics
-                    metrics = {}
-                    if article['metrics']:
-                        for metric_str in article['metrics'].split(','):
-                            try:
-                                metric_type, data = metric_str.split(':')
-                                value, context = data.split('|')
-                                if metric_type not in metrics:
-                                    metrics[metric_type] = {
-                                        'values': [], 'contexts': []
-                                    }
-                                metrics[metric_type]['values'].append(float(value))
-                                metrics[metric_type]['contexts'].append(context)
-                            except:
-                                continue
-                    article['metrics'] = metrics
+            if symbol:
+                query = query.join(NewsArticle.symbols).filter(
+                    ArticleSymbol.symbol == symbol
+                )
 
-                    articles.append(article)
+            if start_date:
+                query = query.filter(NewsArticle.published_at >= start_date)
 
-                self.logger.debug(f"Found {total} articles, returning {len(articles)} for current page")
-                return articles, total
+            if end_date:
+                query = query.filter(NewsArticle.published_at <= end_date)
+
+            if sentiment:
+                query = query.filter(NewsArticle.sentiment_label == sentiment)
+
+            # Get total count
+            total = query.count()
+
+            # Apply pagination and ordering
+            paginated_articles = query.order_by(NewsArticle.published_at.desc())\
+                                    .paginate(page=page, per_page=per_page, error_out=False)
+
+            return [article.to_dict() for article in paginated_articles.items], total
 
         except Exception as e:
             self.logger.error(f"Error searching articles: {str(e)}")
             return [], 0
-    
-    def close(self):
-        """Close database connection"""
+
+    def get_article_by_id(self, article_id: int) -> Optional[Dict]:
+        """
+        Get article by ID
+        
+        Args:
+            article_id (int): Article ID
+            
+        Returns:
+            Optional[Dict]: Article data if found, None if not found
+        """
         try:
-            self.engine.dispose()
+            article = NewsArticle.query.get(article_id)
+            return article.to_dict() if article else None
         except Exception as e:
-            self.logger.error(f"Error closing database connection: {str(e)}")
+            self.logger.error(f"Error getting article by ID: {str(e)}")
+            return None
+
+    def get_article_by_external_id(self, external_id: str) -> Optional[Dict]:
+        """
+        Get article by external ID
+        
+        Args:
+            external_id (str): External article ID
+            
+        Returns:
+            Optional[Dict]: Article data if found, None if not found
+        """
+        try:
+            article = NewsArticle.query.filter_by(external_id=external_id).first()
+            return article.to_dict() if article else None
+        except Exception as e:
+            self.logger.error(f"Error getting article by external ID: {str(e)}")
+            return None
+
+    def delete_article(self, article_id: int) -> bool:
+        """
+        Delete article by ID
+        
+        Args:
+            article_id (int): Article ID
+            
+        Returns:
+            bool: True if successful, False if failed
+        """
+        try:
+            article = NewsArticle.query.get(article_id)
+            if article:
+                db.session.delete(article)
+                db.session.commit()
+                return True
+            return False
+        except Exception as e:
+            self.logger.error(f"Error deleting article: {str(e)}")
+            db.session.rollback()
+            return False
