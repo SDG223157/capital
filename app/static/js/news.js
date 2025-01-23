@@ -186,6 +186,7 @@ class NewsApp {
                 this.elements.searchResults.innerHTML = data.articles
                     .map((article, index) => this.renderArticle(article, index))
                     .join('');
+                this.setupArticleExpansion(); // Add this line
                     
                 setTimeout(() => {
                     this.animateArticles();
