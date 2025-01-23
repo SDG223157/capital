@@ -27,7 +27,16 @@ class NewsAnalytics:
         except Exception as e:
             self.logger.error(f"Error getting news by date range: {str(e)}")
             return [], 0
-
+    def get_sentiment_summary(self, days=7):
+        return {
+            'total_articles': 0,
+            'average_sentiment': 0,
+            'sentiment_distribution': {
+                'positive': 0,
+                'negative': 0,
+                'neutral': 0
+            }
+        }
     def get_sentiment_analysis(
         self, 
         symbol: Optional[str] = None, 

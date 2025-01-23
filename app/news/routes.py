@@ -25,24 +25,26 @@ def index():
         end_date = datetime.now()
         start_date = end_date - timedelta(days=7)
         
-        articles, total = news_service.get_news_by_date_range(
+        articles, total = news_service.get_articles_by_date_range(
             start_date=start_date.strftime("%Y-%m-%d"),
             end_date=end_date.strftime("%Y-%m-%d"),
             page=1,
             per_page=10
         )
         
-        sentiment_summary = {'total_articles': total}  # Provide default value
+        sentiment_summary = news_service.get_sentiment_summary(days=7)
+        sentiment_summary['total_articles'] = total  # Ensure total_articles is set
         
         return render_template(
             'news/analysis.html',
             articles=articles,
             total_articles=total,
-            sentiment_summary=sentiment_summary,  # Always include this
+            sentiment_summary=sentiment_summary,
             trending_topics=[],
             start_date=start_date.strftime("%Y-%m-%d"),
             end_date=end_date.strftime("%Y-%m-%d")
         )
+        
     except Exception as e:
         logger.error(f"Error in news index route: {str(e)}", exc_info=True)
         return render_template(
@@ -50,9 +52,11 @@ def index():
             error="Failed to load news dashboard",
             articles=[],
             total_articles=0,
-            sentiment_summary={'total_articles': 0},  # Include default value
+            sentiment_summary={'total_articles': 0, 'average_sentiment': 0},
             trending_topics=[]
         )
+
+
 @bp.route('/search')
 @login_required
 def search():
