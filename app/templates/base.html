@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}TrendWise Finance{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <!-- Add minimal styles just for the title -->
     <style>
         h1 {
             font-size: 2.2rem;
@@ -21,7 +20,7 @@
         }
 
         .title-space {
-            margin: 0 1rem;  /* Adds space between words */
+            margin: 0 1rem;
             display: inline-block;
         }
     </style>
@@ -31,6 +30,16 @@
         <div class="header-container">
             <nav class="top-nav">
                 {% if current_user.is_authenticated %}
+                    <div class="user-dropdown">
+                        <button class="dropdown-button">
+                            Analytics Tools
+                            <span class="dropdown-arrow">▼</span>
+                        </button>
+                        <div class="dropdown-content">
+                            <a href="{{ url_for('news.search') }}" class="dropdown-item">News Analytics</a>
+                            <a href="{{ url_for('main.index') }}" class="dropdown-item">Trend Analytics</a>
+                        </div>
+                    </div>
                     <div class="user-dropdown">
                         <button class="dropdown-button">
                             {{ current_user.username }}
@@ -75,16 +84,13 @@
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Find all flash messages
             const flashMessages = document.querySelectorAll('.flash-message');
-            
-            // Make each message disappear after 3 seconds
             flashMessages.forEach(function(message) {
                 setTimeout(function() {
                     message.style.opacity = '0';
                     setTimeout(function() {
                         message.remove();
-                    }, 300); // Wait for fade out animation
+                    }, 300);
                 }, 3000);
             });
         });
