@@ -59,12 +59,7 @@ def create_app(config_class=Config):
             migrate.init_app(app, db)
 
             # Check if news tables exist, if not, create them
-            if db.session.query(NewsArticle).count() == 0:
-                NewsArticle.__table__.create(db.engine)
-            if db.session.query(ArticleMetric).count() == 0:
-                ArticleMetric.__table__.create(db.engine)
-            if db.session.query(ArticleSymbol).count() == 0:
-                ArticleSymbol.__table__.create(db.engine)
+            db.create_all()
 
             # Check if admin user exists, if not create one
             admin_user = User.query.filter_by(email='admin@cfa187260.com').first()
