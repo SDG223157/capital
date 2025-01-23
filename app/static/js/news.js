@@ -624,20 +624,21 @@ fetchButton.addEventListener('click', async function() {
 
 // Function to set up article expansion functionality
 // Function to set up article expansion functionality
+// Function to set up article expansion functionality
 function setupArticleExpansion() {
     document.querySelectorAll('.expand-button').forEach(button => {
         button.addEventListener('click', () => {
-            const content = button.previousElementSibling; // Get the article-content div
+            const content = button.closest('.article-card').querySelector('.article-content');
             const isExpanded = button.getAttribute('aria-expanded') === 'true';
             
             if (isExpanded) {
-                // Collapse
+                // Collapse the article content
                 content.classList.remove('max-h-96', 'opacity-100');
                 content.classList.add('max-h-0', 'opacity-0');
                 button.textContent = 'Show More';
                 button.setAttribute('aria-expanded', 'false');
             } else {
-                // Expand
+                // Expand the article content
                 content.classList.remove('max-h-0', 'opacity-0');
                 content.classList.add('max-h-96', 'opacity-100');
                 button.textContent = 'Show Less';
@@ -646,6 +647,7 @@ function setupArticleExpansion() {
         });
     });
 }
+
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', setupArticleExpansion);

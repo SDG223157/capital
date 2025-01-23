@@ -328,3 +328,41 @@ button:disabled {
         display: none;
     }
 }
+/* Article content expansion/collapse animations */
+.article-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease-out, opacity 0.3s ease-out;
+    opacity: 0;
+}
+
+.article-content.max-h-96 {
+    max-height: 1000px; /* Adjust to the height you need */
+    opacity: 1;
+}
+
+/* Expand button styles */
+.expand-button {
+    position: relative;
+    transition: all 0.2s ease-out;
+}
+
+.expand-button:hover {
+    color: rgb(30 64 175); /* Darker blue on hover */
+}
+
+.expand-button::after {
+    content: '';
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    margin-left: 0.5rem;
+    transform: rotate(45deg);
+    transition: transform 0.2s ease-out;
+}
+
+.expand-button[aria-expanded="true"]::after {
+    transform: rotate(-135deg); /* Rotates the icon when expanded */
+}
