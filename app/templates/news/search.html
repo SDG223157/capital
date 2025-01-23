@@ -23,7 +23,7 @@
             {% if articles %}
                 {% for article in articles %}
                 <div class="border-b border-gray-200 pb-6 last:border-b-0">
-                    <div class="flex justify-between items-start mb-2">
+                    <div class="flex justify-between items-start">
                         <h3 class="text-lg font-medium text-gray-900">
                             <a href="{{ article.url }}" target="_blank" class="text-blue-600 hover:text-blue-800">
                                 {{ article.title }}
@@ -32,13 +32,15 @@
                         <span class="text-sm text-gray-500">{{ article.published_at }}</span>
                     </div>
 
-                    <p class="text-gray-600">
-                        {% if article.brief_summary %}
-                            {{ article.brief_summary }}
-                        {% endif %}
-                    </p>
+                    <div class="mt-2 mb-3">
+                        <p class="text-gray-600">
+                            {% if article.brief_summary %}
+                                {{ article.brief_summary }}
+                            {% endif %}
+                        </p>
+                    </div>
 
-                    <div class="flex flex-wrap gap-2 mt-2">
+                    <div class="flex flex-wrap gap-2">
                         {% for symbol in article.symbols %}
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                             {{ symbol.symbol }}
@@ -91,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.articles?.length) {
                     resultsDiv.innerHTML = data.articles.map(article => `
                         <div class="border-b border-gray-200 pb-6 last:border-b-0">
-                            <div class="flex justify-between items-start mb-2">
+                            <div class="flex justify-between items-start">
                                 <h3 class="text-lg font-medium text-gray-900">
                                     <a href="${article.url}" target="_blank" class="text-blue-600 hover:text-blue-800">
                                         ${article.title}
@@ -99,8 +101,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </h3>
                                 <span class="text-sm text-gray-500">${article.published_at}</span>
                             </div>
-                            <p class="text-gray-600">${article.brief_summary || ''}</p>
-                            <div class="flex flex-wrap gap-2 mt-2">
+
+                            <div class="mt-2 mb-3">
+                                <p class="text-gray-600">${article.brief_summary || ''}</p>
+                            </div>
+
+                            <div class="flex flex-wrap gap-2">
                                 ${article.symbols.map(sym => `
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                                         ${sym.symbol}
