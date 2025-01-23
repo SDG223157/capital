@@ -112,7 +112,7 @@ def search():
             total=0
         )
 
-@bp.route('/api/news/fetch', methods=['POST'])
+@bp.route('/api/fetch', methods=['POST'])
 @login_required
 def fetch_news():
     """Fetch and analyze news for specific symbols"""
