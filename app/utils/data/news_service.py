@@ -88,7 +88,25 @@ class NewsService:
             db.session.rollback()
             return None
         
-        
+     
+    def get_daily_sentiment_summary(self, date: str, symbol: str = None) -> Dict:
+        """Get sentiment summary for a specific date"""
+        # Implement sentiment summary logic
+        return {
+            "total_articles": 0,
+            "sentiment_distribution": {
+                "positive": 0,
+                "negative": 0,
+                "neutral": 0
+            },
+            "average_sentiment": 0
+        }
+
+    def get_trending_topics(self, days: int = 7) -> List[Dict]:
+        """Get trending topics from recent articles"""
+        # Implement trending topics logic
+        return []
+   
     def _add_symbols(self, article: NewsArticle, symbols_data: List) -> None:
         """
         Add symbols to article
