@@ -36,8 +36,15 @@
                             <span class="dropdown-arrow">▼</span>
                         </button>
                         <div class="dropdown-content">
-                            <a href="{{ url_for('news.search') }}" class="dropdown-item">News Analytics</a>
-                            <a href="{{ url_for('main.index') }}" class="dropdown-item">Trend Analytics</a>
+                            {% if not request.endpoint == 'news.search' %}
+                                <a href="{{ url_for('news.search') }}" class="dropdown-item text-sm">News Analytics</a>
+                            {% endif %}
+                            {% if not request.endpoint == 'main.index' %}
+                                <a href="{{ url_for('main.index') }}" class="dropdown-item text-sm">Trend Analytics</a>
+                            {% endif %}
+                            {% if current_user.is_administrator %}
+                                <a href="{{ url_for('news.fetch') }}" class="dropdown-item text-sm">Fetch News</a>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="user-dropdown">
