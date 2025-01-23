@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 db = SQLAlchemy()
-migrate = Migrate()  # Initialize Migrate
+# migrate = Migrate()  # Initialize Migrate
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
 login_manager.login_message_category = 'error'
@@ -30,9 +30,11 @@ def create_app(config_class=Config):
     )
 
     # Initialize extensions
-    db.init_app(app)
-    migrate.init_app(app, db)  # Initialize Flask-Migrate with the app and db
+    # db.init_app(app)
+    # migrate.init_app(app, db)  # Initialize Flask-Migrate with the app and db
     from app.models import NewsArticle, ArticleMetric, ArticleSymbol, User
+    migrate = Migrate()
+    migrate.init_app(app, db)
     login_manager.init_app(app)
 
     # Force HTTPS
