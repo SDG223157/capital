@@ -1,9 +1,14 @@
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('analysis-form');
     const tickerInput = document.getElementById('ticker');
-    const suggestionsDiv = document.createElement('div');
-    suggestionsDiv.className = 'suggestions';
-    tickerInput.parentNode.appendChild(suggestionsDiv);
+    
+    // Only create and append suggestions div if ticker input exists
+    let suggestionsDiv;
+    if (tickerInput) {
+        suggestionsDiv = document.createElement('div');
+        suggestionsDiv.className = 'suggestions';
+        tickerInput.parentNode.appendChild(suggestionsDiv);
+    }
     
     let debounceTimeout;
 
@@ -11,98 +16,99 @@ document.addEventListener('DOMContentLoaded', function() {
         return name.replace(/\\'/g, "'");
     }
     
-    // Clear input on double click
-    tickerInput.addEventListener('dblclick', function() {
-        if (this.value) {
-            this.value = '';
-            suggestionsDiv.style.display = 'none';
-        }
-    });
-    
-    tickerInput.addEventListener('input', function() {
-        clearTimeout(debounceTimeout);
-        const query = this.value.trim();
+    if (tickerInput) {
+        // Clear input on double click
+        tickerInput.addEventListener('dblclick', function() {
+            if (this.value) {
+                this.value = '';
+                suggestionsDiv.style.display = 'none';
+            }
+        });
         
-        if (query.length < 1) {
-            suggestionsDiv.style.display = 'none';
-            return;
-        }
-        
-        debounceTimeout = setTimeout(() => {
-            fetch(`/search_ticker?query=${encodeURIComponent(query)}`)
-                .then(response => response.json())
-                .then(data => {
-                    suggestionsDiv.innerHTML = '';
-                    
-                    if (data.length > 0) {
-                        // Filter out results where symbol equals name
-                        const filteredData = data.filter(item => 
-                            item.symbol.toUpperCase() !== item.name.toUpperCase()
-                        );
+        tickerInput.addEventListener('input', function() {
+            clearTimeout(debounceTimeout);
+            const query = this.value.trim();
+            
+            if (query.length < 1) {
+                suggestionsDiv.style.display = 'none';
+                return;
+            }
+            
+            debounceTimeout = setTimeout(() => {
+                fetch(`/search_ticker?query=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        suggestionsDiv.innerHTML = '';
                         
-                        if (filteredData.length > 0) {
-                            filteredData.forEach(item => {
-                                const div = document.createElement('div');
-                                div.className = 'suggestion-item';
-                                const formattedName = formatCompanyName(item.name);
-                                
-                                // Create separate spans for symbol and name
-                                const symbolSpan = document.createElement('span');
-                                symbolSpan.className = 'symbol';
-                                symbolSpan.textContent = item.symbol;
-                                
-                                const nameSpan = document.createElement('span');
-                                nameSpan.className = 'name';
-                                nameSpan.textContent = formattedName;
-                                
-                                div.appendChild(symbolSpan);
-                                div.appendChild(nameSpan);
-                                
-                                div.addEventListener('click', function() {
-                                    // Set input value to both symbol and name
-                                    tickerInput.value = `${item.symbol}    ${formattedName}`;
-                                    suggestionsDiv.style.display = 'none';
+                        if (data.length > 0) {
+                            // Filter out results where symbol equals name
+                            const filteredData = data.filter(item => 
+                                item.symbol.toUpperCase() !== item.name.toUpperCase()
+                            );
+                            
+                            if (filteredData.length > 0) {
+                                filteredData.forEach(item => {
+                                    const div = document.createElement('div');
+                                    div.className = 'suggestion-item';
+                                    const formattedName = formatCompanyName(item.name);
+                                    
+                                    // Create separate spans for symbol and name
+                                    const symbolSpan = document.createElement('span');
+                                    symbolSpan.className = 'symbol';
+                                    symbolSpan.textContent = item.symbol;
+                                    
+                                    const nameSpan = document.createElement('span');
+                                    nameSpan.className = 'name';
+                                    nameSpan.textContent = formattedName;
+                                    
+                                    div.appendChild(symbolSpan);
+                                    div.appendChild(nameSpan);
+                                    
+                                    div.addEventListener('click', function() {
+                                        // Set input value to both symbol and name
+                                        tickerInput.value = `${item.symbol}    ${formattedName}`;
+                                        suggestionsDiv.style.display = 'none';
+                                    });
+                                    
+                                    suggestionsDiv.appendChild(div);
                                 });
-                                
-                                suggestionsDiv.appendChild(div);
-                            });
-                            suggestionsDiv.style.display = 'block';
+                                suggestionsDiv.style.display = 'block';
+                            } else {
+                                suggestionsDiv.style.display = 'none';
+                            }
                         } else {
                             suggestionsDiv.style.display = 'none';
                         }
-                    } else {
+                    })
+                    .catch(error => {
+                        console.error('Search error:', error);
                         suggestionsDiv.style.display = 'none';
-                    }
-                })
-                .catch(error => {
-                    console.error('Search error:', error);
-                    suggestionsDiv.style.display = 'none';
-                });
-        }, 300);
-    });
-    
-    
-    // Close suggestions when clicking outside
-    document.addEventListener('click', function(e) {
-        if (!tickerInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
-            suggestionsDiv.style.display = 'none';
-        }
-    });
+                    });
+            }, 300);
+        });
+        
+        // Close suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!tickerInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                suggestionsDiv.style.display = 'none';
+            }
+        });
 
+        // Prevent suggestions from closing when clicking inside the input
+        tickerInput.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (this.value.trim().length > 0) {
+                suggestionsDiv.style.display = 'block';
+            }
+        });
+    }
 
-    // Prevent suggestions from closing when clicking inside the input
-    tickerInput.addEventListener('click', function(e) {
-        e.stopPropagation();
-        if (this.value.trim().length > 0) {
-            suggestionsDiv.style.display = 'block';
-        }
-    });
-
-    // Form submission (if needed)
+    // Analyze form submission validation
     const analyzeForm = document.getElementById('analyze-form');
     if (analyzeForm) {
         analyzeForm.addEventListener('submit', function(e) {
-            if (!tickerInput.value.trim()) {
+            const tickerInput = document.getElementById('ticker');
+            if (!tickerInput || !tickerInput.value.trim()) {
                 e.preventDefault();
                 alert('Please enter a ticker symbol');
             }
@@ -123,19 +129,11 @@ function togglePassword(button) {
 // Make togglePassword globally available
 window.togglePassword = togglePassword;
 
-
-
-
-// main.js
+// News search page functionality
 document.addEventListener('DOMContentLoaded', function() {
     // Check if elements exist before trying to use them
     const searchForm = document.getElementById('searchForm');
-    const searchResults = document.getElementById('searchResults');
-    const searchButton = document.getElementById('searchButton');
-    const resetButton = document.getElementById('resetButton');
     const fetchButton = document.getElementById('fetchNews');
-    const loadingIndicator = document.getElementById('loadingIndicator');
-    const resultsCount = document.getElementById('resultsCount');
 
     // Only proceed if we're on the news search page
     if (searchForm && fetchButton) {
@@ -155,9 +153,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Helper function to show/hide loading state
         function setLoading(isLoading) {
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const searchButton = document.getElementById('searchButton');
+            const resetButton = document.getElementById('resetButton');
+
             if (loadingIndicator) {
                 loadingIndicator.classList.toggle('hidden', !isLoading);
             }
+            
             // Disable buttons during loading
             [searchButton, resetButton, fetchButton].forEach(button => {
                 if (button) {
@@ -195,7 +198,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Response status:', response.status);
                 
                 if (!response.ok) {
-                    throw new Error(`Failed to fetch news: ${response.status}`);
+                    const errorText = await response.text();
+                    throw new Error(`Failed to fetch news: ${response.status} - ${errorText}`);
                 }
 
                 const data = await response.json();
@@ -215,7 +219,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
             } catch (error) {
-                console.error('Error fetching news:', error);
+                // Comprehensive error logging
+                console.error('Error details:', {
+                    message: error.message,
+                    name: error.name,
+                    stack: error.stack
+                });
+                window.lastError = error;
                 alert('Failed to fetch news: ' + error.message);
             } finally {
                 setLoading(false);
@@ -231,6 +241,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Reset button handler
+        const resetButton = document.getElementById('resetButton');
         if (resetButton) {
             resetButton.addEventListener('click', function() {
                 searchForm.reset();
