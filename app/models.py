@@ -2,7 +2,10 @@ from app import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey, Enum, UniqueConstraint, Boolean
+# from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey, Enum, UniqueConstraint, Boolean
+from sqlalchemy import (Column, Integer, String, Float, DateTime, 
+                       Text, ForeignKey, Enum, UniqueConstraint, Boolean)
+from sqlalchemy.orm import relationship
 # from sqlalchemy.orm import relationship
 # from sqlalchemy.ext.declarative import declarative_base
 
