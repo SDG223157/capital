@@ -34,8 +34,8 @@
 
                     <div class="mt-2 mb-3">
                         <p class="text-gray-600">
-                            {% if article.brief_summary %}
-                                {{ article.brief_summary }}
+                            {% if article.summary.brief %}
+                                {{ article.summary.brief }}
                             {% endif %}
                         </p>
                     </div>
@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
 
                             <div class="mt-2 mb-3">
-                                <p class="text-gray-600">${article.brief_summary || ''}</p>
+                                <p class="text-gray-600">${article.summary.brief || ''}</p>
                             </div>
 
                             <div class="flex flex-wrap gap-2">
