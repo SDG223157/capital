@@ -55,7 +55,11 @@ def index():
             sentiment_summary={'total_articles': 0, 'average_sentiment': 0},
             trending_topics=[]
         )
-
+@bp.route('/fetch')
+@login_required
+def fetch():
+    """Render the Fetch News page"""
+    return render_template('news/fetch.html')
 
 @bp.route('/search')
 @login_required
