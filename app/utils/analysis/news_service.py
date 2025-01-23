@@ -89,7 +89,7 @@ class NewsAnalysisService:
             return []
 
     
-     def get_sentiment_summary(
+    def get_sentiment_summary(
         self,
         date: str = None,
         symbol: str = None,
