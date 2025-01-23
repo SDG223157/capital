@@ -60,56 +60,46 @@ def index():
 @bp.route('/search')
 @login_required
 def search():
-    """Search news articles with filters"""
     try:
-        # Get and validate search parameters
-        params = _get_search_params()
-        logger.debug(f"Processing search with params: {params}")
+        symbol = request.args.get('symbol')
+        symbol = None if symbol in ['None', '', None] else symbol
+        
+        page = max(1, int(request.args.get('page', 1)))
+        per_page = min(50, int(request.args.get('per_page', 20)))
 
-        # Perform search using search_articles method
         articles, total = news_service.search_articles(
-            keyword=params['keyword'],
-            symbol=params['symbol'],
-            start_date=params['start_date'],
-            end_date=params['end_date'],
-            sentiment=params['sentiment'],
-            page=params['page'],
-            per_page=params['per_page']
+            symbol=symbol,
+            page=page,
+            per_page=per_page
         )
 
-        # Handle response format
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({
                 'status': 'success',
                 'articles': articles,
-                'total': total,
-                'page': params['page'],
-                'per_page': params['per_page']
+                'total': total
             })
         
         return render_template(
             'news/search.html',
             articles=articles,
             total=total,
-            search_params=params
+            search_params={'symbol': symbol}
         )
         
     except Exception as e:
         logger.error(f"Error in search route: {str(e)}", exc_info=True)
-        error_response = {
-            'status': 'error',
-            'message': 'Search failed. Please try again.'
-        }
+        error_msg = 'Search failed. Please try again.'
         
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify(error_response), HTTPStatus.INTERNAL_SERVER_ERROR
+            return jsonify({'status': 'error', 'message': error_msg}), 500
         
         return render_template(
             'news/search.html',
-            error=error_response['message'],
-            search_params=_get_search_params(),
+            error=error_msg,
             articles=[],
-            total=0
+            total=0,
+            search_params={'symbol': symbol}
         )
 
 @bp.route('/api/fetch', methods=['POST'])
