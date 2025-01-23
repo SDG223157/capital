@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 db = SQLAlchemy()  # Define SQLAlchemy instance
-# migrate = Migrate()  # Initialize Migrate instance
+migrate = Migrate()  # Initialize Migrate instance
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
 login_manager.login_message_category = 'error'
@@ -31,8 +31,8 @@ def create_app(config_class=Config):
 
     # Initialize extensions
     db.init_app(app)  # Link the db with the app
-    # migrate.init_app(app, db)  # Link Flask-Migrate with the app and db
-    from app.models import NewsArticle, ArticleMetric, ArticleSymbol, User  # Import models after db is initialized
+    migrate.init_app(app, db)  # Link Flask-Migrate with the app and db
+    # from app.models import NewsArticle, ArticleMetric, ArticleSymbol, User  # Import models after db is initialized
     login_manager.init_app(app)
    
 
@@ -50,10 +50,11 @@ def create_app(config_class=Config):
     with app.app_context():
         try:
             # No need to call db.create_all() because Flask-Migrate will handle migrations
-            db.create_all()
+            # db.create_all()
             logger.info("Database tables created successfully")
 
             logger.info("Database initialized using Flask-Migrate")
+            from app.models import NewsArticle, ArticleMetric, ArticleSymbol, User  # Import models after db is initialized
             # db.create_all()
 
             # Check if admin user exists, if not create one
