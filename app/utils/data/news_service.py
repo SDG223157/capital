@@ -22,27 +22,10 @@ class NewsService:
             self.logger.error(f"Error disposing engine: {str(e)}")
 
 
-    def save_article(self, article_data: Dict) -> Optional[int]:
-        """
-        Save article and related data to database
-        
-        Args:
-            article_data (Dict): Dictionary containing article data including:
-                - external_id: Unique identifier for the article
-                - title: Article title
-                - url: Article URL
-                - published_at: Publication datetime
-                - source: News source
-                - sentiment: Dictionary with sentiment analysis results
-                - summary: Dictionary with article summaries
-                - symbols: List of stock symbols
-                - metrics: Dictionary of article metrics
-        
-        Returns:
-            Optional[int]: Article ID if successful, None if failed
-        """
+    def save_article(self, article: Dict) -> int:
+        """Save article and related data to database"""
         try:
-            external_id = article_data.get('external_id')
+            external_id = article.get('external_id')
             if not external_id:
                 self.logger.error("Article missing external ID")
                 return None
@@ -50,48 +33,62 @@ class NewsService:
             # Check for existing article
             existing_article = NewsArticle.query.filter_by(external_id=external_id).first()
             if existing_article:
-                self.logger.debug(f"Article with external_id {external_id} already exists")
                 return existing_article.id
 
             # Create new article
-            article = NewsArticle(
+            new_article = NewsArticle(
                 external_id=external_id,
-                title=article_data.get('title'),
-                url=article_data.get('url'),
-                published_at=article_data.get('published_at'),
-                source=article_data.get('source'),
-                sentiment_label=article_data.get('sentiment', {}).get('overall_sentiment'),
-                sentiment_score=article_data.get('sentiment', {}).get('confidence'),
-                sentiment_explanation=article_data.get('sentiment', {}).get('explanation'),
-                brief_summary=article_data.get('summary', {}).get('brief'),
-                key_points=article_data.get('summary', {}).get('key_points'),
-                market_impact_summary=article_data.get('summary', {}).get('market_impact')
+                title=article.get('title'),
+                url=article.get('url'),
+                published_at=article.get('published_at'),
+                source=article.get('source'),
+                sentiment_label=article.get('sentiment', {}).get('overall_sentiment'),
+                sentiment_score=article.get('sentiment', {}).get('confidence'),
+                sentiment_explanation=article.get('sentiment', {}).get('explanation'),
+                brief_summary=article.get('summary', {}).get('brief'),
+                key_points=article.get('summary', {}).get('key_points'),
+                market_impact_summary=article.get('summary', {}).get('market_impact')
             )
 
-            # Process symbols
-            if article_data.get('symbols'):
-                self._add_symbols(article, article_data['symbols'])
+            # Add symbols
+            if article.get('symbols'):
+                seen_symbols = set()  # Track unique symbols
+                for symbol_data in article['symbols']:
+                    symbol = symbol_data.get('symbol') if isinstance(symbol_data, dict) else symbol_data
+                    if symbol and symbol not in seen_symbols:
+                        seen_symbols.add(symbol)
+                        new_article.symbols.append(ArticleSymbol(symbol=symbol))
 
-            # Process metrics
-            if article_data.get('metrics'):
-                self._add_metrics(article, article_data['metrics'])
+            # Add metrics with deduplication
+            if article.get('metrics'):
+                metrics_by_type = {}  # Track unique metric types
+                for metric_type, metric_data in article['metrics'].items():
+                    if isinstance(metric_data, dict):
+                        values = metric_data.get('values', [])
+                        contexts = metric_data.get('contexts', [])
+                        # Only take the first occurrence of each metric type
+                        if metric_type not in metrics_by_type and values and contexts:
+                            new_article.metrics.append(
+                                ArticleMetric(
+                                    metric_type=metric_type,
+                                    metric_value=values[0],
+                                    metric_context=contexts[0]
+                                )
+                            )
+                            metrics_by_type[metric_type] = True
 
             # Save to database
-            db.session.add(article)
+            db.session.add(new_article)
             db.session.commit()
-            
             self.logger.info(f"Successfully saved article with external_id: {external_id}")
-            return article.id
+            return new_article.id
 
-        except SQLAlchemyError as e:
+        except Exception as e:
             self.logger.error(f"Database error while saving article: {str(e)}")
             db.session.rollback()
             return None
-        except Exception as e:
-            self.logger.error(f"Unexpected error while saving article: {str(e)}")
-            db.session.rollback()
-            return None
-
+        
+        
     def _add_symbols(self, article: NewsArticle, symbols_data: List) -> None:
         """
         Add symbols to article
