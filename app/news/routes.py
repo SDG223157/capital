@@ -41,7 +41,7 @@ def index():
         trending_topics = analytics.get_trending_topics(days=7)
         
         return render_template(
-            'news/dashboard.html',
+            'news/analysis.html',  # Changed from dashboard.html to analysis.html
             articles=articles,
             total_articles=total,
             sentiment_analysis=sentiment_analysis,
@@ -53,7 +53,7 @@ def index():
     except Exception as e:
         logger.error(f"Error in news index route: {str(e)}", exc_info=True)
         return render_template(
-            'news/dashboard.html',
+            'news/analysis.html',  # Changed here too
             error="Failed to load news dashboard",
             articles=[],
             total_articles=0,

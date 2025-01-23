@@ -92,17 +92,17 @@ class NewsAnalysisService:
         required_fields = ['external_id', 'title', 'published_at']
         return all(article.get(field) for field in required_fields)
 
-    def get_news_by_date_range(
+    def get_articles_by_date_range(
         self,
         start_date: str,
         end_date: str,
         symbol: str = None,
         page: int = 1,
         per_page: int = 20
-    ) -> Tuple[List[Dict], int]:
-        """Get news articles within a date range"""
+    ):
+        """Get articles within date range"""
         try:
-            return self.db.get_articles_by_date_range(
+            return self.db.search_articles(
                 start_date=start_date,
                 end_date=end_date,
                 symbol=symbol,

@@ -77,14 +77,14 @@ class ArticleSymbol(db.Model):
 class ArticleMetric(db.Model):
     __tablename__ = 'article_metrics'
 
-    id = db.Column(db.Integer, primary_key=True)
-    article_id = db.Column(db.Integer, db.ForeignKey('news_articles.id', ondelete='CASCADE'))
-    metric_type = db.Column(Enum('percentage', 'currency', name='metric_type_enum'))
+    # Composite primary key
+    article_id = db.Column(db.Integer, db.ForeignKey('news_articles.id', ondelete='CASCADE'), primary_key=True)
+    metric_type = db.Column(db.Enum('percentage', 'currency', name='metric_type_enum'), primary_key=True)
     metric_value = db.Column(db.Float)
     metric_context = db.Column(db.Text)
 
     # Relationship
-    article = relationship('NewsArticle', back_populates='metrics')
+    article = db.relationship('NewsArticle', back_populates='metrics')
 
     def to_dict(self):
         return {
