@@ -270,17 +270,22 @@ def _get_search_params():
         page = 1
         per_page = 20
 
+    keyword = request.args.get('keyword')
+    keyword = None if keyword in ['None', '', None] else keyword
+
+    symbol = request.args.get('symbol')
+    symbol = None if symbol in ['None', '', None] else symbol
+
     return {
-        'keyword': request.args.get('keyword', '').strip() or None,
-        'symbol': request.args.get('symbol', '').strip() or None,
+        'keyword': keyword,
+        'symbol': symbol,
         'start_date': request.args.get('start_date') or (now - timedelta(days=30)).strftime("%Y-%m-%d"),
         'end_date': request.args.get('end_date') or now.strftime("%Y-%m-%d"),
-        'sentiment': request.args.get('sentiment', '').strip() or None,
+        'sentiment': request.args.get('sentiment') or None,
         'page': page,
         'per_page': per_page,
         'include_analytics': request.args.get('include_analytics', 'false').lower() == 'true'
     }
-
 @bp.teardown_request
 def cleanup(exception):
     """Cleanup resources after each request"""
