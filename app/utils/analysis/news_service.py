@@ -29,18 +29,7 @@ class NewsAnalysisService:
             self.logger.error(f"Error getting articles by date range: {str(e)}")
             return [], 0
 
-    def get_sentiment_summary(self, days=7):
-        return {
-            'total_articles': 0,
-            'average_sentiment': 0,
-            'sentiment_distribution': {
-                'positive': 0,
-                'negative': 0,
-                'neutral': 0
-            },
-            'metrics': {},
-            'trending_topics': []
-        }
+    
 
     def search_articles(self, keyword=None, symbol=None, start_date=None, 
                        end_date=None, sentiment=None, page=1, per_page=20):
