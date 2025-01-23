@@ -13,10 +13,35 @@ class NewsAnalysisService:
     def __init__(self):
         """Initialize the news analysis service"""
         self.logger = logging.getLogger(__name__)
-        
-        # Initialize components
         self.analyzer = NewsAnalyzer("apify_api_ewwcE7264pu0eRgeUBL2RaFk6rmCdy4AaAU9")
         self.db = NewsService()
+
+    def search_articles(self, keyword=None, symbol=None, start_date=None, 
+                       end_date=None, sentiment=None, page=1, per_page=20):
+        """
+        Search articles (renamed from search_news to match route expectations)
+        """
+        try:
+            return self.db.search_articles(
+                keyword=keyword,
+                symbol=symbol,
+                start_date=start_date,
+                end_date=end_date,
+                sentiment=sentiment,
+                page=page,
+                per_page=per_page
+            )
+        except Exception as e:
+            self.logger.error(f"Error searching articles: {str(e)}")
+            return [], 0
+
+    def close(self):
+        """Clean up resources"""
+        try:
+            if hasattr(self.db, 'engine'):
+                self.db.engine.dispose()
+        except Exception as e:
+            self.logger.error(f"Error closing resources: {str(e)}")
         
     def fetch_and_analyze_news(self, symbols: List[str], limit: int = 10) -> List[Dict]:
         """

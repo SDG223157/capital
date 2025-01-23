@@ -70,7 +70,7 @@ def search():
         params = _get_search_params()
         logger.debug(f"Processing search with params: {params}")
 
-        # Perform search
+        # Perform search using search_articles method
         articles, total = news_service.search_articles(
             keyword=params['keyword'],
             symbol=params['symbol'],
@@ -80,17 +80,6 @@ def search():
             page=params['page'],
             per_page=params['per_page']
         )
-        
-        # Add analytics if requested
-        if params.get('include_analytics'):
-            analytics = init_analytics()
-            sentiment_analysis = analytics.get_sentiment_analysis(
-                symbol=params['symbol'],
-                days=(datetime.strptime(params['end_date'], "%Y-%m-%d") - 
-                      datetime.strptime(params['start_date'], "%Y-%m-%d")).days
-            )
-        else:
-            sentiment_analysis = None
 
         # Handle response format
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -98,7 +87,6 @@ def search():
                 'status': 'success',
                 'articles': articles,
                 'total': total,
-                'sentiment_analysis': sentiment_analysis,
                 'page': params['page'],
                 'per_page': params['per_page']
             })
@@ -107,8 +95,7 @@ def search():
             'news/search.html',
             articles=articles,
             total=total,
-            search_params=params,
-            sentiment_analysis=sentiment_analysis
+            search_params=params
         )
         
     except Exception as e:
@@ -271,6 +258,7 @@ def _get_search_params():
 def cleanup(exception):
     """Cleanup resources after each request"""
     try:
-        news_service.close()
+        if hasattr(news_service, 'close'):
+            news_service.close()
     except Exception as e:
         logger.error(f"Error in cleanup: {str(e)}")
