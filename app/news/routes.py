@@ -21,13 +21,10 @@ def init_analytics():
 @bp.route('/')
 @login_required
 def index():
-    """News dashboard home page"""
     try:
-        # Get default date range (last 7 days)
         end_date = datetime.now()
         start_date = end_date - timedelta(days=7)
         
-        # Get initial news data
         articles, total = news_service.get_news_by_date_range(
             start_date=start_date.strftime("%Y-%m-%d"),
             end_date=end_date.strftime("%Y-%m-%d"),
@@ -35,24 +32,27 @@ def index():
             per_page=10
         )
         
-        # Get sentiment summary
-        sentiment_summary = news_service.get_sentiment_summary(days=7)
-        
-        # Get trending topics
-        trending_topics = news_service.get_trending_topics()
+        sentiment_summary = {'total_articles': total}  # Provide default value
         
         return render_template(
             'news/analysis.html',
             articles=articles,
             total_articles=total,
-            sentiment_summary=sentiment_summary,
-            trending_topics=trending_topics
+            sentiment_summary=sentiment_summary,  # Always include this
+            trending_topics=[],
+            start_date=start_date.strftime("%Y-%m-%d"),
+            end_date=end_date.strftime("%Y-%m-%d")
         )
     except Exception as e:
-        logger.error(f"Error in news index route: {str(e)}")
-        return render_template('news/analysis.html', error="Failed to load news dashboard")
-
-
+        logger.error(f"Error in news index route: {str(e)}", exc_info=True)
+        return render_template(
+            'news/analysis.html',
+            error="Failed to load news dashboard",
+            articles=[],
+            total_articles=0,
+            sentiment_summary={'total_articles': 0},  # Include default value
+            trending_topics=[]
+        )
 @bp.route('/search')
 @login_required
 def search():

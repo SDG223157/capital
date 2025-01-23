@@ -15,6 +15,18 @@ class NewsAnalytics:
         """Initialize NewsAnalytics with database session"""
         self.session = session
         self.logger = logging.getLogger(__name__)
+    def get_news_by_date_range(self, start_date, end_date, symbol=None, page=1, per_page=20):
+        try:
+            return self.db.get_articles_by_date_range(
+                start_date=start_date,
+                end_date=end_date,
+                symbol=symbol,
+                page=page,
+                per_page=per_page
+            )
+        except Exception as e:
+            self.logger.error(f"Error getting news by date range: {str(e)}")
+            return [], 0
 
     def get_sentiment_analysis(
         self, 

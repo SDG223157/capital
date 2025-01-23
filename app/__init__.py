@@ -5,14 +5,13 @@ from datetime import datetime
 import logging
 from app.config import Config
 from werkzeug.middleware.proxy_fix import ProxyFix
-from flask_migrate import Migrate
-
+from flask_migrate import Migrate  # Import Migrate
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 db = SQLAlchemy()
-# migrate = Migrate()
+migrate = Migrate()  # Initialize Migrate
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
 login_manager.login_message_category = 'error'
@@ -32,8 +31,8 @@ def create_app(config_class=Config):
 
     # Initialize extensions
     db.init_app(app)
+    migrate.init_app(app, db)  # Initialize Flask-Migrate with the app and db
     from app.models import NewsArticle, ArticleMetric, ArticleSymbol, User
-    # migrate.init_app(app, db)
     login_manager.init_app(app)
 
     # Force HTTPS
@@ -43,16 +42,14 @@ def create_app(config_class=Config):
             url = request.url.replace('http://', 'https://', 1)
             return redirect(url, code=301)
 
-    from app.models import User
     @login_manager.user_loader
     def load_user(id):
         return User.query.get(int(id))
 
     with app.app_context():
-        # Create database tables and admin user
         try:
-            db.create_all()
-            logger.info("Database tables created successfully")
+            # Remove db.create_all() and use Flask-Migrate for migrations
+            logger.info("Database initialized using Flask-Migrate")
 
             # Check if admin user exists, if not create one
             admin_user = User.query.filter_by(email='admin@cfa187260.com').first()
@@ -72,7 +69,6 @@ def create_app(config_class=Config):
                 logger.info("Admin user created successfully!")
         except Exception as e:
             logger.error(f"Error during database initialization: {str(e)}")
-            # Don't raise the error - allow the app to continue starting up
 
         # Register blueprints
         from app.routes import bp as main_bp
@@ -90,7 +86,7 @@ def create_app(config_class=Config):
         from app.user.routes import bp as user_bp
         logger.debug(f"Registering user blueprint: {user_bp.name}")
         app.register_blueprint(user_bp, url_prefix='/user')
-        
+
         # Register news blueprint
         try:
             from app.news.routes import bp as news_bp
@@ -99,7 +95,6 @@ def create_app(config_class=Config):
         except Exception as e:
             logger.error(f"Error registering news blueprint: {str(e)}")
             raise
-
 
         @app.context_processor
         def utility_processor():
