@@ -33,13 +33,12 @@ def create_app(config_class=Config):
     db.init_app(app)  # Link the db with the app
     migrate.init_app(app, db)  # Link Flask-Migrate with the app and db
     from app.models import NewsArticle, ArticleMetric, ArticleSymbol, User  # Import models after db is initialized
-    if not NewsArticle.__table__.exists(db.engine):
-                NewsArticle.__table__.create(db.engine)
-    if not ArticleMetric.__table__.exists(db.engine):
-                ArticleMetric.__table__.create(db.engine)
-    if not ArticleSymbol.__table__.exists(db.engine):
-                ArticleSymbol.__table__.create(db.engine)
-
+    if db.session.query(NewsArticle).count() == 0:
+            NewsArticle.__table__.create(db.engine)
+    if db.session.query(ArticleMetric).count() == 0:
+            ArticleMetric.__table__.create(db.engine)
+    if db.session.query(ArticleSymbol).count() == 0:
+            ArticleSymbol.__table__.create(db.engine)
     login_manager.init_app(app)
 
     # Force HTTPS
