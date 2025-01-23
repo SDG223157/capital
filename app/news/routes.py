@@ -23,43 +23,35 @@ def init_analytics():
 def index():
     """News dashboard home page"""
     try:
-        # Set default date range
+        # Get default date range (last 7 days)
         end_date = datetime.now()
         start_date = end_date - timedelta(days=7)
         
-        # Get initial data
-        articles, total = news_service.get_articles_by_date_range(
+        # Get initial news data
+        articles, total = news_service.get_news_by_date_range(
             start_date=start_date.strftime("%Y-%m-%d"),
             end_date=end_date.strftime("%Y-%m-%d"),
             page=1,
             per_page=10
         )
         
-        # Get analytics
-        analytics = init_analytics()
-        sentiment_analysis = analytics.get_sentiment_analysis(days=7)
-        trending_topics = analytics.get_trending_topics(days=7)
+        # Get sentiment summary
+        sentiment_summary = news_service.get_sentiment_summary(days=7)
+        
+        # Get trending topics
+        trending_topics = news_service.get_trending_topics()
         
         return render_template(
-            'news/analysis.html',  # Changed from dashboard.html to analysis.html
+            'news/analysis.html',
             articles=articles,
             total_articles=total,
-            sentiment_analysis=sentiment_analysis,
-            trending_topics=trending_topics,
-            start_date=start_date.strftime("%Y-%m-%d"),
-            end_date=end_date.strftime("%Y-%m-%d")
+            sentiment_summary=sentiment_summary,
+            trending_topics=trending_topics
         )
-        
     except Exception as e:
-        logger.error(f"Error in news index route: {str(e)}", exc_info=True)
-        return render_template(
-            'news/analysis.html',  # Changed here too
-            error="Failed to load news dashboard",
-            articles=[],
-            total_articles=0,
-            sentiment_analysis={},
-            trending_topics=[]
-        )
+        logger.error(f"Error in news index route: {str(e)}")
+        return render_template('news/analysis.html', error="Failed to load news dashboard")
+
 
 @bp.route('/search')
 @login_required
