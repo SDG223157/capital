@@ -16,6 +16,31 @@ class NewsAnalysisService:
         self.logger = logging.getLogger(__name__)
         self.analyzer = NewsAnalyzer("apify_api_ewwcE7264pu0eRgeUBL2RaFk6rmCdy4AaAU9")
         self.db = NewsService()
+    def get_news_by_date_range(self, start_date, end_date, symbol=None, page=1, per_page=20):
+        try:
+            return self.db.get_articles_by_date_range(
+                start_date=start_date,
+                end_date=end_date,
+                symbol=symbol,
+                page=page,
+                per_page=per_page
+            )
+        except Exception as e:
+            self.logger.error(f"Error getting articles by date range: {str(e)}")
+            return [], 0
+
+    def get_sentiment_summary(self, days=7):
+        return {
+            'total_articles': 0,
+            'average_sentiment': 0,
+            'sentiment_distribution': {
+                'positive': 0,
+                'negative': 0,
+                'neutral': 0
+            },
+            'metrics': {},
+            'trending_topics': []
+        }
 
     def search_articles(self, keyword=None, symbol=None, start_date=None, 
                        end_date=None, sentiment=None, page=1, per_page=20):
