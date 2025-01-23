@@ -186,7 +186,6 @@ class NewsApp {
                 this.elements.searchResults.innerHTML = data.articles
                     .map((article, index) => this.renderArticle(article, index))
                     .join('');
-                setupArticleExpansion(); // Add this line
                     
                 setTimeout(() => {
                     this.animateArticles();
@@ -302,15 +301,25 @@ class NewsApp {
     }
 
     setupArticleFeatures() {
-        // Setup article expansion
+        // Article expansion
         document.querySelectorAll('.expand-button').forEach(button => {
             button.addEventListener('click', () => {
-                const content = button.previousElementSibling;
-                const isExpanded = content.classList.contains('max-h-[1000px]');
+                const content = button.closest('.article-card').querySelector('.article-content');
+                const isExpanded = content.classList.contains('max-h-96');
                 
-                content.classList.toggle('max-h-0', isExpanded);
-                content.classList.toggle('max-h-[1000px]', !isExpanded);
-                button.textContent = isExpanded ? 'Show More' : 'Show Less';
+                if (isExpanded) {
+                    // Collapse
+                    content.classList.remove('max-h-96', 'opacity-100');
+                    content.classList.add('max-h-0', 'opacity-0');
+                    button.textContent = 'Show More';
+                    button.setAttribute('aria-expanded', 'false');
+                } else {
+                    // Expand
+                    content.classList.remove('max-h-0', 'opacity-0');
+                    content.classList.add('max-h-96', 'opacity-100');
+                    button.textContent = 'Show Less';
+                    button.setAttribute('aria-expanded', 'true');
+                }
             });
         });
 
@@ -319,8 +328,6 @@ class NewsApp {
         this.addShareFeature();
     }
 
-    // ... Additional helper methods (renderArticle, renderSkeleton, etc.) ...
-    // Would you like me to continue with the rest of the implementation?
     // Rendering Methods
     renderArticle(article, index) {
         const delay = index * 100; // Stagger animation
@@ -363,13 +370,6 @@ class NewsApp {
                     <p class="text-gray-600">
                         ${article.summary?.brief || article.content || ''}
                     </p>
-
-                    ${article.summary?.key_points ? `
-                        <div class="mt-3 mb-3">
-                            <h4 class="text-sm font-semibold text-gray-700">Key Points:</h4>
-                            <p class="text-sm text-gray-600">${article.summary.key_points}</p>
-                        </div>
-                    ` : ''}
 
                     ${article.summary?.market_impact ? `
                         <div class="mb-3">
@@ -518,7 +518,7 @@ class NewsApp {
                 e.stopPropagation();
                 const article = button.closest('.article-card');
                 const title = article.querySelector('h3 a').textContent.trim();
-                const content = article.querySelector('p').textContent.trim();
+                const content = article.querySelector('.article-content p').textContent.trim();
                 const url = article.querySelector('a').href;
                 
                 try {
@@ -562,92 +562,35 @@ class NewsApp {
             });
         });
     }
+
+    loadUserPreferences() {
+        // Load last search parameters
+        const lastSearch = UserPreferences.load(UserPreferences.KEYS.LAST_SEARCH);
+        if (lastSearch) {
+            Object.entries(lastSearch).forEach(([key, value]) => {
+                const input = document.getElementById(key);
+                if (input) input.value = value;
+            });
+        }
+    }
+
+    initializePagination() {
+        const paginationContainer = document.querySelector('nav');
+        if (paginationContainer) {
+            paginationContainer.addEventListener('click', async (e) => {
+                const pageButton = e.target.closest('button[data-page]');
+                if (pageButton) {
+                    const page = pageButton.dataset.page;
+                    const formData = new FormData(this.elements.searchForm);
+                    formData.set('page', page);
+                    await this.performSearch(formData);
+                }
+            });
+        }
+    }
 }
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', () => {
     window.newsApp = new NewsApp();
 });
-
-// Add this logging to see if the click event is being triggered
-fetchButton.addEventListener('click', async function() {
-    try {
-        console.log('Fetch button clicked');  // Debug log
-        
-        const symbol = document.getElementById('symbol').value;
-        console.log('Symbol value:', symbol);  // Debug log
-        
-        if (!symbol) {
-            alert('Please enter a stock symbol');
-            return;
-        }
-
-        setLoading(true);
-        console.log('Sending fetch request...'); // Debug log
-
-        const response = await fetch('/news/api/fetch', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-                symbols: [symbol],
-                limit: 10
-            })
-        });
-
-        console.log('Fetch response:', response); // Debug log
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch news: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log('Fetch data:', data); // Debug log
-
-        alert(`Successfully fetched ${data.articles?.length || 0} articles. You can now search for them.`);
-        
-        // Update search results
-        const formData = new FormData(searchForm);
-        formData.set('symbol', symbol);
-        await performSearch(formData);
-
-    } catch (error) {
-        console.error('Fetch error:', error);
-        alert('Failed to fetch news: ' + error.message);
-    } finally {
-        setLoading(false);
-    }
-});
-
-// Function to set up article expansion functionality
-// Function to set up article expansion functionality
-// Function to set up article expansion functionality
-function setupArticleExpansion() {
-    document.querySelectorAll('.expand-button').forEach(button => {
-        button.addEventListener('click', () => {
-            const content = button.closest('.article-card').querySelector('.article-content');
-            const isExpanded = button.getAttribute('aria-expanded') === 'true';
-            
-            if (isExpanded) {
-                // Collapse the article content
-                content.classList.remove('max-h-96', 'opacity-100');
-                content.classList.add('max-h-0', 'opacity-0');
-                button.textContent = 'Show More';
-                button.setAttribute('aria-expanded', 'false');
-            } else {
-                // Expand the article content
-                content.classList.remove('max-h-0', 'opacity-0');
-                content.classList.add('max-h-96', 'opacity-100');
-                button.textContent = 'Show Less';
-                button.setAttribute('aria-expanded', 'true');
-            }
-        });
-    });
-}
-
-
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', setupArticleExpansion);
