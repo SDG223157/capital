@@ -33,12 +33,6 @@ def create_app(config_class=Config):
     db.init_app(app)  # Link the db with the app
     migrate.init_app(app, db)  # Link Flask-Migrate with the app and db
     from app.models import NewsArticle, ArticleMetric, ArticleSymbol, User  # Import models after db is initialized
-    # if db.session.query(NewsArticle).count() == 0:
-    #         NewsArticle.__table__.create(db.engine)
-    # if db.session.query(ArticleMetric).count() == 0:
-    #         ArticleMetric.__table__.create(db.engine)
-    # if db.session.query(ArticleSymbol).count() == 0:
-    #         ArticleSymbol.__table__.create(db.engine)
     login_manager.init_app(app)
 
     # Force HTTPS
@@ -56,10 +50,6 @@ def create_app(config_class=Config):
         try:
             # No need to call db.create_all() because Flask-Migrate will handle migrations
             logger.info("Database initialized using Flask-Migrate")
-            migrate.init_app(app, db)
-
-            # Check if news tables exist, if not, create them
-            db.create_all()
 
             # Check if admin user exists, if not create one
             admin_user = User.query.filter_by(email='admin@cfa187260.com').first()
