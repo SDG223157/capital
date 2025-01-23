@@ -29,7 +29,18 @@ class NewsAnalysisService:
             self.logger.error(f"Error getting articles by date range: {str(e)}")
             return [], 0
 
-    
+    def get_sentiment_summary(self, days=7):
+        return {
+            'total_articles': 0,
+            'average_sentiment': 0,
+            'sentiment_distribution': {
+                'positive': 0,
+                'negative': 0,
+                'neutral': 0
+            },
+            'metrics': {},
+            'trending_topics': []
+        }
 
     def search_articles(self, keyword=None, symbol=None, start_date=None, 
                        end_date=None, sentiment=None, page=1, per_page=20):
@@ -103,66 +114,66 @@ class NewsAnalysisService:
             return []
 
     
-    def get_sentiment_summary(
-        self,
-        date: str = None,
-        symbol: str = None,
-        days: int = 7
-    ) -> Dict:
-        """
-        Get sentiment summary statistics
+    # def get_sentiment_summary(
+    #     self,
+    #     date: str = None,
+    #     symbol: str = None,
+    #     days: int = 7
+    # ) -> Dict:
+    #     """
+    #     Get sentiment summary statistics
         
-        Args:
-            date (str, optional): Specific date for summary
-            symbol (str, optional): Filter by symbol
-            days (int): Number of days to analyze if no specific date
+    #     Args:
+    #         date (str, optional): Specific date for summary
+    #         symbol (str, optional): Filter by symbol
+    #         days (int): Number of days to analyze if no specific date
             
-        Returns:
-            Dict: Sentiment summary statistics
-        """
-        try:
-            if date:
-                return self.db.get_daily_sentiment_summary(date, symbol)
-            else:
-                # Calculate summary for last N days
-                end_date = datetime.now()
-                start_date = end_date - timedelta(days=days)
+    #     Returns:
+    #         Dict: Sentiment summary statistics
+    #     """
+    #     try:
+    #         if date:
+    #             return self.db.get_daily_sentiment_summary(date, symbol)
+    #         else:
+    #             # Calculate summary for last N days
+    #             end_date = datetime.now()
+    #             start_date = end_date - timedelta(days=days)
                 
-                articles, _ = self.db.get_articles_by_date_range(
-                    start_date=start_date.strftime("%Y-%m-%d"),
-                    end_date=end_date.strftime("%Y-%m-%d"),
-                    symbol=symbol
-                )
+    #             articles, _ = self.db.get_articles_by_date_range(
+    #                 start_date=start_date.strftime("%Y-%m-%d"),
+    #                 end_date=end_date.strftime("%Y-%m-%d"),
+    #                 symbol=symbol
+    #             )
                 
-                if not articles:
-                    return {
-                        "total_articles": 0,
-                        "sentiment_distribution": {
-                            "positive": 0,
-                            "negative": 0,
-                            "neutral": 0
-                        },
-                        "average_sentiment": 0
-                    }
+    #             if not articles:
+    #                 return {
+    #                     "total_articles": 0,
+    #                     "sentiment_distribution": {
+    #                         "positive": 0,
+    #                         "negative": 0,
+    #                         "neutral": 0
+    #                     },
+    #                     "average_sentiment": 0
+    #                 }
                 
-                # Calculate statistics
-                positive = sum(1 for a in articles if a['sentiment_label'] == 'POSITIVE')
-                negative = sum(1 for a in articles if a['sentiment_label'] == 'NEGATIVE')
-                neutral = sum(1 for a in articles if a['sentiment_label'] == 'NEUTRAL')
+    #             # Calculate statistics
+    #             positive = sum(1 for a in articles if a['sentiment_label'] == 'POSITIVE')
+    #             negative = sum(1 for a in articles if a['sentiment_label'] == 'NEGATIVE')
+    #             neutral = sum(1 for a in articles if a['sentiment_label'] == 'NEUTRAL')
                 
-                return {
-                    "total_articles": len(articles),
-                    "sentiment_distribution": {
-                        "positive": positive,
-                        "negative": negative,
-                        "neutral": neutral
-                    },
-                    "average_sentiment": sum(a['sentiment_score'] for a in articles) / len(articles)
-                }
+    #             return {
+    #                 "total_articles": len(articles),
+    #                 "sentiment_distribution": {
+    #                     "positive": positive,
+    #                     "negative": negative,
+    #                     "neutral": neutral
+    #                 },
+    #                 "average_sentiment": sum(a['sentiment_score'] for a in articles) / len(articles)
+    #             }
                 
-        except Exception as e:
-            self.logger.error(f"Error getting sentiment summary: {str(e)}")
-            return {}
+    #     except Exception as e:
+    #         self.logger.error(f"Error getting sentiment summary: {str(e)}")
+    #         return {}
 
     def get_trending_topics(self, days: int = NewsConfig.TRENDING_DAYS) -> List[Dict]:
         """
