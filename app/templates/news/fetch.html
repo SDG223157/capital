@@ -84,24 +84,31 @@
                         if (data.articles && data.articles.length > 0) {
                             resultsCount.textContent = `${data.articles.length} articles found`;
                             articlesContainer.innerHTML = data.articles
-                                .map(article => `
-                                    <div class="article-card border-b border-gray-200 pb-6 mb-4">
-                                        <h3 class="text-lg font-medium text-gray-900">
-                                            <a href="${article.url}" target="_blank" class="text-blue-600 hover:text-blue-800">
-                                                ${article.title}
-                                            </a>
-                                        </h3>
-                                        <p class="text-gray-600">${article.brief_summary || ''}</p>
-                                        <div class="mt-2">
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                                                ${article.sentiment_label === 'POSITIVE' ? 'bg-green-100 text-green-800' :
-                                                  article.sentiment_label === 'NEGATIVE' ? 'bg-red-100 text-red-800' :
-                                                  'bg-gray-100 text-gray-800'}">
-                                                ${article.sentiment_label} (${(article.sentiment_score * 100).toFixed(1)}%)
-                                            </span>
+                                .map(article => {
+                                    // Handle missing or invalid sentiment data
+                                    const sentimentLabel = article.sentiment_label || 'NEUTRAL';
+                                    const sentimentScore = article.sentiment_score || 0;
+                                    const sentimentPercentage = (sentimentScore * 100).toFixed(1);
+
+                                    return `
+                                        <div class="article-card border-b border-gray-200 pb-6 mb-4">
+                                            <h3 class="text-lg font-medium text-gray-900">
+                                                <a href="${article.url}" target="_blank" class="text-blue-600 hover:text-blue-800">
+                                                    ${article.title}
+                                                </a>
+                                            </h3>
+                                            <p class="text-gray-600">${article.brief_summary || ''}</p>
+                                            <div class="mt-2">
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                                    ${sentimentLabel === 'POSITIVE' ? 'bg-green-100 text-green-800' :
+                                                      sentimentLabel === 'NEGATIVE' ? 'bg-red-100 text-red-800' :
+                                                      'bg-gray-100 text-gray-800'}">
+                                                    ${sentimentLabel} (${sentimentPercentage}%)
+                                                </span>
+                                            </div>
                                         </div>
-                                    </div>
-                                `)
+                                    `;
+                                })
                                 .join('');
                         } else {
                             articlesContainer.innerHTML = '<p class="text-gray-600">No articles found.</p>';
