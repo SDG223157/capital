@@ -6,6 +6,8 @@ import logging
 from app.config import Config
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_migrate import Migrate
+from app.models import  NewsArticle, ArticleMetric, ArticleSymbol, User
+
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)

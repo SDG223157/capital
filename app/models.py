@@ -11,6 +11,7 @@ from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKe
 from sqlalchemy import Enum
 from sqlalchemy.orm import relationship
 
+
 class NewsArticle(db.Model):
     __tablename__ = 'news_articles'
 
