@@ -10,8 +10,8 @@ from flask_migrate import Migrate  # Import Migrate
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-db = SQLAlchemy()
-# migrate = Migrate()  # Initialize Migrate
+db = SQLAlchemy()  # Define SQLAlchemy instance
+migrate = Migrate()  # Initialize Migrate instance
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
 login_manager.login_message_category = 'error'
@@ -30,11 +30,9 @@ def create_app(config_class=Config):
     )
 
     # Initialize extensions
-    # db.init_app(app)
-    # migrate.init_app(app, db)  # Initialize Flask-Migrate with the app and db
-    from app.models import NewsArticle, ArticleMetric, ArticleSymbol, User
-    migrate = Migrate()
-    migrate.init_app(app, db)
+    db.init_app(app)  # Link the db with the app
+    migrate.init_app(app, db)  # Link Flask-Migrate with the app and db
+    from app.models import NewsArticle, ArticleMetric, ArticleSymbol, User  # Import models after db is initialized
     login_manager.init_app(app)
 
     # Force HTTPS
@@ -50,7 +48,7 @@ def create_app(config_class=Config):
 
     with app.app_context():
         try:
-            # Remove db.create_all() and use Flask-Migrate for migrations
+            # No need to call db.create_all() because Flask-Migrate will handle migrations
             logger.info("Database initialized using Flask-Migrate")
 
             # Check if admin user exists, if not create one
