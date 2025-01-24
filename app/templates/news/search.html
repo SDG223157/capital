@@ -89,7 +89,7 @@
                 'ADBE', 'CSCO', 'INTC', 'QCOM', 'AMD', 'INTU', 'AMAT', 'MU', 'NFLX', 'PEP'
             ].map(s => s.toUpperCase()));
 
-            symbol = symbol.toUpperCase();
+            symbol = symbol.toUpperCase(); // Ensure input is uppercase
 
             // Hong Kong stocks
             if (/^\d{4}\.HK$/i.test(symbol)) {
