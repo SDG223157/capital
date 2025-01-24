@@ -1,172 +1,254 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const symbolInput = document.getElementById('symbol');
-    const suggestionsDiv = document.getElementById('suggestions');
-    const searchForm = document.getElementById('searchForm');
+{% extends "base.html" %}
 
-    // Function to get suggested symbol
-    function getSuggestedSymbol(symbol) {
-        // NASDAQ stocks set
-        const nasdaqStocks = new Set([
-            'AAPL', 'MSFT', 'AMZN', 'GOOGL', 'GOOG', 'META', 'NVDA', 'TSLA', 'AVGO', 
-            'ADBE', 'CSCO', 'INTC', 'QCOM', 'AMD', 'INTU', 'AMAT', 'MU', 'NFLX', 'PEP'
-        ].map(s => s.toUpperCase()));
+{% block title %}News Search{% endblock %}
 
-        symbol = symbol.toUpperCase();
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <form id="searchForm" class="mb-8">
+            <div class="flex gap-4">
+                <div class="relative flex-1">
+                    <input type="text" name="symbol" id="symbol" 
+                           value="{{ search_params.get('symbol') or '' }}"
+                           placeholder="Enter stock symbol (e.g., AAPL)"
+                           class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <!-- Suggestions Dropdown -->
+                    <div id="suggestions" class="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg hidden">
+                        <!-- Suggestions will be dynamically inserted here -->
+                    </div>
+                </div>
+                <button type="submit" id="searchButton"
+                        class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Search
+                </button>
+            </div>
+        </form>
 
-        // Hong Kong stocks
-        if (/^\d{4}\.HK$/i.test(symbol)) {
-            return `HKEX:${symbol.replace(/\.HK$/i, '')}`;
+        <!-- Results Section -->
+        <div id="searchResults" class="space-y-6">
+            {% if articles %}
+                {% for article in articles %}
+                <div class="border-b border-gray-200 pb-6 last:border-b-0">
+                    <div class="flex justify-between items-start">
+                        <h3 class="text-lg font-medium text-gray-900">
+                            <a href="{{ article.url }}" target="_blank" class="text-blue-600 hover:text-blue-800">
+                                {{ article.title }}
+                            </a>
+                        </h3>
+                        <span class="text-sm text-gray-500">{{ article.published_at }}</span>
+                    </div>
+
+                    <div class="mt-2 mb-3">
+                        <p class="text-gray-600">
+                            {% if article.summary.key_points %}
+                                {{ article.summary.key_points }}
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2">
+                        {% for symbol in article.symbols %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            {{ symbol.symbol }}
+                        </span>
+                        {% endfor %}
+
+                        {% if article.sentiment.explanation %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                            {% if article.sentiment.label == 'POSITIVE' %}bg-green-100 text-green-800
+                            {% elif article.sentiment.label == 'NEGATIVE' %}bg-red-100 text-red-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ article.sentiment.explanation }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-8 text-gray-500">
+                    Enter a stock symbol to search for news articles
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const symbolInput = document.getElementById('symbol');
+        const suggestionsDiv = document.getElementById('suggestions');
+        const searchForm = document.getElementById('searchForm');
+
+        // Function to get suggested symbol
+        function getSuggestedSymbol(symbol) {
+            // NASDAQ stocks set
+            const nasdaqStocks = new Set([
+                'AAPL', 'MSFT', 'AMZN', 'GOOGL', 'GOOG', 'META', 'NVDA', 'TSLA', 'AVGO', 
+                'ADBE', 'CSCO', 'INTC', 'QCOM', 'AMD', 'INTU', 'AMAT', 'MU', 'NFLX', 'PEP'
+            ].map(s => s.toUpperCase()));
+
+            symbol = symbol.toUpperCase();
+
+            // Hong Kong stocks
+            if (/^\d{4}\.HK$/i.test(symbol)) {
+                return `HKEX:${symbol.replace(/\.HK$/i, '')}`;
+            }
+            if (symbol.startsWith('0') && /\.HK$/i.test(symbol)) {
+                return `HKEX:${symbol.replace('0', '').replace(/\.HK$/i, '')}`;
+            }
+            
+            // Shanghai stocks
+            if (/\.SS$/i.test(symbol)) {
+                return `SSE:${symbol.replace(/\.SS$/i, '')}`;
+            }
+            
+            // NASDAQ stocks
+            if (nasdaqStocks.has(symbol)) {
+                return `NASDAQ:${symbol}`;
+            }
+            if (symbol.endsWith('.O')) {
+                return `NASDAQ:${symbol.replace('.O', '')}`;
+            }
+            
+            // Default to NYSE
+            return `NYSE:${symbol}`;
         }
-        if (symbol.startsWith('0') && /\.HK$/i.test(symbol)) {
-            return `HKEX:${symbol.replace('0', '').replace(/\.HK$/i, '')}`;
-        }
-        
-        // Shanghai stocks
-        if (/\.SS$/i.test(symbol)) {
-            return `SSE:${symbol.replace(/\.SS$/i, '')}`;
-        }
-        
-        // NASDAQ stocks
-        if (nasdaqStocks.has(symbol)) {
-            return `NASDAQ:${symbol}`;
-        }
-        if (symbol.endsWith('.O')) {
-            return `NASDAQ:${symbol.replace('.O', '')}`;
-        }
-        
-        // Default to NYSE
-        return `NYSE:${symbol}`;
-    }
 
-    // Show suggestions as the user types
-    if (symbolInput) {
-        symbolInput.addEventListener('input', function () {
-            const inputValue = this.value.trim();
-            if (inputValue) {
-                const suggestedSymbol = getSuggestedSymbol(inputValue);
-                suggestionsDiv.innerHTML = `<div class="p-2 hover:bg-gray-100 cursor-pointer">${suggestedSymbol}</div>`;
-                suggestionsDiv.style.display = 'block';
-            } else {
-                suggestionsDiv.style.display = 'none';
-            }
-        });
-
-        // Hide suggestions when clicking outside the input or dropdown
-        document.addEventListener('click', function (e) {
-            if (e.target !== symbolInput && !suggestionsDiv.contains(e.target)) {
-                suggestionsDiv.style.display = 'none';
-            }
-        });
-
-        // Apply suggestion when clicked
-        suggestionsDiv.addEventListener('click', function (e) {
-            if (e.target && e.target.textContent) {
-                symbolInput.value = e.target.textContent; // Set the input value to the selected suggestion
-                suggestionsDiv.style.display = 'none'; // Hide dropdown after selection
-                symbolInput.focus(); // Keep focus on the input box
-            }
-        });
-
-        // Clear input on double-click
-        symbolInput.addEventListener('dblclick', function () {
-            if (this.value) {
-                this.value = '';
-                suggestionsDiv.style.display = 'none';
-            }
-        });
-    }
-
-    // Trigger search on pressing "Enter"
-    if (symbolInput) {
-        symbolInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault(); // Prevent default form submission
-                searchForm.dispatchEvent(new Event('submit')); // Trigger form submission
-            }
-        });
-    }
-
-    if (searchForm) {
-        searchForm.addEventListener('submit', async (e) => {
-            e.preventDefault(); // Prevent form submission
-
-            const symbol = symbolInput.value.trim();
-            if (!symbol) {
-                alert('Please enter a stock symbol');
-                return;
-            }
-
-            try {
-                // Fetch news from the backend
-                const response = await fetch('/news/api/fetch', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: JSON.stringify({
-                        symbols: [symbol],
-                        limit: 10
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to fetch news');
-                }
-
-                const data = await response.json();
-                console.log('Fetched articles:', data.articles);
-
-                // Update the UI with fetched articles
-                const articlesContainer = document.getElementById('searchResults');
-                if (data.articles && data.articles.length > 0) {
-                    articlesContainer.innerHTML = data.articles
-                        .map(article => {
-                            // Handle missing or invalid sentiment data
-                            const sentimentLabel = article.sentiment_label || 'NEUTRAL';
-                            const sentimentExplanation = article.sentiment_explanation || 'No explanation available';
-                            const sentimentScore = article.sentiment_score || 0;
-                            const sentimentPercentage = (sentimentScore * 100).toFixed(1);
-
-                            return `
-                                <div class="border-b border-gray-200 pb-6 last:border-b-0">
-                                    <div class="flex justify-between items-start">
-                                        <h3 class="text-lg font-medium text-gray-900">
-                                            <a href="${article.url}" target="_blank" class="text-blue-600 hover:text-blue-800">
-                                                ${article.title}
-                                            </a>
-                                        </h3>
-                                        <span class="text-sm text-gray-500">${article.published_at}</span>
-                                    </div>
-                                    <div class="mt-2 mb-3">
-                                        <p class="text-gray-600">${article.brief_summary || ''}</p>
-                                    </div>
-                                    <div class="flex flex-wrap gap-2">
-                                        ${article.symbols.map(symbol => `
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                                ${symbol.symbol}
-                                            </span>
-                                        `).join('')}
-                                        ${article.sentiment.explanation ? `
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                                                ${sentimentLabel === 'POSITIVE' ? 'bg-green-100 text-green-800' :
-                                                  sentimentLabel === 'NEGATIVE' ? 'bg-red-100 text-red-800' :
-                                                  'bg-gray-100 text-gray-800'}">
-                                                ${sentimentExplanation} (${sentimentPercentage}%)
-                                            </span>
-                                        ` : ''}
-                                    </div>
-                                </div>
-                            `;
-                        })
-                        .join('');
+        // Show suggestions as the user types
+        if (symbolInput) {
+            symbolInput.addEventListener('input', function () {
+                const inputValue = this.value.trim();
+                if (inputValue) {
+                    const suggestedSymbol = getSuggestedSymbol(inputValue);
+                    suggestionsDiv.innerHTML = `
+                        <div class="p-2 hover:bg-gray-100 cursor-pointer">${suggestedSymbol}</div>
+                    `;
+                    suggestionsDiv.style.display = 'block';
                 } else {
-                    articlesContainer.innerHTML = '<p class="text-gray-600">No articles found.</p>';
+                    suggestionsDiv.style.display = 'none';
                 }
-            } catch (error) {
-                console.error('Fetch error:', error);
-                alert('Failed to fetch news: ' + error.message);
-            }
-        });
-    }
-});
+            });
+
+            // Hide suggestions when clicking outside the input or dropdown
+            document.addEventListener('click', function (e) {
+                if (e.target !== symbolInput && !suggestionsDiv.contains(e.target)) {
+                    suggestionsDiv.style.display = 'none';
+                }
+            });
+
+            // Apply suggestion when clicked
+            suggestionsDiv.addEventListener('click', function (e) {
+                if (e.target && e.target.textContent) {
+                    symbolInput.value = e.target.textContent; // Set the input value to the selected suggestion
+                    suggestionsDiv.style.display = 'none'; // Hide dropdown after selection
+                    symbolInput.focus(); // Keep focus on the input box
+                }
+            });
+
+            // Clear input on double-click
+            symbolInput.addEventListener('dblclick', function () {
+                if (this.value) {
+                    this.value = '';
+                    suggestionsDiv.style.display = 'none';
+                }
+            });
+        }
+
+        // Trigger search on pressing "Enter"
+        if (symbolInput) {
+            symbolInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); // Prevent default form submission
+                    searchForm.dispatchEvent(new Event('submit')); // Trigger form submission
+                }
+            });
+        }
+
+        if (searchForm) {
+            searchForm.addEventListener('submit', async (e) => {
+                e.preventDefault(); // Prevent form submission
+
+                const symbol = symbolInput.value.trim();
+                if (!symbol) {
+                    alert('Please enter a stock symbol');
+                    return;
+                }
+
+                try {
+                    // Fetch news from the backend
+                    const response = await fetch('/news/api/fetch', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({
+                            symbols: [symbol],
+                            limit: 10
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch news');
+                    }
+
+                    const data = await response.json();
+                    console.log('Fetched articles:', data.articles);
+
+                    // Update the UI with fetched articles
+                    const articlesContainer = document.getElementById('searchResults');
+                    if (data.articles && data.articles.length > 0) {
+                        articlesContainer.innerHTML = data.articles
+                            .map(article => {
+                                // Handle missing or invalid sentiment data
+                                const sentimentLabel = article.sentiment_label || 'NEUTRAL';
+                                const sentimentExplanation = article.sentiment_explanation || 'No explanation available';
+                                const sentimentScore = article.sentiment_score || 0;
+                                const sentimentPercentage = (sentimentScore * 100).toFixed(1);
+
+                                return `
+                                    <div class="border-b border-gray-200 pb-6 last:border-b-0">
+                                        <div class="flex justify-between items-start">
+                                            <h3 class="text-lg font-medium text-gray-900">
+                                                <a href="${article.url}" target="_blank" class="text-blue-600 hover:text-blue-800">
+                                                    ${article.title}
+                                                </a>
+                                            </h3>
+                                            <span class="text-sm text-gray-500">${article.published_at}</span>
+                                        </div>
+                                        <div class="mt-2 mb-3">
+                                            <p class="text-gray-600">${article.brief_summary || ''}</p>
+                                        </div>
+                                        <div class="flex flex-wrap gap-2">
+                                            ${article.symbols.map(symbol => `
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                    ${symbol.symbol}
+                                                </span>
+                                            `).join('')}
+                                            ${article.sentiment.explanation ? `
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                                    ${sentimentLabel === 'POSITIVE' ? 'bg-green-100 text-green-800' :
+                                                      sentimentLabel === 'NEGATIVE' ? 'bg-red-100 text-red-800' :
+                                                      'bg-gray-100 text-gray-800'}">
+                                                    ${sentimentExplanation} (${sentimentPercentage}%)
+                                                </span>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                `;
+                            })
+                            .join('');
+                    } else {
+                        articlesContainer.innerHTML = '<p class="text-gray-600">No articles found.</p>';
+                    }
+                } catch (error) {
+                    console.error('Fetch error:', error);
+                    alert('Failed to fetch news: ' + error.message);
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
