@@ -78,13 +78,17 @@
         const resultsCount = document.getElementById('resultsCount');
         const searchForm = document.getElementById('searchForm');
 
-        // Reset input box on double-click
+        // Clear input on double-click
         if (symbolInput) {
-            symbolInput.addEventListener('dblclick', () => {
-                symbolInput.value = ''; // Clear the input box
+            symbolInput.addEventListener('dblclick', function () {
+                if (this.value) { // Only clear if the input has a value
+                    this.value = '';
+                }
             });
+        }
 
-            // Trigger search on pressing "Enter"
+        // Trigger search on pressing "Enter"
+        if (symbolInput) {
             symbolInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault(); // Prevent default form submission
