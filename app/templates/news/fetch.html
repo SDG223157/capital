@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -87,9 +86,12 @@
                             articlesContainer.innerHTML = data.articles
                                 .map(article => {
                                     // Handle missing or invalid sentiment data
-                                    const sentimentLabel = article.sentiment_label || 'NEUTRAL';
-                                    const sentimentScore = article.sentiment_score || 0;
+                                    const sentimentLabel = article.sentiment.label || 'NEUTRAL';
+                                    const sentimentScore = article.sentiment.score || 0;
                                     const sentimentPercentage = (sentimentScore * 100).toFixed(1);
+
+                                    // Format the published date
+                                    const publishedDate = article.published_at ? new Date(article.published_at).toLocaleDateString() : 'Date not available';
 
                                     return `
                                         <div class="article-card border-b border-gray-200 pb-6 mb-4">
@@ -98,6 +100,7 @@
                                                     ${article.title}
                                                 </a>
                                             </h3>
+                                            <p class="text-sm text-gray-500">Published on: ${publishedDate}</p>
                                             <p class="text-gray-600">${article.brief_summary || ''}</p>
                                             <div class="mt-2">
                                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
