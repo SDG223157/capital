@@ -6,7 +6,7 @@ import logging
 from app.config import Config
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_migrate import Migrate  # Import Migrate
-from app.models import NewsArticle, ArticleMetric, ArticleSymbol, User  # Import models after db is initialized
+# from app.models import NewsArticle, ArticleMetric, ArticleSymbol, User  # Import models after db is initialized
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -36,6 +36,7 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)  # Link Flask-Migrate with the app and db
    
     login_manager.init_app(app)
+    from app.models import NewsArticle, ArticleMetric, ArticleSymbol, User  # Import models after db is initialized
    
 
     # Force HTTPS
@@ -56,7 +57,7 @@ def create_app(config_class=Config):
             logger.info("Database tables created successfully")
 
             logger.info("Database initialized using Flask-Migrate")
-            from app.models import NewsArticle, ArticleMetric, ArticleSymbol, User  # Import models after db is initialized
+            # from app.models import NewsArticle, ArticleMetric, ArticleSymbol, User  # Import models after db is initialized
             # db.create_all()
 
             # Check if admin user exists, if not create one
