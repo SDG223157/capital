@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,7 +16,7 @@
             <form id="fetchForm" class="space-y-4">
                 <div>
                     <label for="symbol" class="block text-sm font-medium text-gray-700">Stock Symbol</label>
-                    <input type="text" id="symbol" name="symbol" placeholder="e.g., AAPL, mega30, or mega50" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                    <input type="text" id="symbol" name="symbol" placeholder="e.g., AAPL" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
                 </div>
                 <button type="submit" id="fetchButton" class="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">
                     Fetch News
@@ -45,28 +46,13 @@
             const articlesContainer = document.getElementById('articlesContainer');
             const resultsCount = document.getElementById('resultsCount');
 
-            function get_mega_symbols() {
-                return [
-                    NASDAQ:AAPL, NASDAQ:MSFT, NASDAQ:AMZN, NASDAQ:GOOGL, NASDAQ:META,
-                    NASDAQ:NVDA, NASDAQ:TSLA, NYSE:BRK.A, NYSE:V, NYSE:JPM,
-                    NYSE:JNJ, NYSE:WMT, NYSE:MA, NYSE:PG, NASDAQ:AVGO,
-                    NYSE:CVX, NYSE:HD, NYSE:MRK, NYSE:KO, NASDAQ:PEP,
-                    NYSE:BAC, NYSE:DIS, NASDAQ:COST, NASDAQ:CSCO, NYSE:VZ, 
-                    NYSE:ABT, NASDAQ:ADBE, NASDAQ:CMCSA, NYSE:NKE, NYSE:TMO,
-                    NASDAQ:TMUS, NYSE:UNH, NYSE:LLY, NASDAQ:INTC, NYSE:CRM,
-                    NASDAQ:AMD, NYSE:ORCL, NYSE:NEE, NYSE:RTX, NYSE:BMY,
-                    NYSE:PM, NYSE:T, NYSE:IBM, NYSE:CAT, NYSE:DE,
-                    NYSE:GE, NYSE:BA, NYSE:MMM, NYSE:MCD, NYSE:AXP
-                ];
-            }
-
             if (fetchButton) {
                 fetchButton.addEventListener('click', async (e) => {
                     e.preventDefault(); // Prevent form submission
 
                     const symbol = symbolInput.value.trim();
                     if (!symbol) {
-                        alert('Please enter a stock symbol, "mega30", or "mega50"');
+                        alert('Please enter a stock symbol');
                         return;
                     }
 
@@ -75,60 +61,35 @@
                         loadingIndicator.classList.remove('hidden');
                         fetchButton.disabled = true;
 
-                        let symbols = [];
-                        if (symbol.toLowerCase() === 'mega30') {
-                            symbols = get_mega_symbols().slice(0, 30); // Top 30 symbols
-                        } else if (symbol.toLowerCase() === 'mega50') {
-                            symbols = get_mega_symbols().slice(0, 50); // Top 50 symbols
-                        } else {
-                            symbols = [symbol]; // Single symbol
+                        // Fetch news from the backend
+                        const response = await fetch('/news/api/fetch', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: JSON.stringify({
+                                symbols: [symbol],
+                                limit: 10
+                            })
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Failed to fetch news');
                         }
 
-                        // Clear previous results
-                        articlesContainer.innerHTML = '';
-                        resultsCount.textContent = '0 articles found';
+                        const data = await response.json();
+                        console.log('Fetched articles:', data.articles);
 
-                        // Fetch news for each symbol one by one
-                        let allArticles = [];
-                        for (const sym of symbols) {
-                            try {
-                                const response = await fetch('/news/api/fetch', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'X-Requested-With': 'XMLHttpRequest'
-                                    },
-                                    body: JSON.stringify({
-                                        symbols: [sym], // Fetch news for one symbol at a time
-                                        limit: 10
-                                    })
-                                });
-
-                                if (!response.ok) {
-                                    throw new Error(`Failed to fetch news for ${sym}`);
-                                }
-
-                                const data = await response.json();
-                                if (data.articles && data.articles.length > 0) {
-                                    allArticles = allArticles.concat(data.articles); // Aggregate articles
-                                }
-                            } catch (error) {
-                                console.error(`Error fetching news for ${sym}:`, error);
-                            }
-                        }
-
-                        // Update the UI with all fetched articles
-                        if (allArticles.length > 0) {
-                            resultsCount.textContent = `${allArticles.length} articles found`;
-                            articlesContainer.innerHTML = allArticles
+                        // Update the UI with fetched articles
+                        if (data.articles && data.articles.length > 0) {
+                            resultsCount.textContent = `${data.articles.length} articles found`;
+                            articlesContainer.innerHTML = data.articles
                                 .map(article => {
                                     // Handle missing or invalid sentiment data
                                     const sentimentLabel = article.sentiment_label || 'NEUTRAL';
                                     const sentimentScore = article.sentiment_score || 0;
                                     const sentimentPercentage = (sentimentScore * 100).toFixed(1);
-
-                                    // Format the published date
-                                    const publishedDate = article.published_at ? new Date(article.published_at).toLocaleDateString() : 'Date not available';
 
                                     return `
                                         <div class="article-card border-b border-gray-200 pb-6 mb-4">
@@ -137,7 +98,6 @@
                                                     ${article.title}
                                                 </a>
                                             </h3>
-                                            <p class="text-sm text-gray-500">Published on: ${publishedDate}</p>
                                             <p class="text-gray-600">${article.brief_summary || ''}</p>
                                             <div class="mt-2">
                                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
