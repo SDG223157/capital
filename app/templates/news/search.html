@@ -8,7 +8,7 @@
         <form id="searchForm" class="mb-8">
             <div class="flex gap-4">
                 <input type="text" name="symbol" id="symbol" 
-                       value="{{ search_params.get('symbol', '') }}"
+                       value="{{ search_params.get('symbol') or '' }}"
                        placeholder="NASDAQ:AAPL"
                        class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 <button type="submit" id="searchButton"
@@ -81,7 +81,7 @@
         // Reset input box on double-click
         if (symbolInput) {
             symbolInput.addEventListener('dblclick', () => {
-                symbolInput.value = '';
+                symbolInput.value = ''; // Clear the input box
             });
 
             // Trigger search on pressing "Enter"
