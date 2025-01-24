@@ -121,13 +121,18 @@
            }
        });
 
+       
+
+       // Inside input event handler, add tracking for original input
+       let currentSymbol = '';
+
        symbolInput.addEventListener('input', (e) => {
-           const currentSymbol = e.target.value.trim();
+           currentSymbol = e.target.value.trim();
            if (!currentSymbol) {
                suggestionsDiv.classList.add('hidden');
                return;
            }
-
+    
            const data = getSuggestedSymbols(currentSymbol);
            suggestionsDiv.innerHTML = '';
            
@@ -143,6 +148,7 @@
            });
            suggestionsDiv.classList.remove('hidden');
        });
+
 
        document.addEventListener('click', (e) => {
            if (!symbolInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
