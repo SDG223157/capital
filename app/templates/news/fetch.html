@@ -84,30 +84,43 @@
                             symbols = [symbol]; // Single symbol
                         }
 
-                        // Fetch news from the backend
-                        const response = await fetch('/news/api/fetch', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            },
-                            body: JSON.stringify({
-                                symbols: symbols,
-                                limit: 10
-                            })
-                        });
+                        // Clear previous results
+                        articlesContainer.innerHTML = '';
+                        resultsCount.textContent = '0 articles found';
 
-                        if (!response.ok) {
-                            throw new Error('Failed to fetch news');
+                        // Fetch news for each symbol one by one
+                        let allArticles = [];
+                        for (const sym of symbols) {
+                            try {
+                                const response = await fetch('/news/api/fetch', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    },
+                                    body: JSON.stringify({
+                                        symbols: [sym], // Fetch news for one symbol at a time
+                                        limit: 10
+                                    })
+                                });
+
+                                if (!response.ok) {
+                                    throw new Error(`Failed to fetch news for ${sym}`);
+                                }
+
+                                const data = await response.json();
+                                if (data.articles && data.articles.length > 0) {
+                                    allArticles = allArticles.concat(data.articles); // Aggregate articles
+                                }
+                            } catch (error) {
+                                console.error(`Error fetching news for ${sym}:`, error);
+                            }
                         }
 
-                        const data = await response.json();
-                        console.log('Fetched articles:', data.articles);
-
-                        // Update the UI with fetched articles
-                        if (data.articles && data.articles.length > 0) {
-                            resultsCount.textContent = `${data.articles.length} articles found`;
-                            articlesContainer.innerHTML = data.articles
+                        // Update the UI with all fetched articles
+                        if (allArticles.length > 0) {
+                            resultsCount.textContent = `${allArticles.length} articles found`;
+                            articlesContainer.innerHTML = allArticles
                                 .map(article => {
                                     // Handle missing or invalid sentiment data
                                     const sentimentLabel = article.sentiment_label || 'NEUTRAL';
