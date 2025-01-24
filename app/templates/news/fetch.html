@@ -15,7 +15,7 @@
             <form id="fetchForm" class="space-y-4">
                 <div>
                     <label for="symbol" class="block text-sm font-medium text-gray-700">Stock Symbol</label>
-                    <input type="text" id="symbol" name="symbol" placeholder="e.g., AAPL" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                    <input type="text" id="symbol" name="symbol" placeholder="e.g., AAPL, mega30, or mega50" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
                 </div>
                 <button type="submit" id="fetchButton" class="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">
                     Fetch News
@@ -45,13 +45,28 @@
             const articlesContainer = document.getElementById('articlesContainer');
             const resultsCount = document.getElementById('resultsCount');
 
+            function get_mega_symbols() {
+                return [
+                    "NASDAQ:AAPL", "NASDAQ:MSFT", "NASDAQ:AMZN", "NASDAQ:GOOGL", "NASDAQ:META",
+                    "NASDAQ:NVDA", "NASDAQ:TSLA", "NYSE:BRK.A", "NYSE:V", "NYSE:JPM",
+                    "NYSE:JNJ", "NYSE:WMT", "NYSE:MA", "NYSE:PG", "NASDAQ:AVGO",
+                    "NYSE:CVX", "NYSE:HD", "NYSE:MRK", "NYSE:KO", "NASDAQ:PEP",
+                    "NYSE:BAC", "NYSE:DIS", "NASDAQ:COST", "NASDAQ:CSCO", "NYSE:VZ", 
+                    "NYSE:ABT", "NASDAQ:ADBE", "NASDAQ:CMCSA", "NYSE:NKE", "NYSE:TMO",
+                    "NASDAQ:TMUS", "NYSE:UNH", "NYSE:LLY", "NASDAQ:INTC", "NYSE:CRM",
+                    "NASDAQ:AMD", "NYSE:ORCL", "NYSE:NEE", "NYSE:RTX", "NYSE:BMY",
+                    "NYSE:PM", "NYSE:T", "NYSE:IBM", "NYSE:CAT", "NYSE:DE",
+                    "NYSE:GE", "NYSE:BA", "NYSE:MMM", "NYSE:MCD", "NYSE:AXP"
+                ];
+            }
+
             if (fetchButton) {
                 fetchButton.addEventListener('click', async (e) => {
                     e.preventDefault(); // Prevent form submission
 
                     const symbol = symbolInput.value.trim();
                     if (!symbol) {
-                        alert('Please enter a stock symbol');
+                        alert('Please enter a stock symbol, "mega30", or "mega50"');
                         return;
                     }
 
@@ -59,6 +74,15 @@
                         // Show loading indicator
                         loadingIndicator.classList.remove('hidden');
                         fetchButton.disabled = true;
+
+                        let symbols = [];
+                        if (symbol.toLowerCase() === 'mega30') {
+                            symbols = get_mega_symbols().slice(0, 30); // Top 30 symbols
+                        } else if (symbol.toLowerCase() === 'mega50') {
+                            symbols = get_mega_symbols().slice(0, 50); // Top 50 symbols
+                        } else {
+                            symbols = [symbol]; // Single symbol
+                        }
 
                         // Fetch news from the backend
                         const response = await fetch('/news/api/fetch', {
@@ -68,7 +92,7 @@
                                 'X-Requested-With': 'XMLHttpRequest'
                             },
                             body: JSON.stringify({
-                                symbols: [symbol],
+                                symbols: symbols,
                                 limit: 10
                             })
                         });
