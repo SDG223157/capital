@@ -293,38 +293,38 @@ def cleanup(exception):
 @bp.route('/api/symbol-suggest')
 @login_required
 def symbol_suggest():
-   symbol = request.args.get('symbol', '')
-   if not symbol:
-       return jsonify({'suggestions': []})
-   
-   suggested_symbol = get_tradingview_symbol(symbol)
-   return jsonify({'suggestions': [{'symbol': suggested_symbol}]})
+    symbol = request.args.get('symbol', '')
+    if not symbol:
+        return jsonify({'suggestions': []})
+    
+    suggested_symbol = get_tradingview_symbol(symbol)
+    return jsonify({'suggestions': [{'symbol': suggested_symbol}]})
 
 def get_tradingview_symbol(symbol):
-   """Convert stock symbol to TradingView format"""
-   symbol = symbol.upper()
-   
-   # Common NASDAQ stocks
-   nasdaq_stocks = {
-       'AAPL', 'MSFT', 'AMZN', 'GOOGL', 'GOOG', 'META', 'NVDA', 'TSLA', 'AVGO', 
-       'ADBE', 'CSCO', 'INTC', 'QCOM', 'AMD', 'INTU', 'AMAT', 'MU', 'NFLX', 'PEP'
-   }
-   
-   # Hong Kong stocks
-   if re.match(r'^\d{4}\.HK$', symbol, re.IGNORECASE):
-       return f"HKEX:{symbol.replace('.HK', '').replace('.hk', '')}"
-   elif symbol.startswith('0') and re.search(r'\.HK$', symbol, re.IGNORECASE):
-       return f"HKEX:{symbol.replace('0', '').replace('.HK', '').replace('.hk', '')}"
-       
-   # Shanghai stocks
-   elif re.search(r'\.SS$', symbol, re.IGNORECASE):
-       return f"SSE:{symbol.replace('.SS', '').replace('.ss', '')}"
-   
-   # NASDAQ stocks
-   elif symbol in nasdaq_stocks:
-       return f"NASDAQ:{symbol}"
-   elif symbol.endswith('.O'):
-       return f"NASDAQ:{symbol.replace('.O', '')}"
-       
-   # Default to NYSE
-   return f"NYSE:{symbol}"
+    """Convert stock symbol to TradingView format"""
+    symbol = symbol.upper()
+    
+    # Common NASDAQ stocks
+    nasdaq_stocks = {
+        'AAPL', 'MSFT', 'AMZN', 'GOOGL', 'GOOG', 'META', 'NVDA', 'TSLA', 'AVGO', 
+        'ADBE', 'CSCO', 'INTC', 'QCOM', 'AMD', 'INTU', 'AMAT', 'MU', 'NFLX', 'PEP'
+    }
+    
+    # Hong Kong stocks
+    if re.match(r'^\d{4}\.HK$', symbol, re.IGNORECASE):
+        return f"HKEX:{symbol.replace('.HK', '').replace('.hk', '')}"
+    elif symbol.startswith('0') and re.search(r'\.HK$', symbol, re.IGNORECASE):
+        return f"HKEX:{symbol.replace('0', '').replace('.HK', '').replace('.hk', '')}"
+        
+    # Shanghai stocks
+    elif re.search(r'\.SS$', symbol, re.IGNORECASE):
+        return f"SSE:{symbol.replace('.SS', '').replace('.ss', '')}"
+    
+    # NASDAQ stocks
+    elif symbol in nasdaq_stocks:
+        return f"NASDAQ:{symbol}"
+    elif symbol.endswith('.O'):
+        return f"NASDAQ:{symbol.replace('.O', '')}"
+        
+    # Default to NYSE
+    return f"NYSE:{symbol}"

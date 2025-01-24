@@ -85,7 +85,7 @@
 
         // Function to fetch suggestions from the backend
         function fetchSuggestions(query) {
-            fetch(`/api/symbol-suggest?symbol=${encodeURIComponent(query)}`)
+            fetch(`/news/api/symbol-suggest?symbol=${encodeURIComponent(query)}`)
                 .then(response => response.json())
                 .then(data => {
                     suggestionsDiv.innerHTML = '';
