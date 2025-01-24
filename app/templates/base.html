@@ -37,13 +37,13 @@
                         </button>
                         <div class="dropdown-content">
                             {% if not request.endpoint == 'news.search' %}
-                                <a href="{{ url_for('news.search') }}" class="dropdown-item text-sm">News Analytics</a>
+                                <a href="{{ url_for('news.search') }}" class="dropdown-item text-sm">News</a>
                             {% endif %}
                             {% if not request.endpoint == 'main.index' %}
-                                <a href="{{ url_for('main.index') }}" class="dropdown-item text-sm">Trend Analytics</a>
+                                <a href="{{ url_for('main.index') }}" class="dropdown-item text-sm">Trend</a>
                             {% endif %}
                             {% if current_user.is_administrator %}
-                                <a href="{{ url_for('news.fetch') }}" class="dropdown-item text-sm">Fetch News</a>
+                                <a href="{{ url_for('news.fetch') }}" class="dropdown-item text-sm">Fetch</a>
                             {% endif %}
                         </div>
                     </div>
