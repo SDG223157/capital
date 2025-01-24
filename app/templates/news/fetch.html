@@ -1,237 +1,129 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-   <meta charset="UTF-8">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>Fetch News</title>
-   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-   <style>
-       .spinner {
-           border: 3px solid rgba(0, 0, 0, 0.1);
-           border-radius: 50%;
-           border-top: 3px solid #3498db;
-           width: 24px;
-           height: 24px;
-           animation: spin 1s linear infinite;
-           margin: 0 auto;
-       }
-       
-       @keyframes spin {
-           0% { transform: rotate(0deg); }
-           100% { transform: rotate(360deg); }
-       }
-       
-       .suggestion-item {
-           padding: 8px 16px;
-           cursor: pointer;
-       }
-       .suggestion-item:hover {
-           background-color: #f3f4f6;
-       }
-   </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fetch News</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 <body class="bg-gray-100">
-   <div class="container mx-auto p-4">
-       <h1 class="text-2xl font-bold mb-4">Fetch News</h1>
+    <div class="container mx-auto p-4">
+        <h1 class="text-2xl font-bold mb-4">Fetch News</h1>
 
-       <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-           <form id="fetchForm" class="space-y-4">
-               <div class="relative">
-                   <label for="symbol" class="block text-sm font-medium text-gray-700">Stock Symbol</label>
-                   <input type="text" id="symbol" name="symbol" 
-                          placeholder="e.g., AAPL" 
-                          class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-               </div>
-               <button type="submit" id="fetchButton" class="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">
-                   Fetch News
-               </button>
-           </form>
-       </div>
+        <!-- Fetch News Form -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <form id="fetchForm" class="space-y-4">
+                <div>
+                    <label for="symbol" class="block text-sm font-medium text-gray-700">Stock Symbol</label>
+                    <input type="text" id="symbol" name="symbol" placeholder="e.g., AAPL" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                </div>
+                <button type="submit" id="fetchButton" class="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">
+                    Fetch News
+                </button>
+            </form>
+        </div>
 
-       <div id="loadingIndicator" class="hidden text-center py-4">
-           <div class="spinner"></div>
-           <p class="text-gray-600">Fetching news...</p>
-       </div>
+        <!-- Loading Indicator -->
+        <div id="loadingIndicator" class="hidden text-center py-4">
+            <div class="spinner"></div>
+            <p class="text-gray-600">Fetching news...</p>
+        </div>
 
-       <div id="searchResults" class="bg-white p-6 rounded-lg shadow-md">
-           <p id="resultsCount" class="text-sm text-gray-600 mb-4">0 articles found</p>
-           <div id="articlesContainer"></div>
-       </div>
-   </div>
+        <!-- Search Results -->
+        <div id="searchResults" class="bg-white p-6 rounded-lg shadow-md">
+            <p id="resultsCount" class="text-sm text-gray-600 mb-4">0 articles found</p>
+            <div id="articlesContainer"></div>
+        </div>
+    </div>
 
-   <script>
-   function getSuggestedSymbols(symbol) {
-       const nasdaqStocks = new Set([
-           'AAPL', 'MSFT', 'AMZN', 'GOOGL', 'GOOG', 'META', 'NVDA', 'TSLA', 'AVGO', 
-           'ADBE', 'CSCO', 'INTC', 'QCOM', 'AMD', 'INTU', 'AMAT', 'MU', 'PANW', 'SNPS',
-           'NFLX', 'PEP', 'COST', 'PYPL', 'ABNB', 'SBUX', 'AMD', 'INTC', 'ASML'
-       ].map(s => s.toUpperCase()));
+    <!-- Inline JavaScript for Fetch Button Handling -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const fetchButton = document.getElementById('fetchButton');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const symbolInput = document.getElementById('symbol');
+            const articlesContainer = document.getElementById('articlesContainer');
+            const resultsCount = document.getElementById('resultsCount');
 
-       symbol = symbol.toUpperCase();
-       const suggestions = [];
+            if (fetchButton) {
+                fetchButton.addEventListener('click', async (e) => {
+                    e.preventDefault(); // Prevent form submission
 
-       if (/^\d{4}\.HK$/.test(symbol)) {
-           suggestions.push({
-               symbol: `HKEX:${symbol.replace('.HK', '')}`,
-               exchange: 'HKEX'
-           });
-       } else if (symbol.startsWith('0') && symbol.endsWith('.HK')) {
-           suggestions.push({
-               symbol: `HKEX:${symbol.replace('0', '').replace('.HK', '')}`,
-               exchange: 'HKEX'
-           });
-       } else if (nasdaqStocks.has(symbol)) {
-           suggestions.push({
-               symbol: `NASDAQ:${symbol}`,
-               exchange: 'NASDAQ'
-           });
-       } else {
-           if (symbol.endsWith('.O')) {
-               const nasdaqSymbol = symbol.replace('.O', '');
-               suggestions.push({
-                   symbol: `NASDAQ:${nasdaqSymbol}`,
-                   exchange: 'NASDAQ'
-               });
-           } else {
-               suggestions.push({
-                   symbol: `NYSE:${symbol}`,
-                   exchange: 'NYSE'
-               });
-           }
-       }
+                    const symbol = symbolInput.value.trim();
+                    if (!symbol) {
+                        alert('Please enter a stock symbol');
+                        return;
+                    }
 
-       return { suggestions };
-   }
+                    try {
+                        // Show loading indicator
+                        loadingIndicator.classList.remove('hidden');
+                        fetchButton.disabled = true;
 
-   document.addEventListener('DOMContentLoaded', () => {
-       const symbolInput = document.getElementById('symbol');
-       const fetchButton = document.getElementById('fetchButton');
-       const loadingIndicator = document.getElementById('loadingIndicator');
-       const articlesContainer = document.getElementById('articlesContainer');
-       const resultsCount = document.getElementById('resultsCount');
-       const suggestionsDiv = document.createElement('div');
-       suggestionsDiv.className = 'absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg hidden';
-       symbolInput.parentElement.appendChild(suggestionsDiv);
+                        // Fetch news from the backend
+                        const response = await fetch('/news/api/fetch', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: JSON.stringify({
+                                symbols: [symbol],
+                                limit: 10
+                            })
+                        });
 
-       // Clear input on double-click
-       symbolInput.addEventListener('dblclick', function () {
-           if (this.value) {
-               this.value = '';
-               suggestionsDiv.classList.add('hidden');
-           }
-       });
+                        if (!response.ok) {
+                            throw new Error('Failed to fetch news');
+                        }
 
-       
+                        const data = await response.json();
+                        console.log('Fetched articles:', data.articles);
 
-       // Inside input event handler, add tracking for original input
-       let currentSymbol = '';
+                        // Update the UI with fetched articles
+                        if (data.articles && data.articles.length > 0) {
+                            resultsCount.textContent = `${data.articles.length} articles found`;
+                            articlesContainer.innerHTML = data.articles
+                                .map(article => {
+                                    // Handle missing or invalid sentiment data
+                                    const sentimentLabel = article.sentiment_label || 'NEUTRAL';
+                                    const sentimentScore = article.sentiment_score || 0;
+                                    const sentimentPercentage = (sentimentScore * 100).toFixed(1);
 
-       symbolInput.addEventListener('input', (e) => {
-           currentSymbol = e.target.value.trim();
-           if (!currentSymbol) {
-               suggestionsDiv.classList.add('hidden');
-               return;
-           }
-    
-           const data = getSuggestedSymbols(currentSymbol);
-           suggestionsDiv.innerHTML = '';
-           
-           data.suggestions.forEach(item => {
-               const div = document.createElement('div');
-               div.className = 'p-2 hover:bg-gray-100 cursor-pointer';
-               div.textContent = item.symbol;
-               div.addEventListener('click', () => {
-                   symbolInput.value = item.symbol;
-                   suggestionsDiv.classList.add('hidden');
-               });
-               suggestionsDiv.appendChild(div);
-           });
-           suggestionsDiv.classList.remove('hidden');
-       });
-       
-       symbolInput.addEventListener('blur', () => {
-        setTimeout(() => {
-            suggestionsDiv.classList.add('hidden');
-        }, 200);
-    });
-
-       document.addEventListener('click', (e) => {
-           if (!symbolInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
-               suggestionsDiv.classList.add('hidden');
-           }
-       });
-
-       fetchButton.addEventListener('click', async (e) => {
-           e.preventDefault();
-           const symbol = symbolInput.value.trim();
-           if (!symbol) {
-               alert('Please enter a stock symbol');
-               return;
-           }
-
-           try {
-               loadingIndicator.classList.remove('hidden');
-               fetchButton.disabled = true;
-
-               const response = await fetch('/news/api/fetch', {
-                   method: 'POST',
-                   headers: {
-                       'Content-Type': 'application/json',
-                       'X-Requested-With': 'XMLHttpRequest'
-                   },
-                   body: JSON.stringify({
-                       symbols: [symbol],
-                       limit: 10
-                   })
-               });
-
-               if (!response.ok) {
-                   throw new Error('Failed to fetch news');
-               }
-
-               const data = await response.json();
-               console.log('Fetched articles:', data.articles);
-
-               if (data.articles && data.articles.length > 0) {
-                   resultsCount.textContent = `${data.articles.length} articles found`;
-                   articlesContainer.innerHTML = data.articles
-                       .map(article => {
-                           const sentimentLabel = article.sentiment_label || 'NEUTRAL';
-                           const sentimentScore = article.sentiment_score || 0;
-                           const sentimentPercentage = (sentimentScore * 100).toFixed(1);
-
-                           return `
-                               <div class="article-card border-b border-gray-200 pb-6 mb-4">
-                                   <h3 class="text-lg font-medium text-gray-900">
-                                       <a href="${article.url}" target="_blank" class="text-blue-600 hover:text-blue-800">
-                                           ${article.title}
-                                       </a>
-                                   </h3>
-                                   <p class="text-gray-600">${article.brief_summary || ''}</p>
-                                   <div class="mt-2">
-                                       <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                                           ${sentimentLabel === 'POSITIVE' ? 'bg-green-100 text-green-800' :
-                                             sentimentLabel === 'NEGATIVE' ? 'bg-red-100 text-red-800' :
-                                             'bg-gray-100 text-gray-800'}">
-                                           ${sentimentLabel} (${sentimentPercentage}%)
-                                       </span>
-                                   </div>
-                               </div>
-                           `;
-                       })
-                       .join('');
-               } else {
-                   articlesContainer.innerHTML = '<p class="text-gray-600">No articles found.</p>';
-               }
-           } catch (error) {
-               console.error('Fetch error:', error);
-               alert('Failed to fetch news: ' + error.message);
-           } finally {
-               loadingIndicator.classList.add('hidden');
-               fetchButton.disabled = false;
-           }
-       });
-   });
-   </script>
+                                    return `
+                                        <div class="article-card border-b border-gray-200 pb-6 mb-4">
+                                            <h3 class="text-lg font-medium text-gray-900">
+                                                <a href="${article.url}" target="_blank" class="text-blue-600 hover:text-blue-800">
+                                                    ${article.title}
+                                                </a>
+                                            </h3>
+                                            <p class="text-gray-600">${article.brief_summary || ''}</p>
+                                            <div class="mt-2">
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                                    ${sentimentLabel === 'POSITIVE' ? 'bg-green-100 text-green-800' :
+                                                      sentimentLabel === 'NEGATIVE' ? 'bg-red-100 text-red-800' :
+                                                      'bg-gray-100 text-gray-800'}">
+                                                    ${sentimentLabel} (${sentimentPercentage}%)
+                                                </span>
+                                            </div>
+                                        </div>
+                                    `;
+                                })
+                                .join('');
+                        } else {
+                            articlesContainer.innerHTML = '<p class="text-gray-600">No articles found.</p>';
+                        }
+                    } catch (error) {
+                        console.error('Fetch error:', error);
+                        alert('Failed to fetch news: ' + error.message);
+                    } finally {
+                        // Hide loading indicator
+                        loadingIndicator.classList.add('hidden');
+                        fetchButton.disabled = false;
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>
