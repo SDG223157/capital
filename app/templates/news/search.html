@@ -3,52 +3,52 @@
 {% block title %}News Search{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="bg-white rounded-lg shadow-md p-6">
-        <form id="searchForm" class="mb-8">
-            <div class="flex gap-4">
+<div class="container mx-auto px-2 py-4">
+    <div class="bg-white rounded-lg shadow-md p-4">
+        <form id="searchForm" class="mb-4">
+            <div class="flex flex-col gap-2">
                 <input type="text" name="symbol" id="symbol" 
                        value="{{ search_params.get('symbol') or '' }}"
                        placeholder="NASDAQ:AAPL"
-                       class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                       class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
                 <button type="submit" id="searchButton"
-                        class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        class="w-full px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                     Search
                 </button>
             </div>
         </form>
 
         <!-- Results Section -->
-        <div id="searchResults" class="space-y-6">
+        <div id="searchResults" class="space-y-4">
             {% if articles %}
                 {% for article in articles %}
-                <div class="border-b border-gray-200 pb-6 last:border-b-0">
-                    <div class="flex justify-between items-start">
-                        <h3 class="text-lg font-medium text-gray-900">
+                <div class="border-b border-gray-200 pb-4 last:border-b-0">
+                    <div class="flex flex-col justify-between items-start">
+                        <h3 class="text-base font-medium text-gray-900">
                             <a href="{{ article.url }}" target="_blank" class="text-blue-600 hover:text-blue-800">
                                 {{ article.title }}
                             </a>
                         </h3>
-                        <span class="text-sm text-gray-500">{{ article.published_at }}</span>
+                        <span class="text-xs text-gray-500 mt-1">{{ article.published_at }}</span>
                     </div>
 
-                    <div class="mt-2 mb-3">
-                        <p class="text-gray-600">
+                    <div class="mt-1 mb-2">
+                        <p class="text-gray-600 text-sm">
                             {% if article.summary.key_points %}
                                 {{ article.summary.key_points }}
                             {% endif %}
                         </p>
                     </div>
 
-                    <div class="flex flex-wrap gap-2">
+                    <div class="flex flex-wrap gap-1">
                         {% for symbol in article.symbols %}
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                             {{ symbol.symbol }}
                         </span>
                         {% endfor %}
 
                         {% if article.sentiment.explanation %}
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium 
                             {% if article.sentiment.label == 'POSITIVE' %}bg-green-100 text-green-800
                             {% elif article.sentiment.label == 'NEGATIVE' %}bg-red-100 text-red-800
                             {% else %}bg-gray-100 text-gray-800{% endif %}">
@@ -59,7 +59,7 @@
                 </div>
                 {% endfor %}
             {% else %}
-                <div class="text-center py-8 text-gray-500">
+                <div class="text-center py-4 text-gray-500 text-sm">
                     Enter a stock symbol to search for news articles
                 </div>
             {% endif %}
@@ -145,15 +145,15 @@
                                     const sentimentPercentage = (sentimentScore * 100).toFixed(1);
 
                                     return `
-                                        <div class="article-card border-b border-gray-200 pb-6 mb-4">
-                                            <h3 class="text-lg font-medium text-gray-900">
+                                        <div class="article-card border-b border-gray-200 pb-4 mb-4">
+                                            <h3 class="text-base font-medium text-gray-900">
                                                 <a href="${article.url}" target="_blank" class="text-blue-600 hover:text-blue-800">
                                                     ${article.title}
                                                 </a>
                                             </h3>
-                                            <p class="text-gray-600">${article.brief_summary || ''}</p>
-                                            <div class="mt-2">
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                            <p class="text-gray-600 text-sm">${article.brief_summary || ''}</p>
+                                            <div class="mt-1">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium 
                                                     ${sentimentLabel === 'POSITIVE' ? 'bg-green-100 text-green-800' :
                                                       sentimentLabel === 'NEGATIVE' ? 'bg-red-100 text-red-800' :
                                                       'bg-gray-100 text-gray-800'}">
@@ -166,7 +166,7 @@
                                 .join('');
                         }
                     } else {
-                        if (articlesContainer) articlesContainer.innerHTML = '<p class="text-gray-600">No articles found.</p>';
+                        if (articlesContainer) articlesContainer.innerHTML = '<p class="text-gray-600 text-sm">No articles found.</p>';
                     }
                 } catch (error) {
                     console.error('Fetch error:', error);
