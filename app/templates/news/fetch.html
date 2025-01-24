@@ -86,8 +86,8 @@
                             articlesContainer.innerHTML = data.articles
                                 .map(article => {
                                     // Handle missing or invalid sentiment data
-                                    const sentimentLabel = article.sentiment.label || 'NEUTRAL';
-                                    const sentimentScore = article.sentiment.score || 0;
+                                    const sentimentLabel = article.sentiment.overall_sentiment || 'NEUTRAL';
+                                    const sentimentScore = article.sentiment.confidence || 0;
                                     const sentimentPercentage = (sentimentScore * 100).toFixed(1);
 
                                     // Format the published date
