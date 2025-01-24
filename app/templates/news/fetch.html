@@ -44,7 +44,6 @@
             const symbolInput = document.getElementById('symbol');
             const articlesContainer = document.getElementById('articlesContainer');
             const resultsCount = document.getElementById('resultsCount');
-            
 
             if (fetchButton) {
                 fetchButton.addEventListener('click', async (e) => {
@@ -91,6 +90,9 @@
                                     const sentimentScore = article.sentiment_score || 0;
                                     const sentimentPercentage = (sentimentScore * 100).toFixed(1);
 
+                                    // Format the published date
+                                    const publishedDate = article.published_at ? new Date(article.published_at).toLocaleDateString() : 'Date not available';
+
                                     return `
                                         <div class="article-card border-b border-gray-200 pb-6 mb-4">
                                             <h3 class="text-lg font-medium text-gray-900">
@@ -98,6 +100,7 @@
                                                     ${article.title}
                                                 </a>
                                             </h3>
+                                            <p class="text-sm text-gray-500">Published on: ${publishedDate}</p>
                                             <p class="text-gray-600">${article.brief_summary || ''}</p>
                                             <div class="mt-2">
                                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
