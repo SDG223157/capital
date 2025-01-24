@@ -7,17 +7,10 @@
     <div class="bg-white rounded-lg shadow-md p-6">
         <form id="searchForm" class="mb-8">
             <div class="flex gap-4">
-                <div class="relative flex-1">
-                    <input type="text" name="symbol" id="symbol" 
-                           value="{{ search_params.get('symbol') or '' }}"
-                           placeholder="Enter stock symbol (e.g., AAPL)"
-                           class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                           autocomplete="off">
-                    <!-- Suggestions Dropdown -->
-                    <div id="suggestions" class="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg hidden">
-                        <!-- Suggestions will be dynamically inserted here -->
-                    </div>
-                </div>
+                <input type="text" name="symbol" id="symbol" 
+                       value="{{ search_params.get('symbol') or '' }}"
+                       placeholder="NASDAQ:AAPL"
+                       class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 <button type="submit" id="searchButton"
                         class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                     Search
@@ -78,78 +71,18 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        const fetchButton = document.getElementById('fetchButton');
+        const loadingIndicator = document.getElementById('loadingIndicator');
         const symbolInput = document.getElementById('symbol');
-        const suggestionsDiv = document.getElementById('suggestions');
+        const articlesContainer = document.getElementById('articlesContainer');
+        const resultsCount = document.getElementById('resultsCount');
         const searchForm = document.getElementById('searchForm');
-        let debounceTimeout;
 
-        // Function to fetch suggestions from the backend
-        function fetchSuggestions(query) {
-            console.log('Fetching suggestions for:', query); // Debugging
-            fetch(`/news/api/symbol-suggest?symbol=${encodeURIComponent(query)}`)
-                .then(response => {
-                    console.log('Response status:', response.status); // Debugging
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('Suggestions data:', data); // Debugging
-                    suggestionsDiv.innerHTML = '';
-
-                    if (data.suggestions && data.suggestions.length > 0) {
-                        data.suggestions.forEach(item => {
-                            const div = document.createElement('div');
-                            div.className = 'p-2 hover:bg-gray-100 cursor-pointer';
-                            div.textContent = item.symbol;
-
-                            div.addEventListener('click', function () {
-                                symbolInput.value = item.symbol;
-                                suggestionsDiv.style.display = 'none';
-                            });
-
-                            suggestionsDiv.appendChild(div);
-                        });
-                        suggestionsDiv.style.display = 'block'; // Show the dropdown
-                    } else {
-                        suggestionsDiv.style.display = 'none'; // Hide the dropdown if no suggestions
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching suggestions:', error);
-                    suggestionsDiv.style.display = 'none'; // Hide the dropdown on error
-                });
-        }
-
-        // Show suggestions as the user types
+        // Clear input on double-click
         if (symbolInput) {
-            symbolInput.addEventListener('input', function () {
-                clearTimeout(debounceTimeout);
-                const query = this.value.trim();
-                console.log('Input query:', query); // Debugging
-
-                if (query.length > 0) {
-                    debounceTimeout = setTimeout(() => {
-                        fetchSuggestions(query);
-                    }, 300); // Debounce delay of 300ms
-                } else {
-                    suggestionsDiv.style.display = 'none'; // Hide the dropdown if the input is empty
-                }
-            });
-
-            // Hide suggestions when clicking outside the input or dropdown
-            document.addEventListener('click', function (e) {
-                if (e.target !== symbolInput && !suggestionsDiv.contains(e.target)) {
-                    suggestionsDiv.style.display = 'none';
-                }
-            });
-
-            // Clear input on double-click
             symbolInput.addEventListener('dblclick', function () {
-                if (this.value) {
+                if (this.value) { // Only clear if the input has a value
                     this.value = '';
-                    suggestionsDiv.style.display = 'none';
                 }
             });
         }
@@ -175,6 +108,10 @@
                 }
 
                 try {
+                    // Show loading indicator
+                    if (loadingIndicator) loadingIndicator.classList.remove('hidden');
+                    if (fetchButton) fetchButton.disabled = true;
+
                     // Fetch news from the backend
                     const response = await fetch('/news/api/fetch', {
                         method: 'POST',
@@ -196,54 +133,48 @@
                     console.log('Fetched articles:', data.articles);
 
                     // Update the UI with fetched articles
-                    const articlesContainer = document.getElementById('searchResults');
                     if (data.articles && data.articles.length > 0) {
-                        articlesContainer.innerHTML = data.articles
-                            .map(article => {
-                                // Handle missing or invalid sentiment data
-                                const sentimentLabel = article.sentiment_label || 'NEUTRAL';
-                                const sentimentExplanation = article.sentiment_explanation || 'No explanation available';
-                                const sentimentScore = article.sentiment_score || 0;
-                                const sentimentPercentage = (sentimentScore * 100).toFixed(1);
+                        if (resultsCount) resultsCount.textContent = `${data.articles.length} articles found`;
+                        if (articlesContainer) {
+                            articlesContainer.innerHTML = data.articles
+                                .map(article => {
+                                    // Handle missing or invalid sentiment data
+                                    const sentimentLabel = article.sentiment_label || 'NEUTRAL';
+                                    const sentimentExplanation = article.sentiment_explanation || 'No explanation available';
+                                    const sentimentScore = article.sentiment_score || 0;
+                                    const sentimentPercentage = (sentimentScore * 100).toFixed(1);
 
-                                return `
-                                    <div class="border-b border-gray-200 pb-6 last:border-b-0">
-                                        <div class="flex justify-between items-start">
+                                    return `
+                                        <div class="article-card border-b border-gray-200 pb-6 mb-4">
                                             <h3 class="text-lg font-medium text-gray-900">
                                                 <a href="${article.url}" target="_blank" class="text-blue-600 hover:text-blue-800">
                                                     ${article.title}
                                                 </a>
                                             </h3>
-                                            <span class="text-sm text-gray-500">${article.published_at}</span>
-                                        </div>
-                                        <div class="mt-2 mb-3">
                                             <p class="text-gray-600">${article.brief_summary || ''}</p>
-                                        </div>
-                                        <div class="flex flex-wrap gap-2">
-                                            ${article.symbols.map(symbol => `
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                                    ${symbol.symbol}
-                                                </span>
-                                            `).join('')}
-                                            ${article.sentiment.explanation ? `
+                                            <div class="mt-2">
                                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
                                                     ${sentimentLabel === 'POSITIVE' ? 'bg-green-100 text-green-800' :
                                                       sentimentLabel === 'NEGATIVE' ? 'bg-red-100 text-red-800' :
                                                       'bg-gray-100 text-gray-800'}">
                                                     ${sentimentExplanation} (${sentimentPercentage}%)
                                                 </span>
-                                            ` : ''}
+                                            </div>
                                         </div>
-                                    </div>
-                                `;
-                            })
-                            .join('');
+                                    `;
+                                })
+                                .join('');
+                        }
                     } else {
-                        articlesContainer.innerHTML = '<p class="text-gray-600">No articles found.</p>';
+                        if (articlesContainer) articlesContainer.innerHTML = '<p class="text-gray-600">No articles found.</p>';
                     }
                 } catch (error) {
                     console.error('Fetch error:', error);
                     alert('Failed to fetch news: ' + error.message);
+                } finally {
+                    // Hide loading indicator
+                    if (loadingIndicator) loadingIndicator.classList.add('hidden');
+                    if (fetchButton) fetchButton.disabled = false;
                 }
             });
         }
