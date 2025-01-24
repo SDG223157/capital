@@ -6,6 +6,7 @@ import logging
 from app.config import Config
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_migrate import Migrate  # Import Migrate
+from app.models import NewsArticle, ArticleMetric, ArticleSymbol, User  # Import models after db is initialized
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -30,9 +31,10 @@ def create_app(config_class=Config):
     )
 
     # Initialize extensions
+    
     db.init_app(app)  # Link the db with the app
     migrate.init_app(app, db)  # Link Flask-Migrate with the app and db
-    # from app.models import NewsArticle, ArticleMetric, ArticleSymbol, User  # Import models after db is initialized
+   
     login_manager.init_app(app)
    
 
