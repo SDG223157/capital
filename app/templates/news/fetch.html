@@ -148,7 +148,12 @@
            });
            suggestionsDiv.classList.remove('hidden');
        });
-
+       
+       symbolInput.addEventListener('blur', () => {
+        setTimeout(() => {
+            suggestionsDiv.classList.add('hidden');
+        }, 200);
+    });
 
        document.addEventListener('click', (e) => {
            if (!symbolInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
