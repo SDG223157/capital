@@ -171,7 +171,7 @@ def batch_fetch():
     try:
         data = request.get_json()
         symbols = data.get('symbols', DEFAULT_SYMBOLS)
-        limit = min(int(data.get('limit', 5)), 20)
+        limit = min(int(data.get('limit', 5)), 10)
         
         all_articles = []
         total_symbols = len(symbols)
