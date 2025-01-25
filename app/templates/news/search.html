@@ -3,59 +3,51 @@
 {% block title %}News Search{% endblock %}
 
 {% block content %}
-<div class="max-w-lg mx-auto p-4">
-    <h1 class="text-xl font-bold mb-4">News Search</h1>
+<div class="bg-gray-50 min-h-screen p-4">
+    <h1 class="text-2xl font-bold mb-6">News Search</h1>
 
-    <div class="bg-white p-4 rounded-lg shadow-sm mb-4">
-        <form id="searchForm" class="space-y-3">
-            <div>
-                <label for="symbol" class="block text-sm font-medium text-gray-700">Stock Symbol</label>
-                <input type="text" 
-                       id="symbol" 
-                       name="symbol" 
-                       value="{{ search_params.get('symbol') or '' }}"
-                       placeholder="NASDAQ:AAPL" 
-                       class="mt-1 block w-full p-3 border border-gray-300 rounded-lg text-base">
-            </div>
+    <div class="bg-white rounded-xl shadow p-6 mb-6">
+        <form id="searchForm">
+            <label class="block text-gray-700 text-lg mb-2">Stock Symbol</label>
+            <input type="text" 
+                   id="symbol" 
+                   name="symbol" 
+                   value="{{ search_params.get('symbol') or '' }}"
+                   placeholder="NASDAQ:AAPL" 
+                   class="w-full p-4 text-lg rounded-xl border border-gray-200 mb-4">
+            
             <button type="submit" 
                     id="searchButton" 
-                    class="w-full bg-blue-500 text-white p-3 rounded-lg font-medium text-base">
-                Search
+                    class="w-full bg-blue-500 text-white p-4 rounded-xl text-lg font-medium">
+                Search News
             </button>
         </form>
     </div>
 
-    <div id="searchResults" class="bg-white p-4 rounded-lg shadow-sm">
-        <div id="articlesContainer">
+    <div id="searchResults" class="bg-white rounded-xl shadow p-6">
+        <div id="resultsCount" class="text-lg text-gray-600 mb-4">
+            {% if articles %}{{ articles|length }} articles found{% endif %}
+        </div>
+
+        <div id="articlesContainer" class="space-y-6">
             {% if articles %}
                 {% for article in articles %}
-                <div class="article-card py-4 border-b border-gray-200 last:border-b-0">
-                    <h3 class="text-base font-medium mb-1">
-                        <a href="{{ article.url }}" target="_blank" class="text-blue-600">
-                            {{ article.title }}
-                        </a>
-                    </h3>
-                    <p class="text-sm text-gray-500 mb-2">{{ article.published_at }}</p>
-                    <p class="text-sm text-gray-600 mb-2">
-                        {% if article.summary.key_points %}
-                            {{ article.summary.key_points }}
-                        {% endif %}
-                    </p>
+                <div class="border-b border-gray-100 pb-6 last:border-b-0">
+                    <a href="{{ article.url }}" class="block text-blue-500 text-lg font-medium mb-2">
+                        {{ article.title }}
+                    </a>
+                    <div class="text-gray-500 mb-2">Published on: {{ article.published_at }}</div>
                     
-                    <div class="flex flex-wrap gap-2">
-                        {% if article.sentiment.label %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium 
-                            {% if article.sentiment.label == 'POSITIVE' %}bg-green-100 text-green-800
-                            {% elif article.sentiment.label == 'NEGATIVE' %}bg-red-100 text-red-800
-                            {% else %}bg-gray-100 text-gray-800{% endif %}">
-                            {{ article.sentiment.explanation }}
-                        </span>
-                        {% endif %}
-                    </div>
+                    {% if article.sentiment.label %}
+                    <span class="inline-block px-3 py-1 rounded-full text-sm
+                        {% if article.sentiment.label == 'POSITIVE' %}bg-green-100 text-green-800
+                        {% elif article.sentiment.label == 'NEGATIVE' %}bg-red-100 text-red-800
+                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                        {{ article.sentiment.label }} ({{ article.sentiment.confidence|float * 100 }}%)
+                    </span>
+                    {% endif %}
                 </div>
                 {% endfor %}
-            {% else %}
-                <p class="text-gray-600 text-center py-4">Enter a stock symbol to search</p>
             {% endif %}
         </div>
     </div>
@@ -68,6 +60,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         const symbolInput = document.getElementById('symbol');
         const articlesContainer = document.getElementById('articlesContainer');
+        const resultsCount = document.getElementById('resultsCount');
         const searchForm = document.getElementById('searchForm');
         const searchButton = document.getElementById('searchButton');
 
@@ -101,35 +94,26 @@
                     const data = await response.json();
                     
                     if (data.articles?.length > 0) {
+                        resultsCount.textContent = `${data.articles.length} articles found`;
                         articlesContainer.innerHTML = data.articles
-                            .map(article => {
-                                const sentimentLabel = article.sentiment.label || 'NEUTRAL';
-                                const sentimentExplanation = article.sentiment.explanation || '';
-                                const publishedDate = article.published_at ? 
-                                    new Date(article.published_at).toLocaleDateString() : 
-                                    'Date not available';
-
-                                return `
-                                    <div class="article-card py-4 border-b border-gray-200 last:border-b-0">
-                                        <h3 class="text-base font-medium mb-1">
-                                            <a href="${article.url}" target="_blank" class="text-blue-600">
-                                                ${article.title}
-                                            </a>
-                                        </h3>
-                                        <p class="text-sm text-gray-500 mb-2">${publishedDate}</p>
-                                        <p class="text-sm text-gray-600 mb-2">${article.brief_summary || ''}</p>
-                                        <span class="px-2 py-1 rounded-full text-xs font-medium 
-                                            ${sentimentLabel === 'POSITIVE' ? 'bg-green-100 text-green-800' :
-                                              sentimentLabel === 'NEGATIVE' ? 'bg-red-100 text-red-800' :
-                                              'bg-gray-100 text-gray-800'}">
-                                            ${sentimentExplanation}
-                                        </span>
-                                    </div>
-                                `;
-                            })
-                            .join('');
+                            .map(article => `
+                                <div class="border-b border-gray-100 pb-6 last:border-b-0">
+                                    <a href="${article.url}" class="block text-blue-500 text-lg font-medium mb-2">
+                                        ${article.title}
+                                    </a>
+                                    <div class="text-gray-500 mb-2">Published on: ${new Date(article.published_at).toLocaleDateString()}</div>
+                                    
+                                    <span class="inline-block px-3 py-1 rounded-full text-sm
+                                        ${article.sentiment.label === 'POSITIVE' ? 'bg-green-100 text-green-800' :
+                                          article.sentiment.label === 'NEGATIVE' ? 'bg-red-100 text-red-800' :
+                                          'bg-gray-100 text-gray-800'}">
+                                        ${article.sentiment.label} (${(article.sentiment.confidence * 100).toFixed(1)}%)
+                                    </span>
+                                </div>
+                            `).join('');
                     } else {
-                        articlesContainer.innerHTML = '<p class="text-gray-600 text-center py-4">No articles found</p>';
+                        resultsCount.textContent = '0 articles found';
+                        articlesContainer.innerHTML = '';
                     }
                 } catch (error) {
                     console.error('Fetch error:', error);
