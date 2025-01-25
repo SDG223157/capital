@@ -48,7 +48,7 @@
                             {% if article.sentiment.label == 'POSITIVE' %}bg-green-100 text-green-800
                             {% elif article.sentiment.label == 'NEGATIVE' %}bg-red-100 text-red-800
                             {% else %}bg-gray-100 text-gray-800{% endif %}">
-                            {{ article.sentiment.label }}
+                            {{ article.sentiment.label }} ({{ article.sentiment.score * 100 }}%)
                         </span>
                         {% endif %}
                     </div>
@@ -104,7 +104,7 @@
                                         ${article.sentiment.label === 'POSITIVE' ? 'bg-green-100 text-green-800' :
                                           article.sentiment.label === 'NEGATIVE' ? 'bg-red-100 text-red-800' :
                                           'bg-gray-100 text-gray-800'}">
-                                        ${article.sentiment.label}
+                                        ${article.sentiment.label} (${(article.sentiment.score * 100).toFixed(1)}%)
                                     </span>
                                 </div>
                             `).join('');
