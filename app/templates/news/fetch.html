@@ -131,51 +131,60 @@
                }
            };
 
-           const batchFetch = async () => {
-            try {
-                loadingIndicator.classList.remove('hidden');
-                batchFetchButton.disabled = true;
-                
-                // Add progress element
-                const progressDiv = document.createElement('div');
-                progressDiv.innerHTML = `
-                    <div class="mt-4 mb-2">
-                        <div class="w-full bg-gray-200 rounded-full h-2.5">
-                            <div id="progressBar" class="bg-green-600 h-2.5 rounded-full" style="width: 0%"></div>
-                        </div>
-                        <p id="progressText" class="text-sm text-gray-600 mt-1">Processing: 0/30 symbols</p>
+           // Add progress tracking function
+function updateProgress(current, total) {
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const percent = (current / total) * 100;
+    progressBar.style.width = `${percent}%`;
+    progressText.textContent = `Processing: ${current}/${total} symbols`;
+}
+
+const batchFetch = async () => {
+    try {
+        loadingIndicator.classList.remove('hidden');
+        batchFetchButton.disabled = true;
+        resultsCount.textContent = "Processing batch fetch...";
+
+        // Create progress bar if doesn't exist
+        if (!document.getElementById('progressBar')) {
+            const progressDiv = document.createElement('div');
+            progressDiv.innerHTML = `
+                <div class="mt-4 mb-2">
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div id="progressBar" class="bg-green-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
                     </div>
-                `;
-                loadingIndicator.appendChild(progressDiv);
-        
-                const response = await fetch('/news/api/batch-fetch', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: JSON.stringify({
-                        limit: 5
-                    }),
-                    onUploadProgress: (progressEvent) => {
-                        const progress = (progressEvent.loaded / progressEvent.total) * 100;
-                        document.getElementById('progressBar').style.width = `${progress}%`;
-                        document.getElementById('progressText').textContent = 
-                            `Processing: ${Math.round((progress/100) * 30)}/30 symbols`;
-                    }
-                });
-        
-                const data = await response.json();
-                renderArticles(data.articles);
-        
-            } catch (error) {
-                console.error('Batch fetch error:', error);
-                alert('Failed to fetch news: ' + error.message);
-            } finally {
-                loadingIndicator.classList.add('hidden');
-                batchFetchButton.disabled = false;
-            }
-        };
+                    <p id="progressText" class="text-sm text-gray-600 mt-1">Processing: 0/30 symbols</p>
+                </div>
+            `;
+            loadingIndicator.appendChild(progressDiv);
+        }
+
+        const response = await fetch('/news/api/batch-fetch', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ limit: 5 })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        renderArticles(data.articles);
+
+    } catch (error) {
+        console.error('Batch fetch error:', error);
+        resultsCount.textContent = "Error during batch fetch";
+        articlesContainer.innerHTML = '<p class="text-red-600">Failed to fetch news</p>';
+    } finally {
+        loadingIndicator.classList.add('hidden');
+        batchFetchButton.disabled = false;
+    }
+};
 
            fetchButton.addEventListener('click', async (e) => {
                e.preventDefault();
