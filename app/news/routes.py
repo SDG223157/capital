@@ -168,33 +168,34 @@ def fetch_news():
 @bp.route('/api/batch-fetch', methods=['POST'])
 @login_required
 def batch_fetch():
-   try:
-       data = request.get_json()
-       symbols = data.get('symbols', DEFAULT_SYMBOLS)
-       limit = min(int(data.get('limit', 5)), 20)  # Cap at 20 per symbol
-       
-       logger.info(f"Batch fetching news for {len(symbols)} symbols")
-       all_articles = []
-       
-       for symbol in symbols:
-           articles = news_service.fetch_and_analyze_news(
-               symbols=[symbol], 
-               limit=limit
-           )
-           all_articles.extend(articles)
-           
-       return jsonify({
-           'status': 'success',
-           'articles': all_articles,
-           'symbols_processed': len(symbols)
-       })
-       
-   except Exception as e:
-       logger.error(f"Error in batch fetch: {str(e)}", exc_info=True)
-       return jsonify({
-           'status': 'error',
-           'message': str(e)
-       }), HTTPStatus.INTERNAL_SERVER_ERROR
+    try:
+        data = request.get_json()
+        symbols = data.get('symbols', DEFAULT_SYMBOLS)
+        limit = min(int(data.get('limit', 5)), 20)
+        
+        all_articles = []
+        total_symbols = len(symbols)
+        
+        for i, symbol in enumerate(symbols, 1):
+            articles = news_service.fetch_and_analyze_news(symbols=[symbol], limit=limit)
+            all_articles.extend(articles)
+            
+            # Send progress update
+            if i % 5 == 0:  # Update every 5 symbols
+                logger.info(f"Processed {i}/{total_symbols} symbols")
+                
+        return jsonify({
+            'status': 'success',
+            'articles': all_articles,
+            'symbols_processed': total_symbols
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in batch fetch: {str(e)}", exc_info=True)
+        return jsonify({
+            'status': 'error', 
+            'message': str(e)
+        }), HTTPStatus.INTERNAL_SERVER_ERROR
 @bp.route('/api/sentiment')
 @login_required
 def get_sentiment():

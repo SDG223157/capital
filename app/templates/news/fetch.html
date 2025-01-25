@@ -135,6 +135,18 @@
             try {
                 loadingIndicator.classList.remove('hidden');
                 batchFetchButton.disabled = true;
+                
+                // Add progress element
+                const progressDiv = document.createElement('div');
+                progressDiv.innerHTML = `
+                    <div class="mt-4 mb-2">
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div id="progressBar" class="bg-green-600 h-2.5 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <p id="progressText" class="text-sm text-gray-600 mt-1">Processing: 0/30 symbols</p>
+                    </div>
+                `;
+                loadingIndicator.appendChild(progressDiv);
         
                 const response = await fetch('/news/api/batch-fetch', {
                     method: 'POST',
@@ -142,12 +154,17 @@
                         'Content-Type': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest'
                     },
-                    body: JSON.stringify({  // Add this
+                    body: JSON.stringify({
                         limit: 5
-                    })
+                    }),
+                    onUploadProgress: (progressEvent) => {
+                        const progress = (progressEvent.loaded / progressEvent.total) * 100;
+                        document.getElementById('progressBar').style.width = `${progress}%`;
+                        document.getElementById('progressText').textContent = 
+                            `Processing: ${Math.round((progress/100) * 30)}/30 symbols`;
+                    }
                 });
         
-                if (!response.ok) throw new Error('Failed to fetch news');
                 const data = await response.json();
                 renderArticles(data.articles);
         
