@@ -160,36 +160,59 @@ const batchFetch = async () => {
             loadingIndicator.appendChild(progressDiv);
         }
 
-        const response = await fetch('/news/api/batch-fetch', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({ limit: 10 })
-        });
-        // Add debug logging
-        // Add debug logging
-        console.log('Response status:', response.status);
-        const text = await response.text();
-        console.log('Response text:', text);
-
-        if (!response.ok) {
-            throw new Error(`Error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        renderArticles(data.articles);
-
-    } catch (error) {
-        console.error('Batch fetch error:', error);
-        resultsCount.textContent = "Error during batch fetch";
-        articlesContainer.innerHTML = '<p class="text-red-600">Failed to fetch news</p>';
-    } finally {
-        loadingIndicator.classList.add('hidden');
-        batchFetchButton.disabled = false;
-    }
-};
+        const batchFetch = async () => {
+            try {
+                loadingIndicator.classList.remove('hidden');
+                batchFetchButton.disabled = true;
+                const progressDiv = document.createElement('div');
+                progressDiv.innerHTML = `
+                    <div class="mt-4 mb-2">
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div id="progressBar" class="bg-green-600 h-2.5 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <p id="progressText" class="text-sm text-gray-600 mt-1">Processing...</p>
+                    </div>
+                `;
+                loadingIndicator.appendChild(progressDiv);
+        
+                const symbols = [
+                    "NASDAQ:AAPL", "NASDAQ:MSFT", "NASDAQ:AMZN", "NASDAQ:GOOGL", "NASDAQ:META"
+                ];  // Starting with just 5 symbols for testing
+        
+                let allArticles = [];
+                for (let i = 0; i < symbols.length; i++) {
+                    const response = await fetch('/news/api/fetch', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            symbols: [symbols[i]],
+                            limit: 2
+                        })
+                    });
+        
+                    if (!response.ok) throw new Error(`Error: ${response.status}`);
+                    const data = await response.json();
+                    allArticles = allArticles.concat(data.articles || []);
+        
+                    // Update progress
+                    const progress = ((i + 1) / symbols.length) * 100;
+                    document.getElementById('progressBar').style.width = `${progress}%`;
+                    document.getElementById('progressText').textContent = 
+                        `Processing: ${i + 1}/${symbols.length} symbols`;
+                }
+        
+                renderArticles(allArticles);
+        
+            } catch (error) {
+                console.error('Batch fetch error:', error);
+                alert('Failed to fetch news');
+            } finally {
+                loadingIndicator.classList.add('hidden');
+                batchFetchButton.disabled = false;
+            }
+        };
 
            fetchButton.addEventListener('click', async (e) => {
                e.preventDefault();
