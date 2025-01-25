@@ -64,13 +64,14 @@
            const resultsCount = document.getElementById('resultsCount');
            
            const DEFAULT_SYMBOLS = [
-            "NASDAQ:AAPL", "NASDAQ:MSFT", "NASDAQ:AMZN", "NASDAQ:GOOGL", "NASDAQ:META",
-            "NASDAQ:NVDA", "NASDAQ:TSLA", "NYSE:BRK.A", "NYSE:V", "NYSE:JPM",
-            "NYSE:JNJ", "NYSE:WMT", "NYSE:MA", "NYSE:PG", "NASDAQ:AVGO",
-            "NYSE:CVX", "NYSE:HD", "NYSE:MRK", "NYSE:KO", "NASDAQ:PEP",
-            "NYSE:BAC", "NYSE:DIS", "NASDAQ:COST", "NASDAQ:CSCO", "NYSE:VZ",
-            "NYSE:ABT", "NASDAQ:ADBE", "NASDAQ:CMCSA", "NYSE:NKE", "NYSE:TMO"
-            ];
+               "NASDAQ:AAPL", "NASDAQ:MSFT", "NASDAQ:AMZN", "NASDAQ:GOOGL", "NASDAQ:META",
+               "NASDAQ:NVDA", "NASDAQ:TSLA", "NYSE:BRK.A", "NYSE:V", "NYSE:JPM",
+               "NYSE:JNJ", "NYSE:WMT", "NYSE:MA", "NYSE:PG", "NASDAQ:AVGO",
+               "NYSE:CVX", "NYSE:HD", "NYSE:MRK", "NYSE:KO", "NASDAQ:PEP",
+               "NYSE:BAC", "NYSE:DIS", "NASDAQ:COST", "NASDAQ:CSCO", "NYSE:VZ", 
+               "NYSE:ABT", "NASDAQ:ADBE", "NASDAQ:CMCSA", "NYSE:NKE", "NYSE:TMO"
+           ];
+
            const renderArticles = (articles) => {
                if (articles && articles.length > 0) {
                    resultsCount.textContent = `${articles.length} articles found`;
@@ -81,6 +82,13 @@
                            const sentimentPercentage = (sentimentScore * 100).toFixed(1);
                            const publishedDate = article.published_at ? 
                                new Date(article.published_at).toLocaleDateString() : 'Date not available';
+                           
+                           // Add related symbols section
+                           const relatedSymbols = article.symbols?.map(s => 
+                               `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-1">
+                                   ${s.symbol}
+                               </span>`
+                           ).join('') || '';
 
                            return `
                                <div class="article-card border-b border-gray-200 pb-6 mb-4">
@@ -90,15 +98,18 @@
                                        </a>
                                    </h3>
                                    <p class="text-sm text-gray-500">Published on: ${publishedDate}</p>
-                                   <p class="text-sm text-gray-500">Symbol: ${article.symbols || 'N/A'}</p>
-                                   <p class="text-gray-600 mt-2">${article.brief_summary || ''}</p>
-                                   <div class="mt-2">
+                                   <p class="text-gray-600 mt-2">${article.summary || ''}</p>
+                                   <div class="mt-2 flex items-center space-x-2">
                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
                                            ${sentimentLabel === 'POSITIVE' ? 'bg-green-100 text-green-800' :
                                              sentimentLabel === 'NEGATIVE' ? 'bg-red-100 text-red-800' :
                                              'bg-gray-100 text-gray-800'}">
                                            ${sentimentLabel} (${sentimentPercentage}%)
                                        </span>
+                                   </div>
+                                   <div class="mt-2 flex flex-wrap gap-1">
+                                       <span class="text-sm text-gray-600 mr-2">Related Symbols:</span>
+                                       ${relatedSymbols || 'None'}
                                    </div>
                                </div>
                            `;
@@ -143,7 +154,6 @@
                    loadingIndicator.classList.remove('hidden');
                    batchFetchButton.disabled = true;
                    
-                   // Add progress tracking
                    const progressDiv = document.createElement('div');
                    progressDiv.innerHTML = `
                        <div class="mt-4 mb-2">
@@ -172,7 +182,6 @@
                        const data = await response.json();
                        allArticles = allArticles.concat(data.articles || []);
 
-                       // Update progress
                        const progress = ((i + 1) / DEFAULT_SYMBOLS.length) * 100;
                        document.getElementById('progressBar').style.width = `${progress}%`;
                        document.getElementById('progressText').textContent = 
@@ -187,7 +196,6 @@
                } finally {
                    loadingIndicator.classList.add('hidden');
                    batchFetchButton.disabled = false;
-                   // Remove progress div
                    const progressDiv = loadingIndicator.querySelector('div');
                    if (progressDiv) {
                        loadingIndicator.removeChild(progressDiv);
