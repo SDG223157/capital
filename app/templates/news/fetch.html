@@ -166,8 +166,13 @@ const batchFetch = async () => {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
-            body: JSON.stringify({ limit: 5 })
+            body: JSON.stringify({ limit: 10 })
         });
+        // Add debug logging
+        // Add debug logging
+        console.log('Response status:', response.status);
+        const text = await response.text();
+        console.log('Response text:', text);
 
         if (!response.ok) {
             throw new Error(`Error: ${response.status}`);
