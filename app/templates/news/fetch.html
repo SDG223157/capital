@@ -28,16 +28,16 @@
        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
            <form id="fetchForm" class="space-y-4">
                <div>
-                   <label for="symbol" class="block text-sm font-medium text-gray-700">Stock Symbol(s)</label>
-                   <textarea id="symbol" name="symbol" placeholder="Enter symbol (e.g., AAPL) or click Batch Fetch for top 30 stocks" 
-                             class="mt-1 block w-full p-2 border border-gray-300 rounded-md" rows="3"></textarea>
+                   <label for="symbol" class="block text-sm font-medium text-gray-700">Stock Symbol</label>
+                   <input type="text" id="symbol" name="symbol" placeholder="e.g., AAPL" 
+                          class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
                </div>
                <div class="flex space-x-4">
                    <button type="submit" id="fetchButton" class="flex-1 bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">
                        Fetch Single Symbol
                    </button>
                    <button type="button" id="batchFetchButton" class="flex-1 bg-green-500 text-white p-2 rounded-md hover:bg-green-600">
-                       Batch Fetch Top 30
+                       Fetch Top 5
                    </button>
                </div>
            </form>
@@ -62,6 +62,10 @@
            const symbolInput = document.getElementById('symbol');
            const articlesContainer = document.getElementById('articlesContainer');
            const resultsCount = document.getElementById('resultsCount');
+           
+           const DEFAULT_SYMBOLS = [
+               "NASDAQ:AAPL", "NASDAQ:MSFT", "NASDAQ:AMZN", "NASDAQ:GOOGL", "NASDAQ:META"
+           ];
 
            const renderArticles = (articles) => {
                if (articles && articles.length > 0) {
@@ -109,8 +113,7 @@
                    const response = await fetch('/news/api/fetch', {
                        method: 'POST',
                        headers: {
-                           'Content-Type': 'application/json',
-                           'X-Requested-With': 'XMLHttpRequest'
+                           'Content-Type': 'application/json'
                        },
                        body: JSON.stringify({
                            symbols: [symbol],
@@ -118,103 +121,77 @@
                        })
                    });
 
-                   if (!response.ok) throw new Error('Failed to fetch news');
+                   if (!response.ok) throw new Error(`Error: ${response.status}`);
                    const data = await response.json();
                    renderArticles(data.articles);
 
                } catch (error) {
                    console.error('Fetch error:', error);
-                   alert('Failed to fetch news: ' + error.message);
+                   alert('Failed to fetch news');
                } finally {
                    loadingIndicator.classList.add('hidden');
                    fetchButton.disabled = false;
                }
            };
 
-           // Add progress tracking function
-function updateProgress(current, total) {
-    const progressBar = document.getElementById('progressBar');
-    const progressText = document.getElementById('progressText');
-    const percent = (current / total) * 100;
-    progressBar.style.width = `${percent}%`;
-    progressText.textContent = `Processing: ${current}/${total} symbols`;
-}
+           const batchFetch = async () => {
+               try {
+                   loadingIndicator.classList.remove('hidden');
+                   batchFetchButton.disabled = true;
+                   
+                   // Add progress tracking
+                   const progressDiv = document.createElement('div');
+                   progressDiv.innerHTML = `
+                       <div class="mt-4 mb-2">
+                           <div class="w-full bg-gray-200 rounded-full h-2.5">
+                               <div id="progressBar" class="bg-green-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                           </div>
+                           <p id="progressText" class="text-sm text-gray-600 mt-1">Processing: 0/${DEFAULT_SYMBOLS.length} symbols</p>
+                       </div>
+                   `;
+                   loadingIndicator.appendChild(progressDiv);
 
-const batchFetch = async () => {
-    try {
-        loadingIndicator.classList.remove('hidden');
-        batchFetchButton.disabled = true;
-        resultsCount.textContent = "Processing batch fetch...";
+                   let allArticles = [];
+                   for (let i = 0; i < DEFAULT_SYMBOLS.length; i++) {
+                       const response = await fetch('/news/api/fetch', {
+                           method: 'POST',
+                           headers: {
+                               'Content-Type': 'application/json'
+                           },
+                           body: JSON.stringify({
+                               symbols: [DEFAULT_SYMBOLS[i]],
+                               limit: 2
+                           })
+                       });
 
-        // Create progress bar if doesn't exist
-        if (!document.getElementById('progressBar')) {
-            const progressDiv = document.createElement('div');
-            progressDiv.innerHTML = `
-                <div class="mt-4 mb-2">
-                    <div class="w-full bg-gray-200 rounded-full h-2.5">
-                        <div id="progressBar" class="bg-green-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
-                    </div>
-                    <p id="progressText" class="text-sm text-gray-600 mt-1">Processing: 0/30 symbols</p>
-                </div>
-            `;
-            loadingIndicator.appendChild(progressDiv);
-        }
+                       if (!response.ok) throw new Error(`Error: ${response.status}`);
+                       const data = await response.json();
+                       allArticles = allArticles.concat(data.articles || []);
 
-        const batchFetch = async () => {
-            try {
-                loadingIndicator.classList.remove('hidden');
-                batchFetchButton.disabled = true;
-                const progressDiv = document.createElement('div');
-                progressDiv.innerHTML = `
-                    <div class="mt-4 mb-2">
-                        <div class="w-full bg-gray-200 rounded-full h-2.5">
-                            <div id="progressBar" class="bg-green-600 h-2.5 rounded-full" style="width: 0%"></div>
-                        </div>
-                        <p id="progressText" class="text-sm text-gray-600 mt-1">Processing...</p>
-                    </div>
-                `;
-                loadingIndicator.appendChild(progressDiv);
-        
-                const symbols = [
-                    "NASDAQ:AAPL", "NASDAQ:MSFT", "NASDAQ:AMZN", "NASDAQ:GOOGL", "NASDAQ:META"
-                ];  // Starting with just 5 symbols for testing
-        
-                let allArticles = [];
-                for (let i = 0; i < symbols.length; i++) {
-                    const response = await fetch('/news/api/fetch', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            symbols: [symbols[i]],
-                            limit: 2
-                        })
-                    });
-        
-                    if (!response.ok) throw new Error(`Error: ${response.status}`);
-                    const data = await response.json();
-                    allArticles = allArticles.concat(data.articles || []);
-        
-                    // Update progress
-                    const progress = ((i + 1) / symbols.length) * 100;
-                    document.getElementById('progressBar').style.width = `${progress}%`;
-                    document.getElementById('progressText').textContent = 
-                        `Processing: ${i + 1}/${symbols.length} symbols`;
-                }
-        
-                renderArticles(allArticles);
-        
-            } catch (error) {
-                console.error('Batch fetch error:', error);
-                alert('Failed to fetch news');
-            } finally {
-                loadingIndicator.classList.add('hidden');
-                batchFetchButton.disabled = false;
-            }
-        };
+                       // Update progress
+                       const progress = ((i + 1) / DEFAULT_SYMBOLS.length) * 100;
+                       document.getElementById('progressBar').style.width = `${progress}%`;
+                       document.getElementById('progressText').textContent = 
+                           `Processing: ${i + 1}/${DEFAULT_SYMBOLS.length} symbols`;
+                   }
 
-           fetchButton.addEventListener('click', async (e) => {
+                   renderArticles(allArticles);
+
+               } catch (error) {
+                   console.error('Batch fetch error:', error);
+                   alert('Failed to fetch news');
+               } finally {
+                   loadingIndicator.classList.add('hidden');
+                   batchFetchButton.disabled = false;
+                   // Remove progress div
+                   const progressDiv = loadingIndicator.querySelector('div');
+                   if (progressDiv) {
+                       loadingIndicator.removeChild(progressDiv);
+                   }
+               }
+           };
+
+           fetchForm.addEventListener('submit', async (e) => {
                e.preventDefault();
                const symbol = symbolInput.value.trim();
                if (!symbol) {
