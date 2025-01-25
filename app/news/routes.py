@@ -170,30 +170,34 @@ def fetch_news():
 def batch_fetch():
     try:
         data = request.get_json()
-        symbols = data.get('symbols', DEFAULT_SYMBOLS[:10])  # Limit to first 10 symbols
-        limit = min(int(data.get('limit', 3)), 10)  # Reduce articles per symbol
+        chunk_size = 5  # Process 5 symbols at a time
+        symbols = data.get('symbols', DEFAULT_SYMBOLS[:10]) 
+        articles_per_symbol = min(int(data.get('limit', 2)), 5)
         
-        logger.info(f"Starting batch fetch for {len(symbols)} symbols")
         all_articles = []
+        chunks = [symbols[i:i + chunk_size] for i in range(0, len(symbols), chunk_size)]
         
-        for symbol in symbols:
-            try:
-                articles = news_service.fetch_and_analyze_news(symbols=[symbol], limit=limit)
-                all_articles.extend(articles)
-                time.sleep(1)  # Add delay between requests
-            except Exception as e:
-                logger.error(f"Error fetching {symbol}: {str(e)}")
-                continue
+        for chunk in chunks:
+            for symbol in chunk:
+                try:
+                    articles = news_service.fetch_and_analyze_news(
+                        symbols=[symbol], 
+                        limit=articles_per_symbol
+                    )
+                    all_articles.extend(articles)
+                except Exception as e:
+                    logger.error(f"Error fetching {symbol}: {str(e)}")
+                    continue
                 
         return jsonify({
             'status': 'success',
-            'articles': all_articles
+            'articles': all_articles,
+            'total': len(all_articles)
         })
         
     except Exception as e:
-        logger.error(f"Error in batch fetch: {str(e)}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
-
+        logger.error(f"Batch fetch error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 @bp.route('/api/sentiment')
 @login_required
 def get_sentiment():
