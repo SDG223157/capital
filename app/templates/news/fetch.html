@@ -132,30 +132,33 @@
            };
 
            const batchFetch = async () => {
-               try {
-                   loadingIndicator.classList.remove('hidden');
-                   batchFetchButton.disabled = true;
-
-                   const response = await fetch('/news/api/batch-fetch', {
-                       method: 'POST',
-                       headers: {
-                           'Content-Type': 'application/json',
-                           'X-Requested-With': 'XMLHttpRequest'
-                       }
-                   });
-
-                   if (!response.ok) throw new Error('Failed to fetch news');
-                   const data = await response.json();
-                   renderArticles(data.articles);
-
-               } catch (error) {
-                   console.error('Batch fetch error:', error);
-                   alert('Failed to fetch news: ' + error.message);
-               } finally {
-                   loadingIndicator.classList.add('hidden');
-                   batchFetchButton.disabled = false;
-               }
-           };
+            try {
+                loadingIndicator.classList.remove('hidden');
+                batchFetchButton.disabled = true;
+        
+                const response = await fetch('/news/api/batch-fetch', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({  // Add this
+                        limit: 5
+                    })
+                });
+        
+                if (!response.ok) throw new Error('Failed to fetch news');
+                const data = await response.json();
+                renderArticles(data.articles);
+        
+            } catch (error) {
+                console.error('Batch fetch error:', error);
+                alert('Failed to fetch news: ' + error.message);
+            } finally {
+                loadingIndicator.classList.add('hidden');
+                batchFetchButton.disabled = false;
+            }
+        };
 
            fetchButton.addEventListener('click', async (e) => {
                e.preventDefault();
