@@ -8,7 +8,7 @@ from app.utils.analytics.news_analytics import NewsAnalytics
 from datetime import datetime, timedelta
 import logging
 from http import HTTPStatus
-from app import admin_required
+# from app import admin_required
 from functools import wraps
 from flask import abort
 from flask_login import current_user
