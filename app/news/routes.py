@@ -15,13 +15,7 @@ from flask_login import current_user
 from app.utils.config.news_config import DEFAULT_SYMBOLS
 logger = logging.getLogger(__name__)
 bp = Blueprint('news', __name__)
-def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or not current_user.is_admin:
-            abort(403)  # Forbidden access
-        return f(*args, **kwargs)
-    return decorated_function
+
 
 # Initialize services
 news_service = NewsAnalysisService()
@@ -120,7 +114,7 @@ def search():
 
 
 @bp.route('/api/fetch', methods=['POST'])
-@admin_required
+@login_required
 def fetch_news():
     """Fetch and analyze news for specific symbols"""
     try:
