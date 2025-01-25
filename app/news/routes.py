@@ -8,9 +8,20 @@ from app.utils.analytics.news_analytics import NewsAnalytics
 from datetime import datetime, timedelta
 import logging
 from http import HTTPStatus
-
+from app import admin_required
+from functools import wraps
+from flask import abort
+from flask_login import current_user
+from app.utils.config.news_config import DEFAULT_SYMBOLS
 logger = logging.getLogger(__name__)
 bp = Blueprint('news', __name__)
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            abort(403)  # Forbidden access
+        return f(*args, **kwargs)
+    return decorated_function
 
 # Initialize services
 news_service = NewsAnalysisService()
@@ -57,7 +68,7 @@ def index():
             trending_topics=[]
         )
 @bp.route('/fetch')
-@login_required
+@admin_required
 def fetch():
     """Render the Fetch News page"""
     return render_template('news/fetch.html')
@@ -107,8 +118,9 @@ def search():
             search_params={'symbol': symbol}
         )
 
+
 @bp.route('/api/fetch', methods=['POST'])
-@login_required
+@admin_required
 def fetch_news():
     """Fetch and analyze news for specific symbols"""
     try:
@@ -138,6 +150,48 @@ def fetch_news():
             'message': 'Failed to fetch news',
             'error': str(e)
         }), HTTPStatus.INTERNAL_SERVER_ERROR
+        
+        
+# Add at top level of routes.py
+# DEFAULT_SYMBOLS = [
+#    "NASDAQ:AAPL", "NASDAQ:MSFT", "NASDAQ:AMZN", "NASDAQ:GOOGL", "NASDAQ:META",
+#    "NASDAQ:NVDA", "NASDAQ:TSLA", "NYSE:BRK.A", "NYSE:V", "NYSE:JPM",
+#    "NYSE:JNJ", "NYSE:WMT", "NYSE:MA", "NYSE:PG", "NASDAQ:AVGO",
+#    "NYSE:CVX", "NYSE:HD", "NYSE:MRK", "NYSE:KO", "NASDAQ:PEP", 
+#    "NYSE:BAC", "NYSE:DIS", "NASDAQ:COST", "NASDAQ:CSCO", "NYSE:VZ",
+#    "NYSE:ABT", "NASDAQ:ADBE", "NASDAQ:CMCSA", "NYSE:NKE", "NYSE:TMO"
+# ]
+
+@bp.route('/api/batch-fetch', methods=['POST'])
+@login_required
+def batch_fetch():
+   try:
+       data = request.get_json()
+       symbols = data.get('symbols', DEFAULT_SYMBOLS)
+       limit = min(int(data.get('limit', 5)), 20)  # Cap at 20 per symbol
+       
+       logger.info(f"Batch fetching news for {len(symbols)} symbols")
+       all_articles = []
+       
+       for symbol in symbols:
+           articles = news_service.fetch_and_analyze_news(
+               symbols=[symbol], 
+               limit=limit
+           )
+           all_articles.extend(articles)
+           
+       return jsonify({
+           'status': 'success',
+           'articles': all_articles,
+           'symbols_processed': len(symbols)
+       })
+       
+   except Exception as e:
+       logger.error(f"Error in batch fetch: {str(e)}", exc_info=True)
+       return jsonify({
+           'status': 'error',
+           'message': str(e)
+       }), HTTPStatus.INTERNAL_SERVER_ERROR
 @bp.route('/api/sentiment')
 @login_required
 def get_sentiment():
@@ -328,3 +382,11 @@ def get_tradingview_symbol(symbol):
         
     # Default to NYSE
     return f"NYSE:{symbol}"
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_admin:
+            abort(403)  # HTTP 403 Forbidden
+        return f(*args, **kwargs)
+    return decorated_function
