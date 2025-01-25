@@ -13,6 +13,7 @@ from functools import wraps
 from flask import abort
 from flask_login import current_user
 # from app.utils.config.news_config import DEFAULT_SYMBOLS
+import time
 logger = logging.getLogger(__name__)
 bp = Blueprint('news', __name__)
 
@@ -164,41 +165,34 @@ def fetch_news():
 #    "NYSE:BAC", "NYSE:DIS", "NASDAQ:COST", "NASDAQ:CSCO", "NYSE:VZ",
 #    "NYSE:ABT", "NASDAQ:ADBE", "NASDAQ:CMCSA", "NYSE:NKE", "NYSE:TMO"
 # ]
-
 @bp.route('/api/batch-fetch', methods=['POST'])
 @login_required
 def batch_fetch():
     try:
         data = request.get_json()
-        symbols = data.get('symbols', DEFAULT_SYMBOLS)
-        limit = min(int(data.get('limit', 5)), 10)
+        symbols = data.get('symbols', DEFAULT_SYMBOLS[:10])  # Limit to first 10 symbols
+        limit = min(int(data.get('limit', 3)), 10)  # Reduce articles per symbol
         
         logger.info(f"Starting batch fetch for {len(symbols)} symbols")
         all_articles = []
         
-        for i, symbol in enumerate(symbols):
+        for symbol in symbols:
             try:
-                logger.info(f"Fetching news for symbol {symbol}")
                 articles = news_service.fetch_and_analyze_news(symbols=[symbol], limit=limit)
                 all_articles.extend(articles)
-                logger.info(f"Got {len(articles)} articles for {symbol}")
-            except Exception as symbol_error:
-                logger.error(f"Error fetching {symbol}: {str(symbol_error)}")
+                time.sleep(1)  # Add delay between requests
+            except Exception as e:
+                logger.error(f"Error fetching {symbol}: {str(e)}")
                 continue
                 
         return jsonify({
             'status': 'success',
-            'articles': all_articles,
-            'symbols_processed': len(symbols)
+            'articles': all_articles
         })
         
     except Exception as e:
-        logger.error(f"Error in batch fetch: {str(e)}", exc_info=True)
-        return jsonify({
-            'status': 'error',
-            'message': str(e)
-        }), HTTPStatus.INTERNAL_SERVER_ERROR
-
+        logger.error(f"Error in batch fetch: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @bp.route('/api/sentiment')
 @login_required
