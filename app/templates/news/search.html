@@ -7,7 +7,7 @@
     <h1 class="text-2xl font-bold mb-6">News Search</h1>
 
     <div class="bg-white rounded-xl shadow p-6 mb-6">
-        <form id="searchForm">
+        <form id="searchForm" action="/news/search" method="GET">
             <label class="block text-gray-700 text-lg mb-2">Stock Symbol</label>
             <input type="text" 
                    id="symbol" 
@@ -43,7 +43,7 @@
                         {% if article.sentiment.label == 'POSITIVE' %}bg-green-100 text-green-800
                         {% elif article.sentiment.label == 'NEGATIVE' %}bg-red-100 text-red-800
                         {% else %}bg-gray-100 text-gray-800{% endif %}">
-                        {{ article.sentiment.label }} ({{ article.sentiment.confidence|float * 100 }}%)
+                        {{ article.sentiment.label }}
                     </span>
                     {% endif %}
                 </div>
@@ -52,77 +52,4 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-{{ super() }}
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const symbolInput = document.getElementById('symbol');
-        const articlesContainer = document.getElementById('articlesContainer');
-        const resultsCount = document.getElementById('resultsCount');
-        const searchForm = document.getElementById('searchForm');
-        const searchButton = document.getElementById('searchButton');
-
-        if (searchForm) {
-            searchForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-
-                const symbol = symbolInput.value.trim();
-                if (!symbol) {
-                    alert('Please enter a stock symbol');
-                    return;
-                }
-
-                try {
-                    searchButton.disabled = true;
-
-                    const response = await fetch('/news/api/fetch', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        body: JSON.stringify({
-                            symbols: [symbol],
-                            limit: 10
-                        })
-                    });
-
-                    if (!response.ok) throw new Error('Failed to fetch news');
-
-                    const data = await response.json();
-                    
-                    if (data.articles?.length > 0) {
-                        resultsCount.textContent = `${data.articles.length} articles found`;
-                        articlesContainer.innerHTML = data.articles
-                            .map(article => `
-                                <div class="border-b border-gray-100 pb-6 last:border-b-0">
-                                    <a href="${article.url}" class="block text-blue-500 text-lg font-medium mb-2">
-                                        ${article.title}
-                                    </a>
-                                    <div class="text-gray-500 mb-2">Published on: ${new Date(article.published_at).toLocaleDateString()}</div>
-                                    
-                                    <span class="inline-block px-3 py-1 rounded-full text-sm
-                                        ${article.sentiment.label === 'POSITIVE' ? 'bg-green-100 text-green-800' :
-                                          article.sentiment.label === 'NEGATIVE' ? 'bg-red-100 text-red-800' :
-                                          'bg-gray-100 text-gray-800'}">
-                                        ${article.sentiment.label} (${(article.sentiment.confidence * 100).toFixed(1)}%)
-                                    </span>
-                                </div>
-                            `).join('');
-                    } else {
-                        resultsCount.textContent = '0 articles found';
-                        articlesContainer.innerHTML = '';
-                    }
-                } catch (error) {
-                    console.error('Fetch error:', error);
-                    alert('Failed to fetch news: ' + error.message);
-                } finally {
-                    searchButton.disabled = false;
-                }
-            });
-        }
-    });
-</script>
 {% endblock %}
