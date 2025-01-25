@@ -37,7 +37,7 @@
                        Fetch Single Symbol
                    </button>
                    <button type="button" id="batchFetchButton" class="flex-1 bg-green-500 text-white p-2 rounded-md hover:bg-green-600">
-                       Fetch Top 5
+                       Fetch Top 30
                    </button>
                </div>
            </form>
@@ -64,9 +64,13 @@
            const resultsCount = document.getElementById('resultsCount');
            
            const DEFAULT_SYMBOLS = [
-               "NASDAQ:AAPL", "NASDAQ:MSFT", "NASDAQ:AMZN", "NASDAQ:GOOGL", "NASDAQ:META"
-           ];
-
+            "NASDAQ:AAPL", "NASDAQ:MSFT", "NASDAQ:AMZN", "NASDAQ:GOOGL", "NASDAQ:META",
+            "NASDAQ:NVDA", "NASDAQ:TSLA", "NYSE:BRK.A", "NYSE:V", "NYSE:JPM",
+            "NYSE:JNJ", "NYSE:WMT", "NYSE:MA", "NYSE:PG", "NASDAQ:AVGO",
+            "NYSE:CVX", "NYSE:HD", "NYSE:MRK", "NYSE:KO", "NASDAQ:PEP",
+            "NYSE:BAC", "NYSE:DIS", "NASDAQ:COST", "NASDAQ:CSCO", "NYSE:VZ",
+            "NYSE:ABT", "NASDAQ:ADBE", "NASDAQ:CMCSA", "NYSE:NKE", "NYSE:TMO"
+            ];
            const renderArticles = (articles) => {
                if (articles && articles.length > 0) {
                    resultsCount.textContent = `${articles.length} articles found`;
@@ -86,7 +90,7 @@
                                        </a>
                                    </h3>
                                    <p class="text-sm text-gray-500">Published on: ${publishedDate}</p>
-                                   <p class="text-sm text-gray-500">Symbol: ${article.symbol || 'N/A'}</p>
+                                   <p class="text-sm text-gray-500">Symbol: ${article.symbols || 'N/A'}</p>
                                    <p class="text-gray-600 mt-2">${article.brief_summary || ''}</p>
                                    <div class="mt-2">
                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
