@@ -41,6 +41,7 @@
                             {{ article.title }}
                         </a>
                         <div class="text-gray-500 mb-2">Published on: {{ article.published_at }}</div>
+                        <p class="text-gray-600 mb-2">{{ article.summary.key_points }}</p>
                         
                         {% if article.sentiment.label %}
                         <span class="inline-block px-3 py-1 rounded-full text-sm
@@ -97,6 +98,7 @@
                                         ${article.title}
                                     </a>
                                     <div class="text-gray-500 mb-2">Published on: ${article.published_at}</div>
+                                    <p class="text-gray-600 mb-2">${article.summary.key_points || ''}</p>
                                     
                                     <span class="inline-block px-3 py-1 rounded-full text-sm
                                         ${article.sentiment.label === 'POSITIVE' ? 'bg-green-100 text-green-800' :
