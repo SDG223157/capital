@@ -12,7 +12,7 @@ from http import HTTPStatus
 from functools import wraps
 from flask import abort
 from flask_login import current_user
-from app.utils.config.news_config import DEFAULT_SYMBOLS
+# from app.utils.config.news_config import DEFAULT_SYMBOLS
 logger = logging.getLogger(__name__)
 bp = Blueprint('news', __name__)
 
@@ -71,7 +71,7 @@ def index():
             trending_topics=[]
         )
 @bp.route('/fetch')
-@admin_required
+@login_required
 def fetch():
     """Render the Fetch News page"""
     return render_template('news/fetch.html')
