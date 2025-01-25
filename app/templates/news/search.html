@@ -1,55 +1,123 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Search</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto p-4">
+        <h1 class="text-2xl font-bold mb-6">News Search</h1>
 
-{% block title %}News Search{% endblock %}
-
-{% block content %}
-<div class="bg-gray-50 min-h-screen p-4">
-    <h1 class="text-2xl font-bold mb-6">News Search</h1>
-
-    <div class="bg-white rounded-xl shadow p-6 mb-6">
-        <form id="searchForm" action="/news/search" method="GET">
-            <label class="block text-gray-700 text-lg mb-2">Stock Symbol</label>
-            <input type="text" 
-                   id="symbol" 
-                   name="symbol" 
-                   value="{{ search_params.get('symbol') or '' }}"
-                   placeholder="NASDAQ:AAPL" 
-                   class="w-full p-4 text-lg rounded-xl border border-gray-200 mb-4">
-            
-            <button type="submit" 
-                    id="searchButton" 
-                    class="w-full bg-blue-500 text-white p-4 rounded-xl text-lg font-medium">
-                Search News
-            </button>
-        </form>
-    </div>
-
-    <div id="searchResults" class="bg-white rounded-xl shadow p-6">
-        <div id="resultsCount" class="text-lg text-gray-600 mb-4">
-            {% if articles %}{{ articles|length }} articles found{% endif %}
+        <div class="bg-white rounded-xl shadow p-6 mb-6">
+            <form id="searchForm">
+                <label for="symbol" class="block text-gray-700 text-lg mb-2">Stock Symbol</label>
+                <input type="text" 
+                       id="symbol" 
+                       name="symbol" 
+                       value="{{ search_params.get('symbol') or '' }}"
+                       placeholder="NASDAQ:AAPL" 
+                       class="w-full p-4 text-lg rounded-xl border border-gray-200 mb-4">
+                
+                <button type="submit" 
+                        id="searchButton" 
+                        class="w-full bg-blue-500 text-white p-4 rounded-xl text-lg font-medium">
+                    Search News
+                </button>
+            </form>
         </div>
 
-        <div id="articlesContainer" class="space-y-6">
-            {% if articles %}
-                {% for article in articles %}
-                <div class="border-b border-gray-100 pb-6 last:border-b-0">
-                    <a href="{{ article.url }}" class="block text-blue-500 text-lg font-medium mb-2">
-                        {{ article.title }}
-                    </a>
-                    <div class="text-gray-500 mb-2">Published on: {{ article.published_at }}</div>
+        <div class="bg-white rounded-xl shadow p-6">
+            <div id="resultsCount" class="text-lg text-gray-600 mb-4">
+                {% if articles %}{{ articles|length }} articles found{% endif %}
+            </div>
+
+            <div id="articlesContainer" class="space-y-6">
+                {% if articles %}
+                    {% for article in articles %}
+                    <div class="border-b border-gray-100 pb-6 last:border-b-0">
+                        <a href="{{ article.url }}" target="_blank" class="block text-blue-500 text-lg font-medium mb-2">
+                            {{ article.title }}
+                        </a>
+                        <div class="text-gray-500 mb-2">Published on: {{ article.published_at }}</div>
+                        
+                        {% if article.sentiment.label %}
+                        <span class="inline-block px-3 py-1 rounded-full text-sm
+                            {% if article.sentiment.label == 'POSITIVE' %}bg-green-100 text-green-800
+                            {% elif article.sentiment.label == 'NEGATIVE' %}bg-red-100 text-red-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ article.sentiment.label }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchForm = document.getElementById('searchForm');
+            const symbolInput = document.getElementById('symbol');
+            const searchButton = document.getElementById('searchButton');
+            const articlesContainer = document.getElementById('articlesContainer');
+            const resultsCount = document.getElementById('resultsCount');
+
+            searchForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const symbol = symbolInput.value.trim();
+                if (!symbol) {
+                    alert('Please enter a stock symbol');
+                    return;
+                }
+
+                try {
+                    searchButton.disabled = true;
+                    const params = new URLSearchParams({ symbol });
                     
-                    {% if article.sentiment.label %}
-                    <span class="inline-block px-3 py-1 rounded-full text-sm
-                        {% if article.sentiment.label == 'POSITIVE' %}bg-green-100 text-green-800
-                        {% elif article.sentiment.label == 'NEGATIVE' %}bg-red-100 text-red-800
-                        {% else %}bg-gray-100 text-gray-800{% endif %}">
-                        {{ article.sentiment.label }}
-                    </span>
-                    {% endif %}
-                </div>
-                {% endfor %}
-            {% endif %}
-        </div>
-    </div>
-</div>
-{% endblock %}
+                    const response = await fetch(`/news/search?${params}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    if (!response.ok) throw new Error('Search failed');
+                    
+                    const data = await response.json();
+                    
+                    if (data.articles?.length > 0) {
+                        resultsCount.textContent = `${data.articles.length} articles found`;
+                        articlesContainer.innerHTML = data.articles
+                            .map(article => `
+                                <div class="border-b border-gray-100 pb-6 last:border-b-0">
+                                    <a href="${article.url}" target="_blank" class="block text-blue-500 text-lg font-medium mb-2">
+                                        ${article.title}
+                                    </a>
+                                    <div class="text-gray-500 mb-2">Published on: ${article.published_at}</div>
+                                    
+                                    <span class="inline-block px-3 py-1 rounded-full text-sm
+                                        ${article.sentiment.label === 'POSITIVE' ? 'bg-green-100 text-green-800' :
+                                          article.sentiment.label === 'NEGATIVE' ? 'bg-red-100 text-red-800' :
+                                          'bg-gray-100 text-gray-800'}">
+                                        ${article.sentiment.label}
+                                    </span>
+                                </div>
+                            `).join('');
+                    } else {
+                        resultsCount.textContent = 'No articles found';
+                        articlesContainer.innerHTML = '';
+                    }
+                } catch (error) {
+                    console.error('Search error:', error);
+                    alert('Failed to search news: ' + error.message);
+                } finally {
+                    searchButton.disabled = false;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
