@@ -173,29 +173,33 @@ def batch_fetch():
         symbols = data.get('symbols', DEFAULT_SYMBOLS)
         limit = min(int(data.get('limit', 5)), 10)
         
+        logger.info(f"Starting batch fetch for {len(symbols)} symbols")
         all_articles = []
-        total_symbols = len(symbols)
         
-        for i, symbol in enumerate(symbols, 1):
-            articles = news_service.fetch_and_analyze_news(symbols=[symbol], limit=limit)
-            all_articles.extend(articles)
-            
-            # Send progress update
-            if i % 5 == 0:  # Update every 5 symbols
-                logger.info(f"Processed {i}/{total_symbols} symbols")
+        for i, symbol in enumerate(symbols):
+            try:
+                logger.info(f"Fetching news for symbol {symbol}")
+                articles = news_service.fetch_and_analyze_news(symbols=[symbol], limit=limit)
+                all_articles.extend(articles)
+                logger.info(f"Got {len(articles)} articles for {symbol}")
+            except Exception as symbol_error:
+                logger.error(f"Error fetching {symbol}: {str(symbol_error)}")
+                continue
                 
         return jsonify({
             'status': 'success',
             'articles': all_articles,
-            'symbols_processed': total_symbols
+            'symbols_processed': len(symbols)
         })
         
     except Exception as e:
         logger.error(f"Error in batch fetch: {str(e)}", exc_info=True)
         return jsonify({
-            'status': 'error', 
+            'status': 'error',
             'message': str(e)
         }), HTTPStatus.INTERNAL_SERVER_ERROR
+
+
 @bp.route('/api/sentiment')
 @login_required
 def get_sentiment():
