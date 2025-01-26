@@ -210,19 +210,17 @@ def batch_fetch():
 def update_ai_summaries():
     try:
         client = OpenAI(
-            api_key=os.getenv('DEEPSEEK_API_KEY'),
+            api_key=current_app.config['DEEPSEEK_API_KEY'],
             base_url="https://api.deepseek.com",
-            http_client=httpx.Client(timeout=120.0)
+            timeout=30.0  # Set timeout to 30 seconds
         )
-      
         
         articles = NewsArticle.query.filter(
             NewsArticle.ai_summary.is_(None),
             NewsArticle.content.isnot(None)
-        ).all()
+        ).limit(10).all()  # Process in smaller batches
         
         processed = 0
-        total = len(articles)
         
         for article in articles:
             try:
@@ -232,12 +230,12 @@ def update_ai_summaries():
                         {"role": "system", "content": "Generate a concise summary of this news article."},
                         {"role": "user", "content": article.content}
                     ],
-                    stream=False
+                    stream=False,
+                    max_tokens=250  # Limit response length
                 )
                 article.ai_summary = response.choices[0].message.content
                 db.session.commit()
                 processed += 1
-                logger.info(f"Processed {processed}/{total} articles")
                 
             except Exception as e:
                 logger.error(f"Error processing article {article.id}: {str(e)}")
@@ -253,10 +251,9 @@ def update_ai_summaries():
     except Exception as e:
         logger.error(f"Error updating AI summaries: {str(e)}")
         return jsonify({
-            'status': 'error',
+            'status': 'error', 
             'message': 'Failed to update AI summaries'
         }), HTTPStatus.INTERNAL_SERVER_ERROR
-        
         
 @bp.route('/api/sentiment')
 @login_required
