@@ -89,6 +89,15 @@ def search():
         symbol = request.args.get('symbol')
         symbol = None if symbol in ['None', '', None] else symbol
         
+        # Return no articles if no symbol is provided
+        if not symbol:
+            return render_template(
+                'news/search.html',
+                articles=[],
+                total=0,
+                search_params={'symbol': symbol}
+            )
+        
         page = max(1, int(request.args.get('page', 1)))
         per_page = min(50, int(request.args.get('per_page', 20)))
 
@@ -126,7 +135,6 @@ def search():
             total=0,
             search_params={'symbol': symbol}
         )
-
 
 @bp.route('/api/fetch', methods=['POST'])
 @login_required
