@@ -5,19 +5,48 @@ from typing import Dict, List
 from datetime import datetime
 import re
 import json
+from apify_client import ApifyClient
+import time
 
 class NewsAnalyzer:
-    def __init__(self, api_key: str):
-        self.client = OpenAI(
-            api_key="sk-32b3417ccbd047028fa01e5a433aa158",
-            base_url="https://api.deepseek.com/v1",
-            http_client=httpx.Client(timeout=30.0)
+    def __init__(self, deepseek_api_key: str, apify_token: str):
+        self.openai_client = OpenAI(
+            api_key=deepseek_api_key,
+            base_url="https://api.deepseek.com",
+            http_client=httpx.Client(timeout=60.0)
         )
+        self.apify_client = ApifyClient(apify_token)
         self.logger = logging.getLogger(__name__)
+
+    def get_news(self, symbols: List[str], limit: int = 10, retries: int = 3) -> List[Dict]:
+        self.logger.debug(f"Fetching news for symbols: {symbols}")
+
+        run_input = {
+            "symbols": symbols,
+            "proxy": {"useApifyProxy": True},
+            "resultsLimit": 3
+        }
+
+        for attempt in range(retries):
+            try:
+                run = self.apify_client.actor("mscraper/tradingview-news-scraper").call(run_input=run_input)
+                
+                if not run or not run.get("defaultDatasetId"):
+                    continue
+
+                items = list(self.apify_client.dataset(run["defaultDatasetId"]).iterate_items())
+                return items
+
+            except Exception as e:
+                self.logger.error(f"Error fetching news (attempt {attempt + 1}): {str(e)}")
+                if attempt < retries - 1:
+                    time.sleep(2 ** attempt)
+
+        return []
 
     def _get_completion(self, messages: List[Dict]) -> Dict:
         try:
-            response = self.client.chat.completions.create(
+            response = self.openai_client.chat.completions.create(
                 model="deepseek-chat",
                 messages=messages
             )
