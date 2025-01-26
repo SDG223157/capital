@@ -23,8 +23,9 @@ class NewsArticle(db.Model):
    key_points = db.Column(db.Text)
    market_impact_summary = db.Column(db.Text)
    ai_summary = db.Column(db.Text)
+   ai_insights = db.Column(db.Text)
    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
+   
    symbols = relationship('ArticleSymbol', back_populates='article', cascade='all, delete-orphan')
    metrics = relationship('ArticleMetric', back_populates='article', cascade='all, delete-orphan')
 
