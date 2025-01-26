@@ -210,7 +210,7 @@ def batch_fetch():
 def update_ai_summaries():
     try:
         client = OpenAI(
-            api_key=current_app.config['DEEPSEEK_API_KEY'],
+            api_key=os.getenv('DEEPSEEK_API_KEY'),
             base_url="https://api.deepseek.com",
             timeout=30.0  # Set timeout to 30 seconds
         )
