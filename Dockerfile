@@ -23,4 +23,4 @@ ENV PORT=3000
 EXPOSE 3000
 
 # Start Gunicorn
-CMD gunicorn --bind 0.0.0.0:3000 "app:create_app()"
+CMD gunicorn --bind 0.0.0.0:3000 --timeout 120 --workers 4 "app:create_app()"
