@@ -10,12 +10,13 @@ import traceback
 from app.utils.config.news_config import NewsConfig
 from app.utils.data.news_service import NewsService
 from .news_analyzer import NewsAnalyzer
+from .get_news import NewsFetcher
 
 class NewsAnalysisService:
     def __init__(self):
         """Initialize the news analysis service"""
         self.logger = logging.getLogger(__name__)
-        self.analyzer = NewsAnalyzer(os.getenv('DEEPSEEK_API_KEY'), os.getenv('APIFY_TOKEN'))
+        self.analyzer = NewsAnalyzer(os.getenv('DEEPSEEK_API_KEY'))
         self.db = NewsService()
     def get_articles_by_date_range(self, start_date, end_date, symbol=None, page=1, per_page=20):
         try:
@@ -82,7 +83,8 @@ class NewsAnalysisService:
                 return []
 
             # 1. Fetch raw news
-            raw_articles = self.analyzer.get_news(symbols, limit)
+            fetcher = NewsFetcher(os.getenv('APIFY_TOKEN'))
+            raw_articles = fetcher.get_news(symbols, limit)
             if not raw_articles:
                 return []
             

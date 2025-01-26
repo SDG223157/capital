@@ -1,3 +1,4 @@
+import time
 from openai import OpenAI
 import httpx
 import logging
@@ -5,7 +6,7 @@ import json
 from typing import Dict, List
 from datetime import datetime
 import re
-
+from .get_news import NewsFetcher
 class NewsAnalyzer:
     def __init__(self, api_key: str):
         self.client = OpenAI(
@@ -29,6 +30,8 @@ class NewsAnalyzer:
         except Exception as e:
             self.logger.error(f"API call error: {str(e)}")
             return {}
+        
+    
 
     def analyze_sentiment(self, text: str) -> Dict:
         messages = [
