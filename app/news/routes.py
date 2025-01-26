@@ -209,65 +209,64 @@ def batch_fetch():
 @bp.route('/api/update-summaries', methods=['POST'])
 @login_required
 def update_ai_summaries():
-    try:
-        client = OpenAI(
-            api_key=os.getenv('DEEPSEEK_API_KEY'),
-            base_url="https://api.deepseek.com",
-            timeout=30.0
-        )
-        
-        articles = NewsArticle.query.filter(
-            NewsArticle.ai_summary.is_(None),
-            NewsArticle.content.isnot(None)
-        ).limit(10).all()
-        
-        processed = 0
-        
-        for article in articles:
-            try:
-                # Generate summary
-                summary_response = client.chat.completions.create(
-                    model="deepseek-chat",
-                    messages=[
-                        {"role": "system", "content": "Generate a concise summary of this news article."},
-                        {"role": "user", "content": article.content}
-                    ],
-                    max_tokens=250
-                )
-                
-                # Generate insights
-                insights_response = client.chat.completions.create(
-                    model="deepseek-chat",
-                    messages=[
-                        {"role": "system", "content": "Extract key financial insights and implications from this article."},
-                        {"role": "user", "content": article.content}
-                    ],
-                    max_tokens=250
-                )
-                
-                article.ai_summary = summary_response.choices[0].message.content
-                article.ai_insights = insights_response.choices[0].message.content
-                db.session.commit()
-                processed += 1
-                
-            except Exception as e:
-                logger.error(f"Error processing article {article.id}: {str(e)}")
-                db.session.rollback()
-                continue
-                
-        return jsonify({
-            'status': 'success',
-            'message': f'Successfully processed {processed} articles',
-            'total_processed': processed
-        })
-        
-    except Exception as e:
-        logger.error(f"Error updating AI summaries: {str(e)}")
-        return jsonify({
-            'status': 'error',
-            'message': 'Failed to update AI summaries'
-        }), HTTPStatus.INTERNAL_SERVER_ERROR
+   try:
+       client = OpenAI(
+           api_key=os.getenv('DEEPSEEK_API_KEY'),
+           base_url="https://api.deepseek.com",
+           timeout=30.0
+       )
+       
+       articles = NewsArticle.query.filter(
+           db.or_(
+               NewsArticle.ai_summary.is_(None),
+               NewsArticle.ai_insights.is_(None)
+           ),
+           NewsArticle.content.isnot(None)
+       ).limit(10).all()
+       
+       processed = 0
+       
+       for article in articles:
+           try:
+               if article.ai_summary is None:
+                   summary_response = client.chat.completions.create(
+                       model="deepseek-chat",
+                       messages=[
+                           {"role": "system", "content": "Generate a concise summary of this news article."},
+                           {"role": "user", "content": article.content}
+                       ],
+                       max_tokens=250
+                   )
+                   article.ai_summary = summary_response.choices[0].message.content
 
+               if article.ai_insights is None:
+                   insights_response = client.chat.completions.create(
+                       model="deepseek-chat",
+                       messages=[
+                           {"role": "system", "content": "Extract key financial insights and implications from this article."},
+                           {"role": "user", "content": article.content}
+                       ],
+                       max_tokens=250
+                   )
+                   article.ai_insights = insights_response.choices[0].message.content
+
+               db.session.commit()
+               processed += 1
+               
+           except Exception as e:
+               logger.error(f"Error processing article {article.id}: {str(e)}")
+               db.session.rollback()
+               continue
+               
+       return jsonify({
+           'status': 'success',
+           'message': f'Successfully processed {processed} articles',
+           'total_processed': processed
+       })
+       
+   except Exception as e:
+       logger.error(f"Error updating AI summaries: {str(e)}")
+       return jsonify({'status': 'error', 'message': str(e)}), HTTPStatus.INTERNAL_SERVER_ERROR
 @bp.route('/api/sentiment')
 @login_required
 def get_sentiment():
