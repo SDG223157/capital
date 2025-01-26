@@ -48,7 +48,8 @@ class NewsService:
                 sentiment_explanation=article.get('sentiment', {}).get('explanation'),
                 brief_summary=article.get('summary', {}).get('brief'),
                 key_points=article.get('summary', {}).get('key_points'),
-                market_impact_summary=article.get('summary', {}).get('market_impact')
+                market_impact_summary=article.get('summary', {}).get('market_impact'),
+                ai_summary=None
             )
 
             # Add symbols
