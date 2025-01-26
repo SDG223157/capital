@@ -69,11 +69,11 @@ class NewsAnalyzer:
 
     def generate_summary(self, text: str) -> Dict:
         messages = [
-            {"role": "system", "content": 'Return only a JSON object like {"brief": "...", "key_points": "...", "market_impact": "..."}'},
+            {"role": "system", "content": 'Return only a JSON object like { "key_points": "..."}'},
             {"role": "user", "content": f"Summarize: {text}"}
         ]
         result = self._get_completion(messages)
-        return result or {"brief": "Summary unavailable", "key_points": ""}
+        return result or {"key_points": ""}
 
     def analyze_article(self, article: Dict) -> Dict:
         content = article.get("descriptionText", "")
