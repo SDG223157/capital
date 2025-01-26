@@ -39,6 +39,7 @@ class NewsService:
             new_article = NewsArticle(
                 external_id=external_id,
                 title=article.get('title'),
+                content=article.get('content'),
                 url=article.get('url'),
                 published_at=article.get('published_at'),
                 source=article.get('source'),

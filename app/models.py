@@ -21,6 +21,7 @@ class NewsArticle(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     external_id = db.Column(db.String(100), unique=True, nullable=False, index=True)
     title = db.Column(db.String(255), nullable=False)
+    content = db.Column(db.Text)
     url = db.Column(db.String(512))
     published_at = db.Column(db.DateTime)
     source = db.Column(db.String(100))
@@ -41,6 +42,7 @@ class NewsArticle(db.Model):
             'id': self.id,
             'external_id': self.external_id,
             'title': self.title,
+            'content': self.content,
             'url': self.url,
             'published_at': self.published_at.isoformat() if self.published_at else None,
             'source': self.source,

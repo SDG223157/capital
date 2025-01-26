@@ -1,6 +1,5 @@
 # app/utils/analysis/news_service.py
 
-import os
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
@@ -10,17 +9,16 @@ import traceback
 from app.utils.config.news_config import NewsConfig
 from app.utils.data.news_service import NewsService
 from .news_analyzer import NewsAnalyzer
-from .get_news import NewsFetcher
 
 class NewsAnalysisService:
     def __init__(self):
         """Initialize the news analysis service"""
         self.logger = logging.getLogger(__name__)
-        self.analyzer = NewsAnalyzer(os.getenv('DEEPSEEK_API_KEY'))
+        self.analyzer = NewsAnalyzer("apify_api_ewwcE7264pu0eRgeUBL2RaFk6rmCdy4AaAU9")
         self.db = NewsService()
-    def get_articles_by_date_range(self, start_date, end_date, symbol=None, page=1, per_page=20):
+    def get_news_by_date_range(self, start_date, end_date, symbol=None, page=1, per_page=20):
         try:
-            return self.db.search_articles(
+            return self.db.get_articles_by_date_range(
                 start_date=start_date,
                 end_date=end_date,
                 symbol=symbol,
@@ -83,8 +81,7 @@ class NewsAnalysisService:
                 return []
 
             # 1. Fetch raw news
-            fetcher = NewsFetcher(os.getenv('APIFY_TOKEN'))
-            raw_articles = fetcher.get_news(symbols, limit)
+            raw_articles = self.analyzer.get_news(symbols, limit)
             if not raw_articles:
                 return []
             
