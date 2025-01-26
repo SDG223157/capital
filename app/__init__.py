@@ -58,7 +58,7 @@ def create_app(config_class=Config):
 
             logger.info("Database initialized using Flask-Migrate")
             from app.models import NewsArticle, ArticleMetric, ArticleSymbol, User  # Import models after db is initialized
-            db.create_all()
+            # db.create_all()
 
             # Check if admin user exists, if not create one
             admin_user = User.query.filter_by(email='admin@cfa187260.com').first()

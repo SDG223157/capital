@@ -16,7 +16,7 @@ from flask_login import current_user
 from app.models import NewsArticle
 from openai import OpenAI
 from app import db
-import httpx
+# import httpx
 # from app.utils.config.news_config import DEFAULT_SYMBOLS
 import time
 logger = logging.getLogger(__name__)
@@ -217,64 +217,90 @@ def batch_fetch():
 @bp.route('/api/update-summaries', methods=['POST'])
 @login_required
 def update_ai_summaries():
-   try:
-       client = OpenAI(
-           api_key=os.getenv('DEEPSEEK_API_KEY'),
-           base_url="https://api.deepseek.com",
-           timeout=120.0
-       )
-       
-       articles = NewsArticle.query.filter(
-           db.or_(
-               NewsArticle.ai_summary.is_(None),
-               NewsArticle.ai_insights.is_(None)
-           ),
-           NewsArticle.content.isnot(None)
-       ).limit(10).all()
-       
-       processed = 0
-       
-       for article in articles:
-           try:
-               if article.ai_summary is None:
-                   summary_response = client.chat.completions.create(
-                       model="deepseek-chat",
-                       messages=[
-                           {"role": "system", "content": "Generate a concise summary of this news article."},
-                           {"role": "user", "content": article.content}
-                       ],
-                       max_tokens=250
-                   )
-                   article.ai_summary = summary_response.choices[0].message.content
+    try:
+        client = OpenAI(
+            api_key=os.getenv('DEEPSEEK_API_KEY'),
+            base_url="https://api.deepseek.com",
+            timeout=120.0
+        )
+        
+        articles = NewsArticle.query.filter(
+            db.or_(
+                NewsArticle.ai_summary.is_(None),
+                NewsArticle.ai_insights.is_(None),
+                NewsArticle.ai_sentiment_rating.is_(None)
+            ),
+            NewsArticle.content.isnot(None)
+        ).limit(10).all()
+        
+        processed = 0
+        results = []
+        
+        for article in articles:
+            try:
+                if not article.ai_summary:
+                    summary_response = client.chat.completions.create(
+                        model="deepseek-chat",
+                        messages=[
+                            {"role": "system", "content": "Generate a concise summary of this news article."},
+                            {"role": "user", "content": article.content}
+                        ],
+                        max_tokens=250
+                    )
+                    article.ai_summary = summary_response.choices[0].message.content
 
-               if article.ai_insights is None:
-                   insights_response = client.chat.completions.create(
-                       model="deepseek-chat",
-                       messages=[
-                           {"role": "system", "content": "Extract key financial insights and implications from this article."},
-                           {"role": "user", "content": article.content}
-                       ],
-                       max_tokens=250
-                   )
-                   article.ai_insights = insights_response.choices[0].message.content
+                if not article.ai_insights:
+                    insights_response = client.chat.completions.create(
+                        model="deepseek-chat",
+                        messages=[
+                            {"role": "system", "content": "Extract key financial insights and implications from this article."},
+                            {"role": "user", "content": article.content}
+                        ],
+                        max_tokens=250
+                    )
+                    article.ai_insights = insights_response.choices[0].message.content
 
-               db.session.commit()
-               processed += 1
-               
-           except Exception as e:
-               logger.error(f"Error processing article {article.id}: {str(e)}")
-               db.session.rollback()
-               continue
-               
-       return jsonify({
-           'status': 'success',
-           'message': f'Successfully processed {processed} articles',
-           'total_processed': processed
-       })
-       
-   except Exception as e:
-       logger.error(f"Error updating AI summaries: {str(e)}")
-       return jsonify({'status': 'error', 'message': str(e)}), HTTPStatus.INTERNAL_SERVER_ERROR
+                if article.ai_sentiment_rating is None:
+                    sentiment_response = client.chat.completions.create(
+                        model="deepseek-chat",
+                        messages=[
+                            {"role": "system", "content": "Analyze the sentiment of this article and provide a rating from -100 (extremely negative) to 100 (extremely positive). Return only the number."},
+                            {"role": "user", "content": article.content}
+                        ],
+                        max_tokens=10
+                    )
+                    try:
+                        rating = int(sentiment_response.choices[0].message.content.strip())
+                        # Ensure rating is within bounds
+                        article.ai_sentiment_rating = max(min(rating, 100), -100)
+                    except ValueError:
+                        logger.error(f"Could not parse sentiment rating for article {article.id}")
+                        article.ai_sentiment_rating = 0
+
+                db.session.commit()
+                processed += 1
+                results.append({
+                    'id': article.id, 
+                    'title': article.title,
+                    'ai_sentiment_rating': article.ai_sentiment_rating
+                })
+                
+            except Exception as e:
+                logger.error(f"Error processing article {article.id}: {str(e)}")
+                db.session.rollback()
+                continue
+                
+        return jsonify({
+            'status': 'success',
+            'processed': processed,
+            'articles': results
+        })
+        
+    except Exception as e:
+        logger.error(f"Error: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
 @bp.route('/api/sentiment')
 @login_required
 def get_sentiment():

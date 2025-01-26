@@ -24,6 +24,7 @@ class NewsArticle(db.Model):
    market_impact_summary = db.Column(db.Text)
    ai_summary = db.Column(db.Text)
    ai_insights = db.Column(db.Text)
+   ai_sentiment_rating = db.Column(db.Integer)
    created_at = db.Column(db.DateTime, default=datetime.utcnow)
    
    symbols = relationship('ArticleSymbol', back_populates='article', cascade='all, delete-orphan')
@@ -48,7 +49,8 @@ class NewsArticle(db.Model):
                'key_points': self.key_points,
                'market_impact': self.market_impact_summary,
                'ai_summary': self.ai_summary,
-               'ai_insights': self.ai_insights
+               'ai_insights': self.ai_insights,
+               'ai_sentiment_rating': self.ai_sentiment_rating
            },
            'symbols': [symbol.to_dict() for symbol in self.symbols],
            'metrics': [metric.to_dict() for metric in self.metrics]
