@@ -205,35 +205,48 @@ def batch_fetch():
         return jsonify({'error': str(e)}), 500
     
     
+
 @bp.route('/api/update-summaries', methods=['POST'])
 @login_required
 def update_ai_summaries():
     try:
         client = OpenAI(
-            api_key=os.getenv('DEEPSEEK_API_KEY'),
+            api_key=current_app.config['DEEPSEEK_API_KEY'],
             base_url="https://api.deepseek.com",
-            timeout=30.0  # Set timeout to 30 seconds
+            timeout=30.0
         )
         
         articles = NewsArticle.query.filter(
             NewsArticle.ai_summary.is_(None),
             NewsArticle.content.isnot(None)
-        ).limit(10).all()  # Process in smaller batches
+        ).limit(10).all()
         
         processed = 0
         
         for article in articles:
             try:
-                response = client.chat.completions.create(
+                # Generate summary
+                summary_response = client.chat.completions.create(
                     model="deepseek-chat",
                     messages=[
                         {"role": "system", "content": "Generate a concise summary of this news article."},
                         {"role": "user", "content": article.content}
                     ],
-                    stream=False,
-                    max_tokens=250  # Limit response length
+                    max_tokens=250
                 )
-                article.ai_summary = response.choices[0].message.content
+                
+                # Generate insights
+                insights_response = client.chat.completions.create(
+                    model="deepseek-chat",
+                    messages=[
+                        {"role": "system", "content": "Extract key financial insights and implications from this article."},
+                        {"role": "user", "content": article.content}
+                    ],
+                    max_tokens=250
+                )
+                
+                article.ai_summary = summary_response.choices[0].message.content
+                article.ai_insights = insights_response.choices[0].message.content
                 db.session.commit()
                 processed += 1
                 
@@ -251,10 +264,10 @@ def update_ai_summaries():
     except Exception as e:
         logger.error(f"Error updating AI summaries: {str(e)}")
         return jsonify({
-            'status': 'error', 
+            'status': 'error',
             'message': 'Failed to update AI summaries'
         }), HTTPStatus.INTERNAL_SERVER_ERROR
-        
+
 @bp.route('/api/sentiment')
 @login_required
 def get_sentiment():

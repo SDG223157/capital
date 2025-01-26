@@ -46,7 +46,8 @@ class NewsArticle(db.Model):
                'brief': self.brief_summary,
                'key_points': self.key_points,
                'market_impact': self.market_impact_summary,
-               'ai_summary': self.ai_summary
+               'ai_summary': self.ai_summary,
+               'ai_insights': self.ai_insights
            },
            'symbols': [symbol.to_dict() for symbol in self.symbols],
            'metrics': [metric.to_dict() for metric in self.metrics]
