@@ -37,7 +37,7 @@
                         Fetch Single Symbol
                     </button>
                     <button type="button" id="batchFetchButton" class="flex-1 bg-green-500 text-white p-2 rounded-md hover:bg-green-600">
-                        Fetch Top 30
+                        Fetch Top 50
                     </button>
                     <button type="button" id="updateAiSummaryButton" class="flex-1 bg-purple-500 text-white p-2 rounded-md hover:bg-purple-600">
                         Update AI Summaries
@@ -67,14 +67,58 @@
             const articlesContainer = document.getElementById('articlesContainer');
             const resultsCount = document.getElementById('resultsCount');
             
-            const DEFAULT_SYMBOLS = [
-                "NASDAQ:AAPL", "NASDAQ:MSFT", "NASDAQ:AMZN", "NASDAQ:GOOGL", "NASDAQ:META",
-                "NASDAQ:NVDA", "NASDAQ:TSLA", "NYSE:BRK.A", "NYSE:V", "NYSE:JPM",
-                "NYSE:JNJ", "NYSE:WMT", "NYSE:MA", "NYSE:PG", "NASDAQ:AVGO",
-                "NYSE:CVX", "NYSE:HD", "NYSE:MRK", "NYSE:KO", "NASDAQ:PEP",
-                "NYSE:BAC", "NYSE:DIS", "NASDAQ:COST", "NASDAQ:CSCO", "NYSE:VZ", 
-                "NYSE:ABT", "NASDAQ:ADBE", "NASDAQ:CMCSA", "NYSE:NKE", "NYSE:TMO"
-            ];
+            const DEFAULT_SYMBOLS = MEGA_CAP_SYMBOLS = [
+            "NASDAQ:AAPL",  # Apple
+            "NASDAQ:MSFT",  # Microsoft
+            "NASDAQ:GOOGL", # Alphabet Class A
+            "NASDAQ:AMZN",  # Amazon
+            "NASDAQ:NVDA",  # NVIDIA
+            "NASDAQ:META",  # Meta Platforms
+            "NYSE:BRK.A",   # Berkshire Hathaway
+            "NASDAQ:TSLA",  # Tesla
+            "NYSE:V",       # Visa
+            "NASDAQ:AVGO",  # Broadcom
+            "NYSE:UNH",     # UnitedHealth
+            "NYSE:JPM",     # JPMorgan Chase
+            "NYSE:JNJ",     # Johnson & Johnson
+            "NYSE:MA",      # Mastercard
+            "NYSE:XOM",     # Exxon Mobil
+            "NYSE:PG",      # Procter & Gamble
+            "NYSE:HD",      # Home Depot
+            "NYSE:CVX",     # Chevron
+            "NYSE:LLY",     # Eli Lilly
+            "NYSE:MRK",     # Merck
+            "NASDAQ:PEP",   # PepsiCo
+            "NYSE:KO",      # Coca-Cola
+            "NYSE:BAC",     # Bank of America
+            "NYSE:ABBV",    # AbbVie
+            "NASDAQ:COST",  # Costco
+            "NYSE:MCD",     # McDonald's
+            "NYSE:TMO",     # Thermo Fisher Scientific
+            "NYSE:DHR",     # Danaher
+            "NYSE:ABT",     # Abbott Laboratories
+            "NASDAQ:CSCO",  # Cisco Systems
+            "NYSE:ACN",     # Accenture
+            "NYSE:WMT",     # Walmart
+            "NASDAQ:ADBE",  # Adobe
+            "NYSE:CRM",     # Salesforce
+            "NYSE:DIS",     # Walt Disney
+            "NYSE:VZ",      # Verizon
+            "NASDAQ:CMCSA", # Comcast
+            "NYSE:NEE",     # NextEra Energy
+            "NYSE:BMY",     # Bristol Myers Squibb
+            "NYSE:RTX",     # Raytheon Technologies
+            "NYSE:UPS",     # United Parcel Service
+            "NYSE:PM",      # Philip Morris
+            "NASDAQ:NFLX",  # Netflix
+            "NYSE:MS",      # Morgan Stanley
+            "NYSE:ORCL",    # Oracle
+            "NYSE:BA",      # Boeing
+            "NYSE:CAT",     # Caterpillar
+            "NYSE:GS",      # Goldman Sachs
+            "NYSE:HON",     # Honeywell
+            "NYSE:IBM"      # IBM
+        ]
 
             const renderArticles = (articles) => {
                 if (articles && articles.length > 0) {
