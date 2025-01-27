@@ -68,57 +68,17 @@
             const resultsCount = document.getElementById('resultsCount');
             
             const DEFAULT_SYMBOLS = [
-            "NASDAQ:AAPL",  # Apple
-            "NASDAQ:MSFT",  # Microsoft
-            "NASDAQ:GOOGL", # Alphabet Class A
-            "NASDAQ:AMZN",  # Amazon
-            "NASDAQ:NVDA",  # NVIDIA
-            "NASDAQ:META",  # Meta Platforms
-            "NYSE:BRK.A",   # Berkshire Hathaway
-            "NASDAQ:TSLA",  # Tesla
-            "NYSE:V",       # Visa
-            "NASDAQ:AVGO",  # Broadcom
-            "NYSE:UNH",     # UnitedHealth
-            "NYSE:JPM",     # JPMorgan Chase
-            "NYSE:JNJ",     # Johnson & Johnson
-            "NYSE:MA",      # Mastercard
-            "NYSE:XOM",     # Exxon Mobil
-            "NYSE:PG",      # Procter & Gamble
-            "NYSE:HD",      # Home Depot
-            "NYSE:CVX",     # Chevron
-            "NYSE:LLY",     # Eli Lilly
-            "NYSE:MRK",     # Merck
-            "NASDAQ:PEP",   # PepsiCo
-            "NYSE:KO",      # Coca-Cola
-            "NYSE:BAC",     # Bank of America
-            "NYSE:ABBV",    # AbbVie
-            "NASDAQ:COST",  # Costco
-            "NYSE:MCD",     # McDonald's
-            "NYSE:TMO",     # Thermo Fisher Scientific
-            "NYSE:DHR",     # Danaher
-            "NYSE:ABT",     # Abbott Laboratories
-            "NASDAQ:CSCO",  # Cisco Systems
-            "NYSE:ACN",     # Accenture
-            "NYSE:WMT",     # Walmart
-            "NASDAQ:ADBE",  # Adobe
-            "NYSE:CRM",     # Salesforce
-            "NYSE:DIS",     # Walt Disney
-            "NYSE:VZ",      # Verizon
-            "NASDAQ:CMCSA", # Comcast
-            "NYSE:NEE",     # NextEra Energy
-            "NYSE:BMY",     # Bristol Myers Squibb
-            "NYSE:RTX",     # Raytheon Technologies
-            "NYSE:UPS",     # United Parcel Service
-            "NYSE:PM",      # Philip Morris
-            "NASDAQ:NFLX",  # Netflix
-            "NYSE:MS",      # Morgan Stanley
-            "NYSE:ORCL",    # Oracle
-            "NYSE:BA",      # Boeing
-            "NYSE:CAT",     # Caterpillar
-            "NYSE:GS",      # Goldman Sachs
-            "NYSE:HON",     # Honeywell
-            "NYSE:IBM"      # IBM
-        ];
+                "NASDAQ:AAPL", "NASDAQ:MSFT", "NASDAQ:GOOGL", "NASDAQ:AMZN", "NASDAQ:NVDA",
+                "NASDAQ:META", "NYSE:BRK.A", "NASDAQ:TSLA", "NYSE:V", "NASDAQ:AVGO",
+                "NYSE:UNH", "NYSE:JPM", "NYSE:JNJ", "NYSE:MA", "NYSE:XOM",
+                "NYSE:PG", "NYSE:HD", "NYSE:CVX", "NYSE:LLY", "NYSE:MRK",
+                "NASDAQ:PEP", "NYSE:KO", "NYSE:BAC", "NYSE:ABBV", "NASDAQ:COST",
+                "NYSE:MCD", "NYSE:TMO", "NYSE:DHR", "NYSE:ABT", "NASDAQ:CSCO",
+                "NYSE:ACN", "NYSE:WMT", "NASDAQ:ADBE", "NYSE:CRM", "NYSE:DIS",
+                "NYSE:VZ", "NASDAQ:CMCSA", "NYSE:NEE", "NYSE:BMY", "NYSE:RTX",
+                "NYSE:UPS", "NYSE:PM", "NASDAQ:NFLX", "NYSE:MS", "NYSE:ORCL",
+                "NYSE:BA", "NYSE:CAT", "NYSE:GS", "NYSE:HON", "NYSE:IBM"
+            ];
 
             const renderArticles = (articles) => {
                 if (articles && articles.length > 0) {
