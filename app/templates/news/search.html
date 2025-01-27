@@ -24,7 +24,7 @@
                
                <button type="submit" 
                        id="searchButton" 
-                       class="w-full bg-blue-500 text-white p-4 rounded-xl text-lg font-medium">
+                       class="w-full bg-blue-500 text-white p-4 rounded-xl text-lg font-medium hover:bg-blue-600 transition-colors">
                    Search News
                </button>
            </form>
@@ -39,7 +39,7 @@
                {% if articles %}
                    {% for article in articles %}
                    <div class="border-b border-gray-100 pb-6 last:border-b-0">
-                       <a href="{{ article.url }}" target="_blank" class="block text-blue-500 text-lg font-medium mb-2">
+                       <a href="{{ article.url }}" target="_blank" class="block text-blue-500 text-lg font-medium mb-2 hover:text-blue-600">
                            {{ article.title }}
                        </a>
                        <div class="text-gray-500 mb-2">Published on: {{ article.published_at }}</div>
@@ -70,16 +70,6 @@
                            </span>
                        </div>
                        {% endif %}
-
-                       <!-- Original Sentiment -->
-                       {% if article.sentiment.label %}
-                       <span class="inline-block px-3 py-1 rounded-full text-sm
-                           {% if article.sentiment.label == 'POSITIVE' %}bg-green-100 text-green-800
-                           {% elif article.sentiment.label == 'NEGATIVE' %}bg-red-100 text-red-800
-                           {% else %}bg-gray-100 text-gray-800{% endif %}">
-                           {{ article.sentiment.label }} ({{ "%.2f"|format(article.sentiment.score * 100) }}%)
-                       </span>
-                       {% endif %}
                    </div>
                    {% endfor %}
                {% endif %}
@@ -95,7 +85,6 @@
            const articlesContainer = document.getElementById('articlesContainer');
            const resultsCount = document.getElementById('resultsCount');
 
-           // Function to convert Markdown to HTML
            const renderMarkdown = (markdown) => {
                return marked.parse(markdown || '');
            };
@@ -128,7 +117,7 @@
                        articlesContainer.innerHTML = data.articles
                            .map(article => `
                                <div class="border-b border-gray-100 pb-6 last:border-b-0">
-                                   <a href="${article.url}" target="_blank" class="block text-blue-500 text-lg font-medium mb-2">
+                                   <a href="${article.url}" target="_blank" class="block text-blue-500 text-lg font-medium mb-2 hover:text-blue-600">
                                        ${article.title}
                                    </a>
                                    <div class="text-gray-500 mb-2">Published on: ${article.published_at}</div>
@@ -160,14 +149,6 @@
                                            </span>
                                        </div>` : ''
                                    }
-
-                                   <!-- Original Sentiment -->
-                                   <span class="inline-block px-3 py-1 rounded-full text-sm
-                                       ${article.sentiment.label === 'POSITIVE' ? 'bg-green-100 text-green-800' :
-                                         article.sentiment.label === 'NEGATIVE' ? 'bg-red-100 text-red-800' :
-                                         'bg-gray-100 text-gray-800'}">
-                                       ${article.sentiment.label} (${(article.sentiment.score * 100).toFixed(2)}%)
-                                   </span>
                                </div>
                            `).join('');
                    } else {
