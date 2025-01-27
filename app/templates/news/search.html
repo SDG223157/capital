@@ -54,15 +54,21 @@
 
                        <!-- AI Sentiment Rating -->
                        {% if article.summary.ai_sentiment_rating is not none %}
-                       <p class="text-sm mt-2">
-                           AI Sentiment Rating: 
-                           <span class="
-                               {% if article.summary.ai_sentiment_rating > 0 %}text-green-600
-                               {% elif article.summary.ai_sentiment_rating < 0 %}text-red-600
-                               {% else %}text-gray-600{% endif %}">
-                               {{ article.summary.ai_sentiment_rating }}
+                       <div class="mt-2 flex items-center space-x-2">
+                           <span class="inline-flex items-center px-2.5 py-1.5 rounded-full text-sm font-medium
+                               {% if article.summary.ai_sentiment_rating > 50 %}bg-green-200 text-green-900 border border-green-300
+                               {% elif article.summary.ai_sentiment_rating > 10 %}bg-green-100 text-green-800 border border-green-200
+                               {% elif article.summary.ai_sentiment_rating >= -10 %}bg-gray-100 text-gray-800 border border-gray-200
+                               {% elif article.summary.ai_sentiment_rating >= -50 %}bg-red-100 text-red-800 border border-red-200
+                               {% else %}bg-red-200 text-red-900 border border-red-300{% endif %}">
+                               {% if article.summary.ai_sentiment_rating > 50 %}Strong Positive
+                               {% elif article.summary.ai_sentiment_rating > 10 %}Positive
+                               {% elif article.summary.ai_sentiment_rating >= -10 %}Neutral
+                               {% elif article.summary.ai_sentiment_rating >= -50 %}Negative
+                               {% else %}Strong Negative{% endif %}
+                               ({{ article.summary.ai_sentiment_rating }})
                            </span>
-                       </p>
+                       </div>
                        {% endif %}
 
                        <!-- Original Sentiment -->
@@ -137,16 +143,22 @@
 
                                    <!-- AI Sentiment Rating -->
                                    ${article.summary.ai_sentiment_rating != null ? 
-                                       `<p class="text-sm mt-2">
-                                           AI Sentiment Rating: 
-                                           <span class="${
-                                               article.summary.ai_sentiment_rating > 0 ? 'text-green-600' :
-                                               article.summary.ai_sentiment_rating < 0 ? 'text-red-600' : 
-                                               'text-gray-600'
+                                       `<div class="mt-2 flex items-center space-x-2">
+                                           <span class="inline-flex items-center px-2.5 py-1.5 rounded-full text-sm font-medium ${
+                                               article.summary.ai_sentiment_rating > 50 ? 'bg-green-200 text-green-900 border border-green-300' :
+                                               article.summary.ai_sentiment_rating > 10 ? 'bg-green-100 text-green-800 border border-green-200' :
+                                               article.summary.ai_sentiment_rating >= -10 ? 'bg-gray-100 text-gray-800 border border-gray-200' :
+                                               article.summary.ai_sentiment_rating >= -50 ? 'bg-red-100 text-red-800 border border-red-200' :
+                                               'bg-red-200 text-red-900 border border-red-300'
                                            }">
-                                               ${article.summary.ai_sentiment_rating}
+                                               ${article.summary.ai_sentiment_rating > 50 ? 'Strong Positive' :
+                                                 article.summary.ai_sentiment_rating > 10 ? 'Positive' :
+                                                 article.summary.ai_sentiment_rating >= -10 ? 'Neutral' :
+                                                 article.summary.ai_sentiment_rating >= -50 ? 'Negative' :
+                                                 'Strong Negative'}
+                                               (${article.summary.ai_sentiment_rating})
                                            </span>
-                                       </p>` : ''
+                                       </div>` : ''
                                    }
 
                                    <!-- Original Sentiment -->
