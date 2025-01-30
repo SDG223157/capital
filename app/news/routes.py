@@ -253,7 +253,7 @@ def update_ai_summaries():
             try:
                 if not article.ai_summary:
                     summary_response = client.messages.create(
-                        model="claude-3-sonnet-20240229",
+                        model="claude-3-5-sonnet-20241022",
                         max_tokens=500,
                         messages=[{
                             "role": "user",
@@ -264,7 +264,7 @@ def update_ai_summaries():
 
                 if not article.ai_insights:
                     insights_response = client.messages.create(
-                        model="claude-3-sonnet-20240229",
+                        model="claude-3-5-sonnet-20241022",
                         max_tokens=500,
                         messages=[{
                             "role": "user",
@@ -275,7 +275,7 @@ def update_ai_summaries():
 
                 if article.ai_sentiment_rating is None:
                     sentiment_response = client.messages.create(
-                        model="claude-3-sonnet-20240229",
+                        model="claude-3-5-sonnet-20241022",
                         max_tokens=10,
                         messages=[{
                             "role": "user",
