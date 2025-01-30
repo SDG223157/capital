@@ -230,7 +230,7 @@ def initialize_articles() -> None:
 @login_required
 def update_ai_summaries():
     try:
-        initialize_articles()
+        # initialize_articles()
         from anthropic import Anthropic
 
         client = Anthropic(
@@ -244,7 +244,7 @@ def update_ai_summaries():
                 NewsArticle.ai_sentiment_rating.is_(None)
             ),
             NewsArticle.content.isnot(None)
-        ).order_by(NewsArticle.created_at.desc()).limit(10).all()
+        ).order_by(NewsArticle.id.desc()).limit(10).all()
         
         processed = 0
         results = []

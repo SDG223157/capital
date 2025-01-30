@@ -25,3 +25,4 @@ textblob==0.17.1
 nltk==3.8.1
 redis>=4.5.0
 openai
+anthropic
