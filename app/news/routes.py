@@ -212,16 +212,29 @@ def batch_fetch():
         logger.error(f"Batch fetch error: {str(e)}")
         return jsonify({'error': str(e)}), 500
     
-    
-
+def initialize_articles() -> None:
+    """Initialize all articles by setting AI fields to None"""
+    try:
+        articles_updated = NewsArticle.query.update({
+            NewsArticle.ai_summary: None,
+            NewsArticle.ai_insights: None,
+            NewsArticle.ai_sentiment_rating: None
+        })
+        db.session.commit()
+        logger.info(f"Initialized {articles_updated} articles with None values")
+    except Exception as e:
+        logger.error(f"Error initializing articles: {str(e)}")
+        db.session.rollback()
+        raise   
 @bp.route('/api/update-summaries', methods=['POST'])
 @login_required
 def update_ai_summaries():
     try:
-        client = OpenAI(
-            api_key=os.getenv('DEEPSEEK_API_KEY'),
-            base_url="https://api.deepseek.com",
-            timeout=120.0
+        initialize_articles()
+        from anthropic import Anthropic
+
+        client = Anthropic(
+            api_key=os.getenv('ANTHROPIC_API_KEY')
         )
         
         articles = NewsArticle.query.filter(
@@ -239,38 +252,38 @@ def update_ai_summaries():
         for article in articles:
             try:
                 if not article.ai_summary:
-                    summary_response = client.chat.completions.create(
-                        model="deepseek-chat",
-                        messages=[
-                            {"role": "system", "content": "Generate a concise summary of this news article."},
-                            {"role": "user", "content": article.content}
-                        ],
-                        max_tokens=250
+                    summary_response = client.messages.create(
+                        model="claude-3-sonnet-20240229",
+                        max_tokens=500,
+                        messages=[{
+                            "role": "user",
+                            "content": f"Generate a concise one-paragraph summary of this news article, just return the summary, nothing else, use markdown format: {article.content}"
+                        }]
                     )
-                    article.ai_summary = summary_response.choices[0].message.content
+                    article.ai_summary = summary_response.content[0].text
 
                 if not article.ai_insights:
-                    insights_response = client.chat.completions.create(
-                        model="deepseek-chat",
-                        messages=[
-                            {"role": "system", "content": "Extract key financial insights and implications from this article."},
-                            {"role": "user", "content": article.content}
-                        ],
-                        max_tokens=250
+                    insights_response = client.messages.create(
+                        model="claude-3-sonnet-20240229",
+                        max_tokens=500,
+                        messages=[{
+                            "role": "user",
+                            "content": f"Extract 2-3 key financial insights and market implications from this article. Focus on actionable information for investors, just return the insights, nothing else,use markdown format: {article.content}"
+                        }]
                     )
-                    article.ai_insights = insights_response.choices[0].message.content
+                    article.ai_insights = insights_response.content[0].text
 
                 if article.ai_sentiment_rating is None:
-                    sentiment_response = client.chat.completions.create(
-                        model="deepseek-chat",
-                        messages=[
-                            {"role": "system", "content": "Analyze the sentiment of this article and provide a rating from -100 (extremely negative) to 100 (extremely positive). Return only the number."},
-                            {"role": "user", "content": article.content}
-                        ],
-                        max_tokens=10
+                    sentiment_response = client.messages.create(
+                        model="claude-3-sonnet-20240229",
+                        max_tokens=10,
+                        messages=[{
+                            "role": "user",
+                            "content": f"Analyze the market sentiment of this article and provide a single number rating from -100 (extremely bearish) to 100 (extremely bullish). Only return the number: {article.content}"
+                        }]
                     )
                     try:
-                        rating = int(sentiment_response.choices[0].message.content.strip())
+                        rating = int(sentiment_response.content[0].text.strip())
                         # Ensure rating is within bounds
                         article.ai_sentiment_rating = max(min(rating, 100), -100)
                     except ValueError:
@@ -299,6 +312,92 @@ def update_ai_summaries():
     except Exception as e:
         logger.error(f"Error: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+# @bp.route('/api/update-summaries', methods=['POST'])
+# @login_required
+# def update_ai_summaries():
+#     try:
+#         client = OpenAI(
+#             api_key=os.getenv('DEEPSEEK_API_KEY'),
+#             base_url="https://api.deepseek.com",
+#             timeout=120.0
+#         )
+        
+#         articles = NewsArticle.query.filter(
+#             db.or_(
+#                 NewsArticle.ai_summary.is_(None),
+#                 NewsArticle.ai_insights.is_(None),
+#                 NewsArticle.ai_sentiment_rating.is_(None)
+#             ),
+#             NewsArticle.content.isnot(None)
+#         ).limit(10).all()
+        
+#         processed = 0
+#         results = []
+        
+#         for article in articles:
+#             try:
+#                 if not article.ai_summary:
+#                     summary_response = client.chat.completions.create(
+#                         model="deepseek-chat",
+#                         messages=[
+#                             {"role": "system", "content": "Generate a concise summary of this news article."},
+#                             {"role": "user", "content": article.content}
+#                         ],
+#                         max_tokens=250
+#                     )
+#                     article.ai_summary = summary_response.choices[0].message.content
+
+#                 if not article.ai_insights:
+#                     insights_response = client.chat.completions.create(
+#                         model="deepseek-chat",
+#                         messages=[
+#                             {"role": "system", "content": "Extract key financial insights and implications from this article."},
+#                             {"role": "user", "content": article.content}
+#                         ],
+#                         max_tokens=250
+#                     )
+#                     article.ai_insights = insights_response.choices[0].message.content
+
+#                 if article.ai_sentiment_rating is None:
+#                     sentiment_response = client.chat.completions.create(
+#                         model="deepseek-chat",
+#                         messages=[
+#                             {"role": "system", "content": "Analyze the sentiment of this article and provide a rating from -100 (extremely negative) to 100 (extremely positive). Return only the number."},
+#                             {"role": "user", "content": article.content}
+#                         ],
+#                         max_tokens=10
+#                     )
+#                     try:
+#                         rating = int(sentiment_response.choices[0].message.content.strip())
+#                         # Ensure rating is within bounds
+#                         article.ai_sentiment_rating = max(min(rating, 100), -100)
+#                     except ValueError:
+#                         logger.error(f"Could not parse sentiment rating for article {article.id}")
+#                         article.ai_sentiment_rating = 0
+
+#                 db.session.commit()
+#                 processed += 1
+#                 results.append({
+#                     'id': article.id, 
+#                     'title': article.title,
+#                     'ai_sentiment_rating': article.ai_sentiment_rating
+#                 })
+                
+#             except Exception as e:
+#                 logger.error(f"Error processing article {article.id}: {str(e)}")
+#                 db.session.rollback()
+#                 continue
+                
+#         return jsonify({
+#             'status': 'success',
+#             'processed': processed,
+#             'articles': results
+#         })
+        
+#     except Exception as e:
+#         logger.error(f"Error: {str(e)}")
+#         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 @bp.route('/api/sentiment')
