@@ -244,7 +244,7 @@ def update_ai_summaries():
                 NewsArticle.ai_sentiment_rating.is_(None)
             ),
             NewsArticle.content.isnot(None)
-        ).limit(10).all()
+        ).order_by(NewsArticle.created_at.desc()).limit(10).all()
         
         processed = 0
         results = []
@@ -257,7 +257,7 @@ def update_ai_summaries():
                         max_tokens=500,
                         messages=[{
                             "role": "user",
-                            "content": f"Generate a concise one-paragraph summary of this news article, just return the summary, nothing else, use markdown format: {article.content}"
+                            "content": f"Generate a concise summary of this news article, just return the summary, nothing else, use markdown format: {article.content}"
                         }]
                     )
                     article.ai_summary = summary_response.content[0].text
