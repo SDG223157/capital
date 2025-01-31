@@ -237,7 +237,29 @@ def initialize_articles() -> None:
     except Exception as e:
         logger.error(f"Error initializing articles: {str(e)}")
         db.session.rollback()
-        raise   
+        raise      
+@bp.route('/api/get-articles-to-update', methods=['GET'])
+@login_required
+def get_articles_to_update():
+    try:
+        # Fetch the articles that need to be updated
+        articles = NewsArticle.query.filter(
+            db.or_(
+                NewsArticle.ai_summary.is_(None),
+                NewsArticle.ai_insights.is_(None),
+                NewsArticle.ai_sentiment_rating.is_(None)
+            ),
+            NewsArticle.content.isnot(None)
+        ).all()
+
+        # Return the count of articles to be updated
+        return jsonify({
+            'status': 'success',
+            'count': len(articles)
+        })
+    except Exception as e:
+        logger.error(f"Error getting articles to update: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 @bp.route('/api/update-summaries', methods=['POST'])
 @login_required
 def update_ai_summaries():

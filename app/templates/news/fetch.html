@@ -49,6 +49,7 @@
         <div id="loadingIndicator" class="hidden text-center py-4">
             <div class="spinner"></div>
             <p class="text-gray-600">Fetching news...</p>
+            <p id="articlesToUpdate" class="text-gray-600"></p> <!-- New element to show the number of articles to be updated -->
         </div>
 
         <div id="searchResults" class="bg-white p-6 rounded-lg shadow-md">
@@ -66,6 +67,7 @@
             const symbolInput = document.getElementById('symbol');
             const articlesContainer = document.getElementById('articlesContainer');
             const resultsCount = document.getElementById('resultsCount');
+            const articlesToUpdate = document.getElementById('articlesToUpdate'); // New element reference
             
             const DEFAULT_SYMBOLS = [ 
                 "NASDAQ:AAPL", "NASDAQ:MSFT", "NASDAQ:GOOGL","NASDAQ:AMZN", "NASDAQ:NVDA",
@@ -98,7 +100,6 @@
                 "SSE:601336", "SSE:601360", "SSE:601377", "SSE:601390", "SSE:601398",
                 "SSE:601555", "SSE:601658", "SSE:601668", "SSE:601688", "SSE:601766",
                 "SSE:601800", "SSE:601818", "SSE:601857", "SSE:601881", "SSE:601888"
-               
             ];
 
             const renderArticles = (articles) => {
@@ -256,12 +257,24 @@
                     updateAiSummaryButton.disabled = true;
                     loadingIndicator.classList.remove('hidden');
                     loadingIndicator.querySelector('p').textContent = 'Updating AI summaries...';
-                    
-                    const response = await fetch('/news/api/update-summaries', {
-                        method: 'POST'
+
+                    // Fetch the number of articles to be updated
+                    const response = await fetch('/news/api/get-articles-to-update', {
+                        method: 'GET'
                     });
 
                     if (!response.ok) throw new Error(`Error: ${response.status}`);
+                    const data = await response.json();
+
+                    // Display the number of articles to be updated
+                    articlesToUpdate.textContent = `${data.count} articles to be updated`;
+
+                    // Proceed with updating the summaries
+                    const updateResponse = await fetch('/news/api/update-summaries', {
+                        method: 'POST'
+                    });
+
+                    if (!updateResponse.ok) throw new Error(`Error: ${updateResponse.status}`);
                     alert('AI summaries update completed');
 
                 } catch (error) {
