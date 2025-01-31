@@ -242,7 +242,7 @@ def initialize_articles() -> None:
 @login_required
 def update_ai_summaries():
     try:
-        # initialize_articles()
+        initialize_articles()
         import requests
 
         OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
@@ -273,7 +273,7 @@ def update_ai_summaries():
                         "messages": [
                             {
                                 "role": "user",
-                                "content": f"Generate a concise summary of this news article, just return the summary, nothing else, use markdown format: {article.content}"
+                                "content": f"Generate a concise summary of this news article with a maximum of 100 words, use markdown format, just return the text of the summary, nothing else: {article.content}"
                             }
                         ],
                         "max_tokens": 500
@@ -288,7 +288,7 @@ def update_ai_summaries():
                         "messages": [
                             {
                                 "role": "user",
-                                "content": f"Extract 2-3 key financial insights and market implications from this article. Focus on actionable information for investors, just return the insights, nothing else, use markdown format: {article.content}"
+                                "content": f"Extract key financial insights and market implications from this article with a maximum of 100 words. Focus on actionable information for investors, use markdown format, just return the text of the insights and market implications, nothing else: {article.content}"
                             }
                         ],
                         "max_tokens": 500
