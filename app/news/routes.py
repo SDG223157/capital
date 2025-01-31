@@ -283,7 +283,7 @@ def update_ai_summaries():
                 NewsArticle.ai_sentiment_rating.is_(None)
             ),
             NewsArticle.content.isnot(None)
-        ).order_by(NewsArticle.id.desc()).limit(20).all()
+        ).order_by(NewsArticle.id.desc()).limit(10).all()
 
         processed = 0
         results = []
