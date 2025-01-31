@@ -242,7 +242,7 @@ def initialize_articles() -> None:
 @login_required
 def update_ai_summaries():
     try:
-        initialize_articles()
+        # initialize_articles()
         import requests
 
         OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
