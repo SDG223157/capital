@@ -67,7 +67,18 @@
             const articlesContainer = document.getElementById('articlesContainer');
             const resultsCount = document.getElementById('resultsCount');
             
-            const DEFAULT_SYMBOLS = ["HKEX:700", "HKEX:9988", "HKEX:1299", "HKEX:941", "HKEX:388",
+            const DEFAULT_SYMBOLS = [ 
+                "NASDAQ:AAPL", "NASDAQ:MSFT", "NASDAQ:GOOGL","NASDAQ:AMZN", "NASDAQ:NVDA",
+                "NASDAQ:META", "NYSE:BRK.A", "NASDAQ:TSLA", "NYSE:V", "NASDAQ:AVGO",
+                "NYSE:UNH", "NYSE:JPM", "NYSE:JNJ", "NYSE:MA", "NYSE:XOM",
+                "NYSE:PG", "NYSE:HD", "NYSE:CVX", "NYSE:LLY", "NYSE:MRK",
+                "NASDAQ:PEP", "NYSE:KO", "NYSE:BAC", "NYSE:ABBV", "NASDAQ:COST",
+                "NYSE:MCD", "NYSE:TMO", "NYSE:DHR", "NYSE:ABT", "NASDAQ:CSCO",
+                "NYSE:ACN", "NYSE:WMT", "NASDAQ:ADBE", "NYSE:CRM", "NYSE:DIS",
+                "NYSE:VZ", "NASDAQ:CMCSA", "NYSE:NEE", "NYSE:BMY", "NYSE:RTX",
+                "NYSE:UPS", "NYSE:PM", "NASDAQ:NFLX", "NYSE:MS", "NYSE:ORCL",
+                "NYSE:BA", "NYSE:CAT", "NYSE:GS", "NYSE:HON", "NYSE:IBM",
+                "HKEX:700", "HKEX:9988", "HKEX:1299", "HKEX:941", "HKEX:388",
                 "HKEX:5", "HKEX:3690", "HKEX:2318", "HKEX:2628", "HKEX:1211",
                 "HKEX:1810", "HKEX:2382", "HKEX:1024", "HKEX:9618", "HKEX:2269",
                 "HKEX:2018", "HKEX:2020", "HKEX:1177", "HKEX:1928", "HKEX:883",
@@ -86,17 +97,8 @@
                 "SSE:601211", "SSE:601229", "SSE:601236", "SSE:601318", "SSE:601319",
                 "SSE:601336", "SSE:601360", "SSE:601377", "SSE:601390", "SSE:601398",
                 "SSE:601555", "SSE:601658", "SSE:601668", "SSE:601688", "SSE:601766",
-                "SSE:601800", "SSE:601818", "SSE:601857", "SSE:601881", "SSE:601888",
-                "NASDAQ:AAPL", "NASDAQ:MSFT", "NASDAQ:GOOGL", "NASDAQ:AMZN", "NASDAQ:NVDA",
-                "NASDAQ:META", "NYSE:BRK.A", "NASDAQ:TSLA", "NYSE:V", "NASDAQ:AVGO",
-                "NYSE:UNH", "NYSE:JPM", "NYSE:JNJ", "NYSE:MA", "NYSE:XOM",
-                "NYSE:PG", "NYSE:HD", "NYSE:CVX", "NYSE:LLY", "NYSE:MRK",
-                "NASDAQ:PEP", "NYSE:KO", "NYSE:BAC", "NYSE:ABBV", "NASDAQ:COST",
-                "NYSE:MCD", "NYSE:TMO", "NYSE:DHR", "NYSE:ABT", "NASDAQ:CSCO",
-                "NYSE:ACN", "NYSE:WMT", "NASDAQ:ADBE", "NYSE:CRM", "NYSE:DIS",
-                "NYSE:VZ", "NASDAQ:CMCSA", "NYSE:NEE", "NYSE:BMY", "NYSE:RTX",
-                "NYSE:UPS", "NYSE:PM", "NASDAQ:NFLX", "NYSE:MS", "NYSE:ORCL",
-                "NYSE:BA", "NYSE:CAT", "NYSE:GS", "NYSE:HON", "NYSE:IBM"
+                "SSE:601800", "SSE:601818", "SSE:601857", "SSE:601881", "SSE:601888"
+               
             ];
 
             const renderArticles = (articles) => {

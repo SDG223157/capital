@@ -273,7 +273,7 @@ def update_ai_summaries():
                         "messages": [
                             {
                                 "role": "user",
-                                "content": f"Generate a concise summary of this news article with a maximum of 100 words, use markdown format, just return the text of the summary, nothing else: {article.content}"
+                                "content": f"Generate a concise summary of this news article with a maximum of 100 words, use markdown format, just return the text of the summary, nothing else like 'Here is a 100-word summary of the news article:' : {article.content}"
                             }
                         ],
                         "max_tokens": 500
@@ -288,7 +288,7 @@ def update_ai_summaries():
                         "messages": [
                             {
                                 "role": "user",
-                                "content": f"Extract key financial insights and market implications from this article with a maximum of 100 words. Focus on actionable information for investors, use markdown format, just return the text of the insights and market implications, nothing else: {article.content}"
+                                "content": f"Extract key financial insights and market implications from this article with a maximum of 100 words. Focus on actionable information for investors, use markdown format, just return the text of the insights and market implications, nothing else like 'Here are the key financial insights and market implications from the article:' : {article.content}"
                             }
                         ],
                         "max_tokens": 500
