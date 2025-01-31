@@ -242,7 +242,8 @@ def initialize_articles() -> None:
 @login_required
 def update_ai_summaries():
     try:
-        # initialize_articles()
+        initialize_articles()
+        exit()
         import requests
 
         OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
@@ -269,11 +270,11 @@ def update_ai_summaries():
             try:
                 if not article.ai_summary:
                     summary_payload = {
-                        "model": "anthropic/claude-3-sonnet",  # You can choose a different model if needed
+                        "model": "anthropic/claude-3.5-sonnet:beta", # You can choose a different model if needed
                         "messages": [
                             {
                                 "role": "user",
-                                "content": f"Generate a concise summary of this news article with a maximum of 100 words, use markdown format, just return the text of the summary, nothing else like 'Here is a 100-word summary of the news article:' : {article.content}"
+                                "content": f"Generate a concise summary of this news article with a maximum of 200 words, use markdown format, just return the text of the summary, nothing else like 'Here is a 100-word summary of the news article:' : {article.content}"
                             }
                         ],
                         "max_tokens": 500
@@ -284,11 +285,11 @@ def update_ai_summaries():
 
                 if not article.ai_insights:
                     insights_payload = {
-                        "model": "anthropic/claude-3-sonnet",  # You can choose a different model if needed
+                        "model": "anthropic/claude-3.5-sonnet:beta",  # You can choose a different model if needed
                         "messages": [
                             {
                                 "role": "user",
-                                "content": f"Extract key financial insights and market implications from this article with a maximum of 100 words. Focus on actionable information for investors, use markdown format, just return the text of the insights and market implications, nothing else like 'Here are the key financial insights and market implications from the article:' : {article.content}"
+                                "content": f"Extract key financial insights and market implications from this article with a maximum of 200 words. Focus on actionable information for investors, use markdown format, just return the text of the insights and market implications, nothing else like 'Here are the key financial insights and market implications from the article:' : {article.content}"
                             }
                         ],
                         "max_tokens": 500
@@ -299,7 +300,7 @@ def update_ai_summaries():
 
                 if article.ai_sentiment_rating is None:
                     sentiment_payload = {
-                        "model": "anthropic/claude-3-sonnet",  # You can choose a different model if needed
+                        "model": "anthropic/claude-3.5-sonnet:beta",  # You can choose a different model if needed
                         "messages": [
                             {
                                 "role": "user",
