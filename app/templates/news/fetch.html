@@ -37,7 +37,7 @@
                         Fetch Single Symbol
                     </button>
                     <button type="button" id="batchFetchButton" class="flex-1 bg-green-500 text-white p-2 rounded-md hover:bg-green-600">
-                        Fetch Top 50
+                        Fetch Top 150
                     </button>
                     <button type="button" id="updateAiSummaryButton" class="flex-1 bg-purple-500 text-white p-2 rounded-md hover:bg-purple-600">
                         Update AI Summaries
@@ -67,7 +67,26 @@
             const articlesContainer = document.getElementById('articlesContainer');
             const resultsCount = document.getElementById('resultsCount');
             
-            const DEFAULT_SYMBOLS = [
+            const DEFAULT_SYMBOLS = ["HKEX:0700", "HKEX:9988", "HKEX:1299", "HKEX:0941", "HKEX:0388",
+                "HKEX:0005", "HKEX:3690", "HKEX:2318", "HKEX:2628", "HKEX:1211",
+                "HKEX:1810", "HKEX:2382", "HKEX:1024", "HKEX:9618", "HKEX:2269",
+                "HKEX:2018", "HKEX:2020", "HKEX:1177", "HKEX:1928", "HKEX:0883",
+                "HKEX:1088", "HKEX:0857", "HKEX:0386", "HKEX:0001", "HKEX:0016",
+                "HKEX:0011", "HKEX:0002", "HKEX:0003", "HKEX:0006", "HKEX:0012",
+                "HKEX:0017", "HKEX:0019", "HKEX:0066", "HKEX:0083", "HKEX:0101",
+                "HKEX:0135", "HKEX:0151", "HKEX:0175", "HKEX:0267", "HKEX:0288",
+                "HKEX:0291", "HKEX:0293", "HKEX:0330", "HKEX:0392", "HKEX:0688",
+                "HKEX:0762", "HKEX:0823", "HKEX:0960", "HKEX:1038", "HKEX:1109",
+                "SSE:601318", "SSE:600519", "SZSE:300750", "SSE:601012", "SSE:600036",
+                "SSE:601166", "SSE:600104", "SSE:601328", "SSE:601288", "SSE:601398",
+                "SSE:601628", "SSE:601888", "SSE:600276", "SSE:600030", "SSE:601601",
+                "SSE:600900", "SSE:601668", "SSE:601390", "SSE:601818", "SSE:601988",
+                "SSE:600016", "SSE:600028", "SSE:600029", "SSE:600048", "SSE:600050",
+                "SSE:600585", "SSE:600690", "SSE:600837", "SSE:600887", "SSE:600958",
+                "SSE:601211", "SSE:601229", "SSE:601236", "SSE:601318", "SSE:601319",
+                "SSE:601336", "SSE:601360", "SSE:601377", "SSE:601390", "SSE:601398",
+                "SSE:601555", "SSE:601658", "SSE:601668", "SSE:601688", "SSE:601766",
+                "SSE:601800", "SSE:601818", "SSE:601857", "SSE:601881", "SSE:601888",
                 "NASDAQ:AAPL", "NASDAQ:MSFT", "NASDAQ:GOOGL", "NASDAQ:AMZN", "NASDAQ:NVDA",
                 "NASDAQ:META", "NYSE:BRK.A", "NASDAQ:TSLA", "NYSE:V", "NASDAQ:AVGO",
                 "NYSE:UNH", "NYSE:JPM", "NYSE:JNJ", "NYSE:MA", "NYSE:XOM",
