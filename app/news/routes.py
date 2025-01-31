@@ -231,12 +231,16 @@ def initialize_articles() -> None:
 def update_ai_summaries():
     try:
         # initialize_articles()
-        from anthropic import Anthropic
+        import requests
 
-        client = Anthropic(
-            api_key=os.getenv('ANTHROPIC_API_KEY')
-        )
-        
+        OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
+        OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json"
+        }
+
         articles = NewsArticle.query.filter(
             db.or_(
                 NewsArticle.ai_summary.is_(None),
@@ -245,45 +249,57 @@ def update_ai_summaries():
             ),
             NewsArticle.content.isnot(None)
         ).order_by(NewsArticle.id.desc()).limit(10).all()
-        
+
         processed = 0
         results = []
-        
+
         for article in articles:
             try:
                 if not article.ai_summary:
-                    summary_response = client.messages.create(
-                        model="claude-3-5-sonnet-20241022",
-                        max_tokens=500,
-                        messages=[{
-                            "role": "user",
-                            "content": f"Generate a concise summary of this news article, just return the summary, nothing else, use markdown format: {article.content}"
-                        }]
-                    )
-                    article.ai_summary = summary_response.content[0].text
+                    summary_payload = {
+                        "model": "anthropic/claude-3-sonnet",  # You can choose a different model if needed
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": f"Generate a concise summary of this news article, just return the summary, nothing else, use markdown format: {article.content}"
+                            }
+                        ],
+                        "max_tokens": 500
+                    }
+                    summary_response = requests.post(OPENROUTER_API_URL, headers=headers, json=summary_payload)
+                    summary_response.raise_for_status()
+                    article.ai_summary = summary_response.json()['choices'][0]['message']['content']
 
                 if not article.ai_insights:
-                    insights_response = client.messages.create(
-                        model="claude-3-5-sonnet-20241022",
-                        max_tokens=500,
-                        messages=[{
-                            "role": "user",
-                            "content": f"Extract 2-3 key financial insights and market implications from this article. Focus on actionable information for investors, just return the insights, nothing else,use markdown format: {article.content}"
-                        }]
-                    )
-                    article.ai_insights = insights_response.content[0].text
+                    insights_payload = {
+                        "model": "anthropic/claude-3-sonnet",  # You can choose a different model if needed
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": f"Extract 2-3 key financial insights and market implications from this article. Focus on actionable information for investors, just return the insights, nothing else, use markdown format: {article.content}"
+                            }
+                        ],
+                        "max_tokens": 500
+                    }
+                    insights_response = requests.post(OPENROUTER_API_URL, headers=headers, json=insights_payload)
+                    insights_response.raise_for_status()
+                    article.ai_insights = insights_response.json()['choices'][0]['message']['content']
 
                 if article.ai_sentiment_rating is None:
-                    sentiment_response = client.messages.create(
-                        model="claude-3-5-sonnet-20241022",
-                        max_tokens=10,
-                        messages=[{
-                            "role": "user",
-                            "content": f"Analyze the market sentiment of this article and provide a single number rating from -100 (extremely bearish) to 100 (extremely bullish). Only return the number: {article.content}"
-                        }]
-                    )
+                    sentiment_payload = {
+                        "model": "anthropic/claude-3-sonnet",  # You can choose a different model if needed
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": f"Analyze the market sentiment of this article and provide a single number rating from -100 (extremely bearish) to 100 (extremely bullish). Only return the number: {article.content}"
+                            }
+                        ],
+                        "max_tokens": 10
+                    }
+                    sentiment_response = requests.post(OPENROUTER_API_URL, headers=headers, json=sentiment_payload)
+                    sentiment_response.raise_for_status()
                     try:
-                        rating = int(sentiment_response.content[0].text.strip())
+                        rating = int(sentiment_response.json()['choices'][0]['message']['content'].strip())
                         # Ensure rating is within bounds
                         article.ai_sentiment_rating = max(min(rating, 100), -100)
                     except ValueError:
@@ -293,22 +309,22 @@ def update_ai_summaries():
                 db.session.commit()
                 processed += 1
                 results.append({
-                    'id': article.id, 
+                    'id': article.id,
                     'title': article.title,
                     'ai_sentiment_rating': article.ai_sentiment_rating
                 })
-                
+
             except Exception as e:
                 logger.error(f"Error processing article {article.id}: {str(e)}")
                 db.session.rollback()
                 continue
-                
+
         return jsonify({
             'status': 'success',
             'processed': processed,
             'articles': results
         })
-        
+
     except Exception as e:
         logger.error(f"Error: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
