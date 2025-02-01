@@ -48,9 +48,9 @@
 
            <!-- Latest Articles Wrap-Up Section -->
            <div class="mt-6">
-               <h2 class="text-xl font-bold mb-4">Latest News</h2>
+               <h2 class="text-xl font-bold mb-4">Latest Articles Wrap-Up</h2>
                <div id="latestArticlesWrapUp" class="space-y-4">
-                   <!-- Latest articles will be dynamically inserted here -->
+                   <!-- Latest articles wrap-up will be dynamically inserted here -->
                </div>
            </div>
        </div>
@@ -106,7 +106,7 @@
            const symbolInput = document.getElementById('symbol');
            const searchButton = document.getElementById('searchButton');
            const articlesContainer = document.getElementById('articlesContainer');
-           const resultsCount = document.getElementById('resultsCount");
+           const resultsCount = document.getElementById('resultsCount');
            const latestArticlesWrapUp = document.getElementById('latestArticlesWrapUp');
 
            const renderMarkdown = (markdown) => {
@@ -122,7 +122,7 @@
                        }
                    });
 
-                   if (!response.ok) throw new Error('Failed to fetch latest articles');
+                   if (!response.ok) throw new Error('Failed to fetch latest articles wrap-up');
 
                    const data = await response.json();
                    if (data.articles?.length > 0) {
@@ -133,21 +133,19 @@
                                        ${article.title}
                                    </a>
                                    <div class="text-gray-500 mb-2">Published on: ${article.published_at}</div>
-                                   <div class="text-gray-600 markdown-content">
-                                       ${renderMarkdown(article.wrapup)}
-                                   </div>
+                                   <div class="text-gray-600">${article.wrapup}</div>
                                </div>
                            `).join('');
                    } else {
                        latestArticlesWrapUp.innerHTML = '<p class="text-gray-500">No latest articles found.</p>';
                    }
                } catch (error) {
-                   console.error('Error fetching latest articles:', error);
-                   latestArticlesWrapUp.innerHTML = '<p class="text-red-500">Failed to load latest articles.</p>';
+                   console.error('Error fetching latest articles wrap-up:', error);
+                   latestArticlesWrapUp.innerHTML = '<p class="text-red-500">Failed to load latest articles wrap-up.</p>';
                }
            };
 
-           // Fetch latest articles when the page loads
+           // Fetch latest articles wrap-up when the page loads
            fetchLatestArticlesWrapUp();
 
            searchForm.addEventListener('submit', async (e) => {
