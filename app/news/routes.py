@@ -289,7 +289,7 @@ def get_latest_articles_wrapup():
                     "messages": [
                         {
                             "role": "user",
-                            "content": f"Summarize this article in less than 30 words: {article.content}"
+                            "content": f"Summarize this article in less than 30 words,key words with markdown format: {article.content}"
                         }
                     ],
                     "max_tokens": 50  # Limit the response to ensure brevity
