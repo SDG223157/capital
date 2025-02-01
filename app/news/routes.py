@@ -265,52 +265,19 @@ def get_articles_to_update():
 @login_required
 def get_latest_articles_wrapup():
     try:
-        import requests
-
         # Fetch the latest 10 articles
         articles = NewsArticle.query.order_by(NewsArticle.published_at.desc()).limit(10).all()
-
-        # Initialize OpenRouter API
-        OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
-        OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
-
-        headers = {
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json"
-        }
 
         wrapup_results = []
 
         for article in articles:
-            try:
-                # Generate a concise wrap-up for the article using OpenRouter API
-                wrapup_payload = {
-                    "model": "anthropic/claude-3.5-sonnet:beta",  # You can choose a different model if needed
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": f"Summarize this article in less than 30 words: {article.content}"
-                        }
-                    ],
-                    "max_tokens": 50  # Limit the response to ensure brevity
-                }
-
-                wrapup_response = requests.post(OPENROUTER_API_URL, headers=headers, json=wrapup_payload)
-                wrapup_response.raise_for_status()
-
-                wrapup_text = wrapup_response.json()['choices'][0]['message']['content'].strip()
-
-                wrapup_results.append({
-                    'id': article.id,
-                    'title': article.title,
-                    'url': article.url,
-                    'published_at': article.published_at.strftime("%Y-%m-%d %H:%M:%S"),
-                    'wrapup': wrapup_text
-                })
-
-            except Exception as e:
-                logger.error(f"Error generating wrap-up for article {article.id}: {str(e)}")
-                continue
+            wrapup_results.append({
+                'id': article.id,
+                'title': article.title,
+                'url': article.url,
+                'published_at': article.published_at.strftime("%Y-%m-%d %H:%M:%S"),
+                'wrapup': article.brief_summary or "No summary available."  # Use brief_summary
+            })
 
         return jsonify({
             'status': 'success',
