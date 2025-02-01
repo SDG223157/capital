@@ -45,6 +45,14 @@
                    Search News
                </button>
            </form>
+
+           <!-- Latest Articles Wrap-Up Section -->
+           <div class="mt-6">
+               <h2 class="text-xl font-bold mb-4">Latest Articles Wrap-Up</h2>
+               <div id="latestArticlesWrapUp" class="space-y-4">
+                   <!-- Latest articles wrap-up will be dynamically inserted here -->
+               </div>
+           </div>
        </div>
 
        <div class="bg-white rounded-xl shadow p-6">
@@ -99,10 +107,46 @@
            const searchButton = document.getElementById('searchButton');
            const articlesContainer = document.getElementById('articlesContainer');
            const resultsCount = document.getElementById('resultsCount');
+           const latestArticlesWrapUp = document.getElementById('latestArticlesWrapUp');
 
            const renderMarkdown = (markdown) => {
                return marked.parse(markdown || '');
            };
+
+           // Function to fetch and display the latest articles wrap-up
+           const fetchLatestArticlesWrapUp = async () => {
+               try {
+                   const response = await fetch('/news/api/latest-articles-wrapup', {
+                       headers: {
+                           'X-Requested-With': 'XMLHttpRequest'
+                       }
+                   });
+
+                   if (!response.ok) throw new Error('Failed to fetch latest articles wrap-up');
+
+                   const data = await response.json();
+                   if (data.articles?.length > 0) {
+                       latestArticlesWrapUp.innerHTML = data.articles
+                           .map(article => `
+                               <div class="border-b border-gray-100 pb-4 last:border-b-0">
+                                   <a href="${article.url}" target="_blank" class="block text-blue-500 text-lg font-medium mb-2 hover:text-blue-600">
+                                       ${article.title}
+                                   </a>
+                                   <div class="text-gray-500 mb-2">Published on: ${article.published_at}</div>
+                                   <div class="text-gray-600">${article.wrapup}</div>
+                               </div>
+                           `).join('');
+                   } else {
+                       latestArticlesWrapUp.innerHTML = '<p class="text-gray-500">No latest articles found.</p>';
+                   }
+               } catch (error) {
+                   console.error('Error fetching latest articles wrap-up:', error);
+                   latestArticlesWrapUp.innerHTML = '<p class="text-red-500">Failed to load latest articles wrap-up.</p>';
+               }
+           };
+
+           // Fetch latest articles wrap-up when the page loads
+           fetchLatestArticlesWrapUp();
 
            searchForm.addEventListener('submit', async (e) => {
                e.preventDefault();
