@@ -16,6 +16,13 @@ from flask_login import current_user
 from app.models import NewsArticle
 from openai import OpenAI
 from app import db
+# Add to top of file
+import requests
+from http import HTTPStatus
+import re
+# Consider adding rate limiting decorator
+from flask_limiter import Limiter
+limiter = Limiter(app=current_app, key_func=lambda: current_user.id)
 # import httpx
 # from app.utils.config.news_config import DEFAULT_SYMBOLS
 import time
@@ -287,22 +294,110 @@ def get_latest_articles_wrapup():
     except Exception as e:
         logger.error(f"Error in get_latest_articles_wrapup: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
 @bp.route('/api/update-summaries', methods=['POST'])
 @login_required
 def update_ai_summaries():
+    """Update news articles using OpenRouter API with dynamic prompt selection"""
+    
+    # =====================
+    # PROMPT BANK CONFIGURATION
+    # =====================
+    PROMPT_BANK = {
+        'summary': [
+            {
+                'id': 1,
+                'name': 'Concise Summary',
+                'instruction': "Summarize the main points in 3-5 bullet points focusing on key stakeholders and "
+                               "financial implications. Use markdown formatting. Avoid technical jargon.",
+                'model': "anthropic/claude-3.5-sonnet",
+                'condition': lambda c: 500 < len(c) < 2000
+            },
+            {
+                'id': 6,
+                'name': 'Executive TL;DR',
+                'instruction': "Create an executive summary highlighting: 1) Core event 2) Market impact "
+                               "3) Key players 4) Potential outcomes. Use bold headers for each section.",
+                'model': "google/palm-2",
+                'condition': lambda c: len(c) >= 2000
+            }
+        ],
+        'insights': [
+            {
+                'id': 3,
+                'name': 'Investor Focus',
+                'instruction': "Identify 3-5 actionable insights for investors including: - Short-term opportunities "
+                               "- Long-term risks - Sector implications - Recommended watchlist symbols",
+                'model': "anthropic/claude-3.5-sonnet",
+                'condition': lambda c: any(kw in c.lower() for kw in ['stock', 'share', 'investment', 'market'])
+            },
+            {
+                'id': 15,
+                'name': 'Policy Impact',
+                'instruction': "Analyze regulatory/policy impacts including: - Affected industries - Compliance costs "
+                               "- Potential market shifts - Timeline implications",
+                'model': "meta-llama/llama-3-70b",
+                'condition': lambda c: any(kw in c.lower() for kw in ['regulation', 'policy', 'law', 'compliance'])
+            }
+        ],
+        'sentiment': [
+            {
+                'id': 11,
+                'name': 'Multi-dimensional Sentiment',
+                'instruction': "Evaluate sentiment through three lenses:\n1. Market impact (scale: -100 to 100)\n"
+                               "2. Retail investor perception\n3. Institutional reaction\nFormat: Market:<score>|"
+                               "Retail:<score>|Institutions:<score>",
+                'model': "anthropic/claude-3.5-sonnet",
+                'condition': lambda _: True
+            }
+        ]
+    }
+
+    # =====================
+    # HELPER FUNCTIONS
+    # =====================
+    def select_prompt(content, prompt_type):
+        """Select the most appropriate prompt based on content analysis"""
+        try:
+            for prompt in PROMPT_BANK[prompt_type]:
+                if prompt['condition'](content):
+                    return {
+                        'id': prompt['id'],
+                        'name': prompt['name'],
+                        'instruction': prompt['instruction'],
+                        'model': prompt['model']
+                    }
+            return PROMPT_BANK[prompt_type][0]  # Fallback to first prompt
+        except Exception as e:
+            logger.error(f"Prompt selection error: {str(e)}")
+            return PROMPT_BANK[prompt_type][0]
+
+    def parse_sentiment_response(response):
+        """Parse and normalize sentiment response into aggregate score"""
+        try:
+            market = int(re.search(r"Market:(-?\d+)", response).group(1))
+            retail = int(re.search(r"Retail:(-?\d+)", response).group(1))
+            institutions = int(re.search(r"Institutions:(-?\d+)", response).group(1))
+            return int((market * 0.6) + (retail * 0.2) + (institutions * 0.2))
+        except Exception as e:
+            logger.warning(f"Sentiment parsing failed: {str(e)}")
+            return 0
+
+    # =====================
+    # MAIN PROCESSING LOGIC
+    # =====================
     try:
-        # initialize_articles()
-        # exit()
-        import requests
-
+        # OpenRouter API configuration
         OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
-        OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
-
-        headers = {
+        BASE_URL = "https://openrouter.ai/api/v1"
+        HEADERS = {
             "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json"
+            "HTTP-Referer": "https://your-domain.com",  # Required by OpenRouter
+            "X-Title": "Financial News Analyzer"
         }
 
+        # Fetch articles needing processing
         articles = NewsArticle.query.filter(
             db.or_(
                 NewsArticle.ai_summary.is_(None),
@@ -310,87 +405,122 @@ def update_ai_summaries():
                 NewsArticle.ai_sentiment_rating.is_(None)
             ),
             NewsArticle.content.isnot(None)
-        ).order_by(NewsArticle.id.desc()).limit(10).all()
+        ).order_by(NewsArticle.published_at.desc()).limit(5).all()  # Reduced batch size for stability
 
         processed = 0
         results = []
 
         for article in articles:
             try:
+                content = article.content
+                prompts_used = {}
+
+                # --- Summary Generation ---
                 if not article.ai_summary:
-                    summary_payload = {
-                        "model": "anthropic/claude-3.5-sonnet:beta", # You can choose a different model if needed
-                        "messages": [
-                            {
-                                "role": "user",
-                                "content": f"Generate a concise summary of this news article with a maximum of 200 words,show key words and key points with markdown format, just return the text of the summary, nothing else like 'Here is a 100-word summary of the news article:' : {article.content}"
-                            }
-                        ],
-                        "max_tokens": 500
-                    }
-                    summary_response = requests.post(OPENROUTER_API_URL, headers=headers, json=summary_payload)
-                    summary_response.raise_for_status()
-                    article.ai_summary = summary_response.json()['choices'][0]['message']['content']
+                    summary_prompt = select_prompt(content, 'summary')
+                    prompts_used['summary'] = summary_prompt
+                    
+                    response = requests.post(
+                        f"{BASE_URL}/chat/completions",
+                        headers=HEADERS,
+                        json={
+                            "model": summary_prompt['model'],
+                            "messages": [
+                                {"role": "system", "content": summary_prompt['instruction']},
+                                {"role": "user", "content": f"Article content:\n{content}"}
+                            ],
+                            "temperature": 0.3,
+                            "max_tokens": 500
+                        },
+                        timeout=45
+                    )
+                    response.raise_for_status()
+                    article.ai_summary = response.json()['choices'][0]['message']['content']
 
+                # --- Insights Generation ---
                 if not article.ai_insights:
-                    insights_payload = {
-                        "model": "anthropic/claude-3.5-sonnet:beta",  # You can choose a different model if needed
-                        "messages": [
-                            {
-                                "role": "user",
-                                "content": f"Extract key financial insights and market implications from this article with a maximum of 200 words. Focus on actionable information for investors, use markdown format, just return the text of the insights and market implications, nothing else like 'Here are the key financial insights and market implications from the article:' : {article.content}"
-                            }
-                        ],
-                        "max_tokens": 500
-                    }
-                    insights_response = requests.post(OPENROUTER_API_URL, headers=headers, json=insights_payload)
-                    insights_response.raise_for_status()
-                    article.ai_insights = insights_response.json()['choices'][0]['message']['content']
+                    insights_prompt = select_prompt(content, 'insights')
+                    prompts_used['insights'] = insights_prompt
+                    
+                    response = requests.post(
+                        f"{BASE_URL}/chat/completions",
+                        headers=HEADERS,
+                        json={
+                            "model": insights_prompt['model'],
+                            "messages": [
+                                {"role": "system", "content": insights_prompt['instruction']},
+                                {"role": "user", "content": f"Article content:\n{content}"}
+                            ],
+                            "temperature": 0.5,
+                            "max_tokens": 600
+                        },
+                        timeout=60
+                    )
+                    response.raise_for_status()
+                    article.ai_insights = response.json()['choices'][0]['message']['content']
 
+                # --- Sentiment Analysis ---
                 if article.ai_sentiment_rating is None:
-                    sentiment_payload = {
-                        "model": "anthropic/claude-3.5-sonnet:beta",  # You can choose a different model if needed
-                        "messages": [
-                            {
-                                "role": "user",
-                                "content": f"Analyze the market sentiment of this article and provide a single number rating from -100 (extremely bearish) to 100 (extremely bullish). Only return the number: {article.content}"
-                            }
-                        ],
-                        "max_tokens": 10
-                    }
-                    sentiment_response = requests.post(OPENROUTER_API_URL, headers=headers, json=sentiment_payload)
-                    sentiment_response.raise_for_status()
-                    try:
-                        rating = int(sentiment_response.json()['choices'][0]['message']['content'].strip())
-                        # Ensure rating is within bounds
-                        article.ai_sentiment_rating = max(min(rating, 100), -100)
-                    except ValueError:
-                        logger.error(f"Could not parse sentiment rating for article {article.id}")
-                        article.ai_sentiment_rating = 0
+                    sentiment_prompt = select_prompt(content, 'sentiment')
+                    prompts_used['sentiment'] = sentiment_prompt
+                    
+                    response = requests.post(
+                        f"{BASE_URL}/chat/completions",
+                        headers=HEADERS,
+                        json={
+                            "model": sentiment_prompt['model'],
+                            "messages": [
+                                {"role": "system", "content": sentiment_prompt['instruction']},
+                                {"role": "user", "content": f"Article content:\n{content}"}
+                            ],
+                            "temperature": 0.2,
+                            "max_tokens": 150
+                        },
+                        timeout=30
+                    )
+                    response.raise_for_status()
+                    raw_sentiment = response.json()['choices'][0]['message']['content']
+                    article.ai_sentiment_rating = parse_sentiment_response(raw_sentiment)
 
+                # Commit changes
                 db.session.commit()
                 processed += 1
+                
+                # Store processing metadata
                 results.append({
                     'id': article.id,
-                    'title': article.title,
-                    'ai_sentiment_rating': article.ai_sentiment_rating
+                    'title': article.title[:75] + '...' if len(article.title) > 75 else article.title,
+                    'sentiment': article.ai_sentiment_rating,
+                    'prompts': prompts_used,
+                    'models_used': {k: v['model'] for k,v in prompts_used.items()},
+                    'processing_time': datetime.now().isoformat()
                 })
 
+            except requests.exceptions.RequestException as e:
+                logger.error(f"API request failed for article {article.id}: {str(e)}")
+                db.session.rollback()
+                continue
             except Exception as e:
-                logger.error(f"Error processing article {article.id}: {str(e)}")
+                logger.error(f"General processing error for article {article.id}: {str(e)}")
                 db.session.rollback()
                 continue
 
         return jsonify({
             'status': 'success',
             'processed': processed,
-            'articles': results
+            'batch_size': len(articles),
+            'results': results,
+            'timestamp': datetime.now().isoformat()
         })
 
     except Exception as e:
-        logger.error(f"Error: {str(e)}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
-
+        logger.error(f"Critical system error: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': "Article processing system unavailable",
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
 # @bp.route('/api/update-summaries', methods=['POST'])
 # @login_required
 # def update_ai_summaries():

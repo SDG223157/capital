@@ -26,3 +26,5 @@ nltk==3.8.1
 redis>=4.5.0
 openai
 anthropic
+httpx
+flask-limiter
