@@ -240,7 +240,7 @@ def initialize_articles(cutoff_time: str) -> None:
         
         # Update articles created after the cutoff time
         articles_updated = NewsArticle.query.filter(
-            NewsArticle.created_date > cutoff_datetime
+            NewsArticle.created_at >= cutoff_datetime
         ).update({
             NewsArticle.ai_summary: None,
             NewsArticle.ai_insights: None,
