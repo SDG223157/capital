@@ -16,7 +16,7 @@ from flask_login import current_user
 from app.models import NewsArticle
 from openai import OpenAI
 from app import db
-# import httpx
+import requests
 # from app.utils.config.news_config import DEFAULT_SYMBOLS
 import time
 logger = logging.getLogger(__name__)
@@ -291,9 +291,16 @@ def get_latest_articles_wrapup():
 @bp.route('/api/update-summaries', methods=['POST'])
 @login_required
 def update_ai_summaries():
-    import requests
     """Update news articles using OpenRouter API with dynamic prompt selection"""
-    
+
+    # OpenRouter API configuration
+    OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
+    OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
     # =====================
     # PROMPT BANK CONFIGURATION
     # =====================
@@ -381,22 +388,6 @@ def update_ai_summaries():
     # MAIN PROCESSING LOGIC
     # =====================
     try:
-        # OpenRouter API configuration
-        # OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
-        # BASE_URL = "https://openrouter.ai/api/v1"
-        # HEADERS = {
-        #     "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        #     "HTTP-Referer": "https://your-domain.com",  # Required by OpenRouter
-        #     "X-Title": "Financial News Analyzer"
-        # }
-        OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
-        OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
-
-        headers = {
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json"
-        }
-
         # Fetch articles needing processing
         articles = NewsArticle.query.filter(
             db.or_(
@@ -421,8 +412,8 @@ def update_ai_summaries():
                     prompts_used['summary'] = summary_prompt
                     
                     response = requests.post(
-                        f"{BASE_URL}/chat/completions",
-                        headers=HEADERS,
+                        OPENROUTER_API_URL,
+                        headers=headers,
                         json={
                             "model": summary_prompt['model'],
                             "messages": [
@@ -443,8 +434,8 @@ def update_ai_summaries():
                     prompts_used['insights'] = insights_prompt
                     
                     response = requests.post(
-                        f"{BASE_URL}/chat/completions",
-                        headers=HEADERS,
+                        OPENROUTER_API_URL,
+                        headers=headers,
                         json={
                             "model": insights_prompt['model'],
                             "messages": [
@@ -465,8 +456,8 @@ def update_ai_summaries():
                     prompts_used['sentiment'] = sentiment_prompt
                     
                     response = requests.post(
-                        f"{BASE_URL}/chat/completions",
-                        headers=HEADERS,
+                        OPENROUTER_API_URL,
+                        headers=headers,
                         json={
                             "model": sentiment_prompt['model'],
                             "messages": [
