@@ -16,13 +16,6 @@ from flask_login import current_user
 from app.models import NewsArticle
 from openai import OpenAI
 from app import db
-# Add to top of file
-import requests
-from http import HTTPStatus
-import re
-# Consider adding rate limiting decorator
-from flask_limiter import Limiter
-limiter = Limiter(app=current_app, key_func=lambda: current_user.id)
 # import httpx
 # from app.utils.config.news_config import DEFAULT_SYMBOLS
 import time
@@ -295,10 +288,10 @@ def get_latest_articles_wrapup():
         logger.error(f"Error in get_latest_articles_wrapup: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
-
 @bp.route('/api/update-summaries', methods=['POST'])
 @login_required
 def update_ai_summaries():
+    import requests
     """Update news articles using OpenRouter API with dynamic prompt selection"""
     
     # =====================
@@ -389,12 +382,19 @@ def update_ai_summaries():
     # =====================
     try:
         # OpenRouter API configuration
+        # OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
+        # BASE_URL = "https://openrouter.ai/api/v1"
+        # HEADERS = {
+        #     "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        #     "HTTP-Referer": "https://your-domain.com",  # Required by OpenRouter
+        #     "X-Title": "Financial News Analyzer"
+        # }
         OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
-        BASE_URL = "https://openrouter.ai/api/v1"
-        HEADERS = {
+        OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+        headers = {
             "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "HTTP-Referer": "https://your-domain.com",  # Required by OpenRouter
-            "X-Title": "Financial News Analyzer"
+            "Content-Type": "application/json"
         }
 
         # Fetch articles needing processing
@@ -521,6 +521,7 @@ def update_ai_summaries():
             'error': str(e),
             'timestamp': datetime.now().isoformat()
         }), 500
+
 # @bp.route('/api/update-summaries', methods=['POST'])
 # @login_required
 # def update_ai_summaries():
