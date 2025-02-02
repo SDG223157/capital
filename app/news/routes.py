@@ -224,20 +224,36 @@ def batch_fetch():
         logger.error(f"Batch fetch error: {str(e)}")
         return jsonify({'error': str(e)}), 500
     
-def initialize_articles() -> None:
-    """Initialize all articles by setting AI fields to None"""
+from datetime import datetime
+
+def initialize_articles(cutoff_time: str) -> None:
+    """
+    Initialize AI fields for articles created after a specific timestamp.
+    
+    Args:
+        cutoff_time (str): The timestamp in the format 'YYYY-MM-DD HH:MM:SS'.
+                          Articles created after this time will have their AI fields set to None.
+    """
     try:
-        articles_updated = NewsArticle.query.update({
+        # Convert the cutoff_time string to a datetime object
+        cutoff_datetime = datetime.strptime(cutoff_time, "%Y-%m-%d %H:%M:%S")
+        
+        # Update articles created after the cutoff time
+        articles_updated = NewsArticle.query.filter(
+            NewsArticle.created_date > cutoff_datetime
+        ).update({
             NewsArticle.ai_summary: None,
             NewsArticle.ai_insights: None,
             NewsArticle.ai_sentiment_rating: None
         })
+        
+        # Commit the changes to the database
         db.session.commit()
-        logger.info(f"Initialized {articles_updated} articles with None values")
+        logger.info(f"Initialized {articles_updated} articles created after {cutoff_time} with None values for AI fields")
     except Exception as e:
         logger.error(f"Error initializing articles: {str(e)}")
         db.session.rollback()
-        raise      
+        raise
 @bp.route('/api/get-articles-to-update', methods=['GET'])
 @login_required
 def get_articles_to_update():
@@ -291,7 +307,7 @@ def get_latest_articles_wrapup():
 @login_required
 def update_ai_summaries():
     try:
-        # initialize_articles()
+        initialize_articles(cutoff_time="2025-02-02 00:00:00")
         # exit()
         import requests
 
