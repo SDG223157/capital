@@ -66,7 +66,18 @@
                        
                        <!-- AI Insights -->
                        <div class="text-gray-600 mb-4 markdown-content">{{ article.summary.ai_insights | safe }}</div>
-                       
+
+                       <!-- Related Symbols -->
+                       {% if article.symbols %}
+                       <div class="text-gray-600 mb-4">
+                           <span class="font-medium">Related Symbols:</span>
+                           <div class="flex flex-wrap gap-2 mt-2">
+                               {% for symbol in article.symbols %}
+                                   <span class="bg-gray-200 text-gray-800 px-2 py-1 rounded-full text-sm">{{ symbol.symbol }}</span>
+                               {% endfor %}
+                           </div>
+                       </div>
+                       {% endif %}
 
                        <!-- AI Sentiment Rating -->
                        {% if article.summary.ai_sentiment_rating is not none %}
@@ -148,7 +159,17 @@
                                        ${renderMarkdown(article.summary.ai_insights)}
                                    </div>
 
-                                  
+                                   <!-- Related Symbols -->
+                                   ${article.symbols?.length > 0 ? `
+                                       <div class="text-gray-600 mb-4">
+                                           <span class="font-medium">Related Symbols:</span>
+                                           <div class="flex flex-wrap gap-2 mt-2">
+                                               ${article.symbols.map(symbol => `
+                                                   <span class="bg-gray-200 text-gray-800 px-2 py-1 rounded-full text-sm">${symbol.symbol}</span>
+                                               `).join('')}
+                                           </div>
+                                       </div>
+                                   ` : ''}
 
                                    <!-- AI Sentiment Rating -->
                                    ${article.summary.ai_sentiment_rating != null ? 
