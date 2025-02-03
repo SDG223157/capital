@@ -21,9 +21,6 @@
        .markdown-content li {
            margin-bottom: 0.25rem;
        }
-       .markdown-content em {
-           font-style: italic;
-       }
    </style>
 </head>
 <body class="bg-gray-50">
@@ -63,9 +60,7 @@
                        <div class="text-gray-500 mb-2">Published on: {{ article.published_at }}</div>
                        
                        <!-- AI Summary -->
-                       <div class="text-gray-600 mb-4 markdown-content">
-                           {{ format_ai_summary(article.summary.ai_summary) | safe }}
-                       </div>
+                       <div class="text-gray-600 mb-4 markdown-content">{{ article.summary.ai_summary | safe }}</div>
 
                        <!-- AI Insights -->
                        <div class="text-gray-600 mb-4 markdown-content">{{ article.summary.ai_insights | safe }}</div>
@@ -118,15 +113,6 @@
            const articlesContainer = document.getElementById('articlesContainer');
            const resultsCount = document.getElementById('resultsCount');
 
-           // Function to format AI summary (replace hashtags with bullet points and italics)
-           const formatAISummary = (summary) => {
-               if (!summary) return '';
-               return summary
-                   .replace(/#(\w+)/g, '<li><em>$1</em></li>') // Replace hashtags with <li><em>...</em></li>
-                   .replace(/^/, '<ul>') // Add opening <ul> tag
-                   .replace(/$/, '</ul>'); // Add closing </ul> tag
-           };
-
            const renderMarkdown = (markdown) => {
                return marked.parse(markdown || '');
            };
@@ -172,7 +158,7 @@
                                    
                                    <!-- AI Summary -->
                                    <div class="text-gray-600 mb-4 markdown-content">
-                                       ${formatAISummary(article.summary.ai_summary)}
+                                       ${renderMarkdown(article.summary.ai_summary)}
                                    </div>
                                    
                                    <!-- AI Insights -->
