@@ -335,7 +335,7 @@ def update_ai_summaries():
             try:
                 if not article.ai_summary:
                     summary_payload = {
-                        "model": "anthropic/claude-3.5-sonnet:beta", # You can choose a different model if needed
+                        "model": "deepseek/deepseek-r1:free", # You can choose a different model if needed
                         "messages": [
                             {
                                 "role": "user",
@@ -350,7 +350,7 @@ def update_ai_summaries():
 
                 if not article.ai_insights:
                     insights_payload = {
-                        "model": "anthropic/claude-3.5-sonnet:beta",  # You can choose a different model if needed
+                        "model": "deepseek/deepseek-r1:free",  # You can choose a different model if needed
                         "messages": [
                             {
                                 "role": "user",
@@ -365,7 +365,7 @@ def update_ai_summaries():
 
                 if article.ai_sentiment_rating is None:
                     sentiment_payload = {
-                        "model": "anthropic/claude-3.5-sonnet:beta",  # You can choose a different model if needed
+                        "model": "deepseek/deepseek-r1:free",  # You can choose a different model if needed
                         "messages": [
                             {
                                 "role": "user",
