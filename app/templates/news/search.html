@@ -151,6 +151,11 @@
                                        ${renderMarkdown(article.summary.ai_insights)}
                                    </div>
 
+                                   <div class="mt-2 flex flex-wrap gap-1">
+                                        <span class="text-sm text-gray-600 mr-2">Related Symbols:</span>
+                                        ${article.symbols | join(', ') || 'None'}
+                                    </div>
+
                                    <!-- AI Sentiment Rating -->
                                    ${article.summary.ai_sentiment_rating != null ? 
                                        `<div class="mt-2 flex items-center space-x-2">
