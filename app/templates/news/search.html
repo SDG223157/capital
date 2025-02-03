@@ -5,10 +5,8 @@
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
    <title>News Search</title>
    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-   <!-- Include marked.js for Markdown rendering -->
    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
    <style>
-       /* Add some basic styling for markdown content */
        .markdown-content h2 {
            font-size: 1.25rem;
            font-weight: 600;
@@ -36,7 +34,7 @@
                       id="symbol" 
                       name="symbol" 
                       value="{{ search_params.get('symbol') or '' }}"
-                      placeholder="NASDAQ:AAPL" 
+                      placeholder="NASDAQ:AAPL or 'latest'" 
                       class="w-full p-4 text-lg rounded-xl border border-gray-200 mb-4">
                
                <button type="submit" 
@@ -64,9 +62,6 @@
                        <!-- AI Summary -->
                        <div class="text-gray-600 mb-4 markdown-content">{{ article.summary.ai_summary | safe }}</div>
                        
-                       <!-- AI Insights -->
-                       <div class="text-gray-600 mb-4 markdown-content">{{ article.summary.ai_insights | safe }}</div>
-
                        <!-- Related Symbols -->
                        {% if article.symbols %}
                        <div class="text-gray-600 mb-4">
@@ -121,7 +116,7 @@
                
                const symbol = symbolInput.value.trim();
                if (!symbol) {
-                   alert('Please enter a stock symbol');
+                   alert('Please enter a stock symbol or "latest"');
                    return;
                }
 
@@ -154,11 +149,6 @@
                                        ${renderMarkdown(article.summary.ai_summary)}
                                    </div>
                                    
-                                   <!-- AI Insights -->
-                                   <div class="text-gray-600 mb-4 markdown-content">
-                                       ${renderMarkdown(article.summary.ai_insights)}
-                                   </div>
-
                                    <!-- Related Symbols -->
                                    ${article.symbols?.length > 0 ? `
                                        <div class="text-gray-600 mb-4">

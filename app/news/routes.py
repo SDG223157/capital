@@ -101,6 +101,17 @@ def search():
         symbol = request.args.get('symbol')
         symbol = None if symbol in ['None', '', None] else symbol
         
+        # Handle "latest" keyword
+        if symbol and symbol.lower() == "latest":
+            # Fetch the latest 20 articles
+            articles = NewsArticle.query.order_by(NewsArticle.published_at.desc()).limit(20).all()
+            articles_data = [article.to_dict() for article in articles]
+            return jsonify({
+                'status': 'success',
+                'articles': articles_data,
+                'total': len(articles_data)
+            })
+        
         # Return no articles if no symbol is provided
         if not symbol:
             return render_template(
