@@ -150,7 +150,7 @@
 
                                    <div class="mt-2 flex flex-wrap gap-1">
                                         <span class="text-sm text-gray-600 mr-2">Related Symbols:</span>
-                                         ${relatedSymbols || 'None'}
+                                         ${article.symbols | join(', ') || 'None'}
                                     </div>
 
                                    <!-- AI Sentiment Rating -->
