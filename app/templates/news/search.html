@@ -61,6 +61,9 @@
                        
                        <!-- AI Summary -->
                        <div class="text-gray-600 mb-4 markdown-content">{{ article.summary.ai_summary | safe }}</div>
+
+                       <!-- AI Insights -->
+                       <div class="text-gray-600 mb-4 markdown-content">{{ article.summary.ai_insights | safe }}</div>
                        
                        <!-- Related Symbols -->
                        {% if article.symbols %}
@@ -68,7 +71,10 @@
                            <span class="font-medium">Related Symbols:</span>
                            <div class="flex flex-wrap gap-2 mt-2">
                                {% for symbol in article.symbols %}
-                                   <span class="bg-gray-200 text-gray-800 px-2 py-1 rounded-full text-sm">{{ symbol.symbol }}</span>
+                                   <span class="bg-gray-200 text-gray-800 px-2 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-300"
+                                         onclick="searchSymbol('{{ symbol.symbol }}')">
+                                       {{ symbol.symbol }}
+                                   </span>
                                {% endfor %}
                            </div>
                        </div>
@@ -111,6 +117,12 @@
                return marked.parse(markdown || '');
            };
 
+           // Function to handle symbol search when clicking related symbols
+           window.searchSymbol = (symbol) => {
+               symbolInput.value = symbol; // Set the symbol in the search input
+               searchForm.dispatchEvent(new Event('submit')); // Trigger the search form submission
+           };
+
            searchForm.addEventListener('submit', async (e) => {
                e.preventDefault();
                
@@ -149,13 +161,21 @@
                                        ${renderMarkdown(article.summary.ai_summary)}
                                    </div>
                                    
+                                   <!-- AI Insights -->
+                                   <div class="text-gray-600 mb-4 markdown-content">
+                                       ${renderMarkdown(article.summary.ai_insights)}
+                                   </div>
+
                                    <!-- Related Symbols -->
                                    ${article.symbols?.length > 0 ? `
                                        <div class="text-gray-600 mb-4">
                                            <span class="font-medium">Related Symbols:</span>
                                            <div class="flex flex-wrap gap-2 mt-2">
                                                ${article.symbols.map(symbol => `
-                                                   <span class="bg-gray-200 text-gray-800 px-2 py-1 rounded-full text-sm">${symbol.symbol}</span>
+                                                   <span class="bg-gray-200 text-gray-800 px-2 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-300"
+                                                         onclick="searchSymbol('${symbol.symbol}')">
+                                                       ${symbol.symbol}
+                                                   </span>
                                                `).join('')}
                                            </div>
                                        </div>
