@@ -318,7 +318,7 @@ def get_latest_articles_wrapup():
 @login_required
 def update_ai_summaries():
     try:
-        # initialize_articles(cutoff_time="2025-02-02 00:00:00")
+        initialize_articles(cutoff_time="2025-01-01 00:00:00")
         # exit()
         import requests
 
@@ -350,7 +350,7 @@ def update_ai_summaries():
                         "messages": [
                             {
                                 "role": "user",
-                                "content": f"Generate a concise summary of this news article with a maximum of 200 words,show key words or concepts, context and background, and key points with markdown format, just return the text of the summary, nothing else like 'Here is a 100-word summary of the news article:' : {article.content}"
+                                "content": f"Generate a concise summary of this news article with a maximum of 300 words,show key words and concepts, context and background, and key points with markdown format, just return the text of the summary, nothing else like 'Here is a 100-word summary of the news article:' : {article.content}"
                             }
                         ],
                         "max_tokens": 500
