@@ -318,7 +318,7 @@ def get_latest_articles_wrapup():
 @login_required
 def update_ai_summaries():
     try:
-        initialize_articles(cutoff_time="2025-01-01 00:00:00")
+        # initialize_articles(cutoff_time="2025-01-01 00:00:00")
         # exit()
         import requests
 
