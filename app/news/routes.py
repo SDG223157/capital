@@ -365,7 +365,7 @@ def update_ai_summaries():
                         "messages": [
                             {
                                 "role": "user",
-                                "content": f"Extract key financial insights and market implications from this article with a maximum of 200 words. Focus on actionable information(risks, opportunities, etc) for investors, use markdown format, just return the text of the insights and market implications, nothing else like 'Here are the key financial insights and market implications from the article:' : {article.content}"
+                                "content": f"Extract key financial insights , market implications, and hidden correlations and causes from this article with a maximum of 300 words, ending with conclusion with one sentence with noticible visibility. Focus on actionable information(risks, opportunities, etc) for investors, use markdown format, just return the text of the insights and market implications, nothing else like 'Here are the key financial insights and market implications from the article:' : {article.content}"
                             }
                         ],
                         "max_tokens": 500
