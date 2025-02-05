@@ -227,55 +227,58 @@
                 return 'Other'; // This will be used internally but not displayed
             };
 
-            // Function to handle sector search
-            window.searchSector = async (sectorName) => {
-                console.log(`Searching for sector: ${sectorName}`);
-                console.log(`Available sectors:`, sectors);
-                
-                const sectorSymbols = sectors[sectorName];
-                console.log(`Symbols for sector ${sectorName}:`, sectorSymbols);
-                
-                if (!sectorSymbols || sectorSymbols.length === 0) {
-                    console.error(`No symbols found for sector: ${sectorName}`);
+            // Function to handle sector click
+            window.handleSectorClick = async (sector) => {
+                const sectorSymbols = sectors[sector];
+                if (!sectorSymbols || !Array.isArray(sectorSymbols)) {
+                    console.error('Invalid sector or no symbols found:', sector);
                     return;
                 }
 
                 try {
-                    // Show loading state
+                    // Disable button and show loading state
+                    const searchButton = document.getElementById('searchButton');
                     if (searchButton) searchButton.disabled = true;
-                    resultsCount.textContent = `Loading ${sectorName} sector news...`;
+                    
+                    // Update UI to show loading
+                    resultsCount.textContent = `Loading news for ${sector} sector...`;
 
-                    // Create a URL-encoded string of all symbols
-                    const symbolsString = sectorSymbols.join(',');
-                    const searchUrl = `/news/search?symbol=${encodeURIComponent(symbolsString)}`;
+                    // Create search query with all sector symbols
+                    const symbolsQuery = sectorSymbols.join(',');
+                    const encodedQuery = encodeURIComponent(symbolsQuery);
                     
-                    console.log(`Fetching from URL: ${searchUrl}`);
-                    
-                    const response = await fetch(searchUrl, {
+                    // Make the API call
+                    const response = await fetch(`/news/search?symbol=${encodedQuery}`, {
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest'
                         }
                     });
 
                     if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                        throw new Error(`Failed to fetch sector news (${response.status})`);
                     }
 
                     const data = await response.json();
-                    console.log(`Received data:`, data);
 
-                    // Sort articles by date
+                    // Sort articles by date (newest first)
                     if (data.articles) {
                         data.articles.sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
                     }
 
-                    // Update the results
-                    updateResults(data, `${sectorName} Sector`);
+                    // Update results with sector context
+                    updateResults(data, sector);
+                    
+                    // Update input to show current sector
+                    const symbolInput = document.getElementById('symbol');
+                    if (symbolInput) {
+                        symbolInput.value = `[${sector} Sector]`;
+                    }
 
                 } catch (error) {
-                    console.error('Error in sector search:', error);
-                    resultsCount.textContent = `Error loading ${sectorName} sector news: ${error.message}`;
+                    console.error('Sector search failed:', error);
+                    resultsCount.textContent = `Failed to load ${sector} sector news`;
                 } finally {
+                    // Re-enable button
                     if (searchButton) searchButton.disabled = false;
                 }
             };
