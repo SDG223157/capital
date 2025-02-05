@@ -1,219 +1,387 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-   <meta charset="UTF-8">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>News Search</title>
-   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-   <style>
-       .markdown-content h2 {
-           font-size: 1.25rem;
-           font-weight: 600;
-           margin-top: 1rem;
-           margin-bottom: 0.5rem;
-       }
-       .markdown-content ul {
-           list-style-type: disc;
-           margin-left: 1.5rem;
-           margin-bottom: 1rem;
-       }
-       .markdown-content li {
-           margin-bottom: 0.25rem;
-       }
-   </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Search</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+    <style>
+        .markdown-content h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .markdown-content ul {
+            list-style-type: disc;
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .markdown-content li {
+            margin-bottom: 0.25rem;
+        }
+        .sector-tag {
+            transition: all 0.2s ease;
+        }
+        .sector-tag:hover {
+            transform: translateY(-1px);
+        }
+    </style>
 </head>
 <body class="bg-gray-50">
-   <div class="container mx-auto p-4">
-       <h1 class="text-2xl font-bold mb-6">News Search</h1>
+    <div class="container mx-auto p-4">
+        <h1 class="text-2xl font-bold mb-6">News Search</h1>
 
-       <div class="bg-white rounded-xl shadow p-6 mb-6">
-           <form id="searchForm">
-               <label for="symbol" class="block text-gray-700 text-lg mb-2">Stock Symbol</label>
-               <input type="text" 
-                      id="symbol" 
-                      name="symbol" 
-                      value="{{ search_params.get('symbol') or '' }}"
-                      placeholder="NASDAQ:AAPL or 'latest'" 
-                      class="w-full p-4 text-lg rounded-xl border border-gray-200 mb-4">
-               
-               <button type="submit" 
-                       id="searchButton" 
-                       class="w-full bg-blue-500 text-white p-4 rounded-xl text-lg font-medium hover:bg-blue-600 transition-colors">
-                   Search News
-               </button>
-           </form>
-       </div>
+        <!-- Search Form -->
+        <div class="bg-white rounded-xl shadow p-6 mb-6">
+            <form id="searchForm">
+                <label for="symbol" class="block text-gray-700 text-lg mb-2">Stock Symbol</label>
+                <input type="text" 
+                       id="symbol" 
+                       name="symbol" 
+                       value="{{ search_params.get('symbol') or '' }}"
+                       placeholder="NASDAQ:AAPL or 'latest'" 
+                       class="w-full p-4 text-lg rounded-xl border border-gray-200 mb-4">
+                
+                <button type="submit" 
+                        id="searchButton" 
+                        class="w-full bg-blue-500 text-white p-4 rounded-xl text-lg font-medium hover:bg-blue-600 transition-colors">
+                    Search News
+                </button>
+            </form>
+        </div>
 
-       <div class="bg-white rounded-xl shadow p-6">
-           <div id="resultsCount" class="text-lg text-gray-600 mb-4">
-               {% if articles %}{{ articles|length }} articles found{% endif %}
-           </div>
+        <!-- Results Container -->
+        <div class="bg-white rounded-xl shadow p-6">
+            <div id="resultsCount" class="text-lg text-gray-600 mb-4">
+                {% if articles %}{{ articles|length }} articles found{% endif %}
+            </div>
 
-           <div id="articlesContainer" class="space-y-6">
-               {% if articles %}
-                   {% for article in articles %}
-                   <div class="border-b border-gray-100 pb-6 last:border-b-0">
-                       <a href="{{ article.url }}" target="_blank" class="block text-blue-500 text-lg font-medium mb-2 hover:text-blue-600">
-                           {{ article.title }}
-                       </a>
-                       <div class="text-gray-500 mb-2">Published on: {{ article.published_at }}</div>
-                       
-                       <!-- AI Summary -->
-                       <div class="text-gray-600 mb-4 markdown-content">{{ article.summary.ai_summary | safe }}</div>
+            <div id="articlesContainer" class="space-y-6">
+                {% if articles %}
+                    {% for article in articles %}
+                    <div class="border-b border-gray-100 pb-6 last:border-b-0">
+                        <a href="{{ article.url }}" target="_blank" class="block text-blue-500 text-lg font-medium mb-2 hover:text-blue-600">
+                            {{ article.title }}
+                        </a>
+                        <div class="text-gray-500 mb-2">Published on: {{ article.published_at }}</div>
+                        
+                        <!-- AI Summary -->
+                        <div class="text-gray-600 mb-4 markdown-content">{{ article.summary.ai_summary | safe }}</div>
 
-                       <!-- AI Insights -->
-                       <div class="text-gray-600 mb-4 markdown-content">{{ article.summary.ai_insights | safe }}</div>
-                       
-                       <!-- Related Symbols -->
-                       {% if article.symbols %}
-                       <div class="text-gray-600 mb-4">
-                           <span class="font-medium">Related Symbols:</span>
-                           <div class="flex flex-wrap gap-2 mt-2">
-                               {% for symbol in article.symbols %}
-                                   <span class="bg-gray-200 text-gray-800 px-2 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-300"
-                                         onclick="searchSymbol('{{ symbol.symbol }}')">
-                                       {{ symbol.symbol }}
-                                   </span>
-                               {% endfor %}
-                           </div>
-                       </div>
-                       {% endif %}
+                        <!-- AI Insights -->
+                        <div class="text-gray-600 mb-4 markdown-content">{{ article.summary.ai_insights | safe }}</div>
+                        
+                        <!-- Related Symbols with Sectors -->
+                        {% if article.symbols %}
+                        <div class="text-gray-600 mb-4">
+                            <span class="font-medium">Related Symbols:</span>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                {% for symbol in article.symbols %}
+                                    <div class="inline-flex rounded-lg overflow-hidden sector-tag shadow-sm">
+                                        <span class="bg-gray-100 text-gray-800 px-3 py-1.5 cursor-pointer hover:bg-gray-200 transition-colors"
+                                              onclick="searchSymbol('{{ symbol.symbol }}')">
+                                            {{ symbol.symbol }}
+                                        </span>
+                                        <span class="bg-blue-50 text-blue-700 px-3 py-1.5 cursor-pointer hover:bg-blue-100 transition-colors"
+                                              onclick="searchSector('{{ symbol.sector }}')"
+                                              data-sector="{{ symbol.sector }}">
+                                            {{ symbol.sector }}
+                                        </span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
 
-                       <!-- AI Sentiment Rating -->
-                       {% if article.summary.ai_sentiment_rating is not none %}
-                       <div class="mt-2 flex items-center space-x-2">
-                           <span class="inline-flex items-center px-2.5 py-1.5 rounded-full text-sm font-medium
-                               {% if article.summary.ai_sentiment_rating > 50 %}bg-green-200 text-green-900 border border-green-300
-                               {% elif article.summary.ai_sentiment_rating > 10 %}bg-green-100 text-green-800 border border-green-200
-                               {% elif article.summary.ai_sentiment_rating >= -10 %}bg-gray-100 text-gray-800 border border-gray-200
-                               {% elif article.summary.ai_sentiment_rating >= -50 %}bg-red-100 text-red-800 border border-red-200
-                               {% else %}bg-red-200 text-red-900 border border-red-300{% endif %}">
-                               {% if article.summary.ai_sentiment_rating > 50 %}Strong Positive
-                               {% elif article.summary.ai_sentiment_rating > 10 %}Positive
-                               {% elif article.summary.ai_sentiment_rating >= -10 %}Neutral
-                               {% elif article.summary.ai_sentiment_rating >= -50 %}Negative
-                               {% else %}Strong Negative{% endif %}
-                               ({{ article.summary.ai_sentiment_rating }})
-                           </span>
-                       </div>
-                       {% endif %}
-                   </div>
-                   {% endfor %}
-               {% endif %}
-           </div>
-       </div>
-   </div>
+                        <!-- AI Sentiment Rating -->
+                        {% if article.summary.ai_sentiment_rating is not none %}
+                        <div class="mt-2 flex items-center space-x-2">
+                            <span class="inline-flex items-center px-2.5 py-1.5 rounded-full text-sm font-medium
+                                {% if article.summary.ai_sentiment_rating > 50 %}bg-green-200 text-green-900 border border-green-300
+                                {% elif article.summary.ai_sentiment_rating > 10 %}bg-green-100 text-green-800 border border-green-200
+                                {% elif article.summary.ai_sentiment_rating >= -10 %}bg-gray-100 text-gray-800 border border-gray-200
+                                {% elif article.summary.ai_sentiment_rating >= -50 %}bg-red-100 text-red-800 border border-red-200
+                                {% else %}bg-red-200 text-red-900 border border-red-300{% endif %}">
+                                {% if article.summary.ai_sentiment_rating > 50 %}Strong Positive
+                                {% elif article.summary.ai_sentiment_rating > 10 %}Positive
+                                {% elif article.summary.ai_sentiment_rating >= -10 %}Neutral
+                                {% elif article.summary.ai_sentiment_rating >= -50 %}Negative
+                                {% else %}Strong Negative{% endif %}
+                                ({{ article.summary.ai_sentiment_rating }})
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
 
-   <script>
-       document.addEventListener('DOMContentLoaded', () => {
-           const searchForm = document.getElementById('searchForm');
-           const symbolInput = document.getElementById('symbol');
-           const searchButton = document.getElementById('searchButton');
-           const articlesContainer = document.getElementById('articlesContainer');
-           const resultsCount = document.getElementById('resultsCount');
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchForm = document.getElementById('searchForm');
+            const symbolInput = document.getElementById('symbol');
+            const searchButton = document.getElementById('searchButton');
+            const articlesContainer = document.getElementById('articlesContainer');
+            const resultsCount = document.getElementById('resultsCount');
 
-           const renderMarkdown = (markdown) => {
-               return marked.parse(markdown || '');
-           };
+            // Define sectors and their symbols
+            const sectors = {
+                "Technology": [
+                    "NASDAQ:AAPL", "NASDAQ:MSFT", "NASDAQ:GOOGL", "NASDAQ:GOOG", "NASDAQ:AMZN",
+                    "NASDAQ:NVDA", "NASDAQ:META", "NASDAQ:TSLA", "NASDAQ:AVGO", "NASDAQ:ADBE",
+                    "NASDAQ:CSCO", "NASDAQ:NFLX", "NASDAQ:INTC", "NASDAQ:AMD", "NASDAQ:QCOM",
+                    "NYSE:CRM", "NYSE:SQ", "NASDAQ:PYPL", "NYSE:SHOP", "NYSE:NOW", 
+                    "NASDAQ:INTU", "NYSE:ORCL", "NASDAQ:WDAY", "NASDAQ:AMAT", "NASDAQ:MU", 
+                    "NASDAQ:KLAC", "NASDAQ:LRCX", "NYSE:TSM", "NYSE:ASML", "TSE:6758",
+                    "TSE:6861", "TSE:7974", "TSE:6501", "TSE:6902", "TSE:6367",
+                    "TSE:6503", "TSE:7751", "TSE:6702", "SSE:601012", "SZSE:000063",
+                    "SSE:600584", "SZSE:300124", "SZSE:002024", "SSE:600845", "HKEX:700",
+                    "HKEX:9988", "HKEX:3690", "HKEX:9618"
+                ],
+                "Financial Services": [
+                    "NYSE:JPM", "NYSE:BAC", "NYSE:WFC", "NYSE:MS", "NYSE:GS", 
+                    "NYSE:BLK", "NYSE:AXP", "LSE:HSBA", "TSE:8306", "NYSE:RY",
+                    "NYSE:TD", "TSE:8316", "NYSE:ING", "NYSE:HSBC", "NYSE:BBD",
+                    "NYSE:BMO", "NYSE:BCS", "NYSE:CS", "NYSE:UBS", "NYSE:PGR",
+                    "NYSE:MET", "NYSE:ALL", "SSE:601318", "SSE:601628", "SSE:600000",
+                    "SSE:601988", "SSE:601328", "SSE:601998", "SSE:600015", "SSE:600016",
+                    "SSE:601398", "SSE:601288", "HKEX:1299", "HKEX:388", "HKEX:2318",
+                    "HKEX:2628", "HKEX:1177"
+                ],
+                "Healthcare": [
+                    "LSE:AZN", "NYSE:UNH", "NYSE:JNJ", "NYSE:LLY", "NYSE:PFE",
+                    "NYSE:MRK", "NYSE:ABT", "NYSE:TMO", "NYSE:DHR", "NYSE:BMY",
+                    "NYSE:ABBV", "LSE:GSK", "NYSE:SNY", "NYSE:ZTS", "NASDAQ:ISRG",
+                    "NASDAQ:VRTX", "NASDAQ:REGN", "NASDAQ:GILD", "SSE:600276"
+                ],
+                "Consumer Goods & Retail": [
+                    "NYSE:WMT", "NYSE:PG", "NYSE:KO", "NASDAQ:PEP", "NYSE:COST",
+                    "NYSE:MCD", "NYSE:NKE", "NYSE:DIS", "NYSE:TGT", "NYSE:LOW",
+                    "NYSE:DG", "NYSE:EL", "NYSE:CL", "NYSE:K", "NYSE:UL",
+                    "NYSE:DEO", "SSE:600519", "SZSE:000858", "SZSE:000651", "SSE:603288",
+                    "SSE:600887", "SZSE:000725", "HKEX:1810", "HKEX:2020"
+                ],
+                "Energy": [
+                    "NYSE:XOM", "NYSE:CVX", "NYSE:BP", "NYSE:TTE", "NYSE:SLB",
+                    "SSE:601857", "SSE:600028", "HKEX:883", "HKEX:857", "SSE:601138"
+                ],
+                "Industrial & Manufacturing": [
+                    "NYSE:RTX", "NYSE:HON", "NYSE:CAT", "NYSE:GE", "NYSE:BA",
+                    "NYSE:LMT", "NYSE:MMM", "NYSE:UPS", "TSE:7203", "TSE:6861",
+                    "NYSE:EADSY", "TSE:7267", "TSE:6367", "SSE:600104", "SSE:601766",
+                    "SZSE:000333", "SSE:601899", "SSE:601375", "SSE:601668", "HKEX:1211"
+                ],
+                "Telecommunications": [
+                    "NYSE:T", "NYSE:VZ", "NASDAQ:TMUS", "TSE:9432", "HKEX:941",
+                    "SSE:600050", "HKEX:762"
+                ],
+                "Real Estate": [
+                    "NYSE:PLD", "NYSE:AMT", "NYSE:CCI", "HKEX:823", "SSE:601668",
+                    "HKEX:1109", "HKEX:1038", "SSE:600606"
+                ],
+                "Materials & Mining": [
+                    "NYSE:LIN", "NYSE:APD", "NYSE:ECL", "LSE:RIO", "NYSE:BHP",
+                    "NYSE:VALE", "SSE:601899", "HKEX:1088", "SSE:600019"
+                ],
+                "Utilities": [
+                    "NYSE:NEE", "NYSE:DUK", "NYSE:SO", "NYSE:NGG", "SSE:600900",
+                    "HKEX:2", "HKEX:3"
+                ],
+                "Entertainment & Gaming": [
+                    "NASDAQ:EA", "NASDAQ:ATVI", "NYSE:SPOT", "NASDAQ:NFLX",
+                    "NYSE:DIS", "NASDAQ:CMCSA"
+                ],
+                "Transportation & Logistics": [
+                    "NYSE:UNP", "NYSE:CSX", "NSE:FDX", "NYSE:UBER", "NYSE:DASH",
+                    "SSE:601919", "HKEX:1919"
+                ],
+                "Insurance": [
+                    "NYSE:PGR", "NYSE:MET", "NYSE:ALL", "SSE:601601", "HKEX:2628",
+                    "SSE:601318", "TSE:8766"
+                ],
+                "Internet & E-commerce": [
+                    "NASDAQ:AMZN", "NASDAQ:META", "NYSE:SHOP", "NYSE:ABNB",
+                    "HKEX:9988", "HKEX:3690", "HKEX:9618"
+                ],
+                "Business Services": [
+                    "NYSE:ACN", "NYSE:ADP", "NYSE:INFO", "NYSE:VEEV",
+                    "SSE:600570", "HKEX:2382"
+                ],
+                "Semiconductors": [
+                    "NYSE:TSM", "NYSE:ASML", "NASDAQ:NVDA", "NASDAQ:INTC",
+                    "NASDAQ:AMD", "NASDAQ:QCOM", "NASDAQ:AMAT", "NASDAQ:MU",
+                    "NASDAQ:KLAC", "NASDAQ:LRCX"
+                ]
+            };
 
-           // Function to handle symbol search when clicking related symbols
-           window.searchSymbol = (symbol) => {
-               symbolInput.value = symbol; // Set the symbol in the search input
-               searchForm.dispatchEvent(new Event('submit')); // Trigger the search form submission
-           };
+            // Function to get sector for a symbol
+            const getSymbolSector = (symbol) => {
+                for (const [sector, symbols] of Object.entries(sectors)) {
+                    if (symbols.includes(symbol)) return sector;
+                }
+                return 'Other';
+            };
 
-           searchForm.addEventListener('submit', async (e) => {
-               e.preventDefault();
-               
-               const symbol = symbolInput.value.trim();
-               if (!symbol) {
-                   alert('Please enter a stock symbol or "latest"');
-                   return;
-               }
+            // Function to handle sector search
+            window.searchSector = async (sector) => {
+                const symbols = sectors[sector] || [];
+                if (symbols.length === 0) return;
+                
+                try {
+                    const symbolsParam = symbols.join(',');
+                    const params = new URLSearchParams({ symbol: symbolsParam });
+                    const response = await fetch(`/news/search?${params}`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    
+                    if (!response.ok) throw new Error('Search failed');
+                    const data = await response.json();
+                    updateResults(data, `${sector} Sector News`);
+                } catch (error) {
+                    console.error('Sector search error:', error);
+                    alert('Failed to search sector news: ' + error.message);
+                }
+            };
 
-               try {
-                   searchButton.disabled = true;
-                   const params = new URLSearchParams({ symbol });
-                   
-                   const response = await fetch(`/news/search?${params}`, {
-                       headers: {
-                           'X-Requested-With': 'XMLHttpRequest'
-                       }
-                   });
+            // Function to handle symbol search
+            window.searchSymbol = (symbol) => {
+                symbolInput.value = symbol;
+                searchForm.dispatchEvent(new Event('submit'));
+            };
 
-                   if (!response.ok) throw new Error('Search failed');
-                   
-                   const data = await response.json();
-                   
-                   if (data.articles?.length > 0) {
-                       resultsCount.textContent = `${data.articles.length} articles found`;
-                       articlesContainer.innerHTML = data.articles
-                           .map(article => `
-                               <div class="border-b border-gray-100 pb-6 last:border-b-0">
-                                   <a href="${article.url}" target="_blank" class="block text-blue-500 text-lg font-medium mb-2 hover:text-blue-600">
-                                       ${article.title}
-                                   </a>
-                                   <div class="text-gray-500 mb-2">Published on: ${article.published_at}</div>
-                                   
-                                   <!-- AI Summary -->
-                                   <div class="text-gray-600 mb-4 markdown-content">
-                                       ${renderMarkdown(article.summary.ai_summary)}
-                                   </div>
-                                   
-                                   <!-- AI Insights -->
-                                   <div class="text-gray-600 mb-4 markdown-content">
-                                       ${renderMarkdown(article.summary.ai_insights)}
-                                   </div>
+            // Function to render markdown
+            const renderMarkdown = (markdown) => {
+                return marked.parse(markdown || '');
+            };
 
-                                   <!-- Related Symbols -->
-                                   ${article.symbols?.length > 0 ? `
-                                       <div class="text-gray-600 mb-4">
-                                           <span class="font-medium">Related Symbols:</span>
-                                           <div class="flex flex-wrap gap-2 mt-2">
-                                               ${article.symbols.map(symbol => `
-                                                   <span class="bg-gray-200 text-gray-800 px-2 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-300"
-                                                         onclick="searchSymbol('${symbol.symbol}')">
-                                                       ${symbol.symbol}
-                                                   </span>
-                                               `).join('')}
-                                           </div>
-                                       </div>
-                                   ` : ''}
+            // Function to update results
+            const updateResults = (data, searchContext = '') => {
+                if (data.articles?.length > 0) {
+                    // Sort articles by date (newest first)
+                    const sortedArticles = _.orderBy(data.articles, ['published_at'], ['desc']);
+                    resultsCount.textContent = `${sortedArticles.length} articles found ${searchContext ? 'for ' + searchContext : ''}`;
+                    
+                    articlesContainer.innerHTML = sortedArticles
+                        .map(article => {
+                            // Add sector information to each symbol
+                            const symbolsWithSectors = article.symbols?.map(symbol => ({
+                                ...symbol,
+                                sector: getSymbolSector(symbol.symbol)
+                            }));
 
-                                   <!-- AI Sentiment Rating -->
-                                   ${article.summary.ai_sentiment_rating != null ? 
-                                       `<div class="mt-2 flex items-center space-x-2">
-                                           <span class="inline-flex items-center px-2.5 py-1.5 rounded-full text-sm font-medium ${
-                                               article.summary.ai_sentiment_rating > 50 ? 'bg-green-200 text-green-900 border border-green-300' :
-                                               article.summary.ai_sentiment_rating > 10 ? 'bg-green-100 text-green-800 border border-green-200' :
-                                               article.summary.ai_sentiment_rating >= -10 ? 'bg-gray-100 text-gray-800 border border-gray-200' :
-                                               article.summary.ai_sentiment_rating >= -50 ? 'bg-red-100 text-red-800 border border-red-200' :
-                                               'bg-red-200 text-red-900 border border-red-300'
-                                           }">
-                                               ${article.summary.ai_sentiment_rating > 50 ? 'Strong Positive' :
-                                                 article.summary.ai_sentiment_rating > 10 ? 'Positive' :
-                                                 article.summary.ai_sentiment_rating >= -10 ? 'Neutral' :
-                                                 article.summary.ai_sentiment_rating >= -50 ? 'Negative' :
-                                                 'Strong Negative'}
-                                               (${article.summary.ai_sentiment_rating})
-                                           </span>
-                                       </div>` : ''
-                                   }
-                               </div>
-                           `).join('');
-                   } else {
-                       resultsCount.textContent = 'No articles found';
-                       articlesContainer.innerHTML = '';
-                   }
-               } catch (error) {
-                   console.error('Search error:', error);
-                   alert('Failed to search news: ' + error.message);
-               } finally {
-                   searchButton.disabled = false;
-               }
-           });
-       });
-   </script>
+                            return `
+                                <div class="border-b border-gray-100 pb-6 last:border-b-0">
+                                    <a href="${article.url}" target="_blank" class="block text-blue-500 text-lg font-medium mb-2 hover:text-blue-600">
+                                        ${article.title}
+                                    </a>
+                                    <div class="text-gray-500 mb-2">Published on: ${article.published_at}</div>
+                                    
+                                    <!-- AI Summary -->
+                                    <div class="text-gray-600 mb-4 markdown-content">
+                                        ${renderMarkdown(article.summary.ai_summary)}
+                                    </div>
+                                    
+                                    <!-- AI Insights -->
+                                    <div class="text-gray-600 mb-4 markdown-content">
+                                        ${renderMarkdown(article.summary.ai_insights)}
+                                    </div>
+
+                                    <!-- Related Symbols with Sectors -->
+                                    ${symbolsWithSectors?.length > 0 ? `
+                                        <div class="text-gray-600 mb-4">
+                                            <span class="font-medium">Related Symbols:</span>
+                                            <div class="flex flex-wrap gap-2 mt-2">
+                                                ${symbolsWithSectors.map(symbol => `
+                                                    <div class="inline-flex rounded-lg overflow-hidden sector-tag shadow-sm">
+                                                        <span class="bg-gray-100 text-gray-800 px-3 py-1.5 cursor-pointer hover:bg-gray-200 transition-colors"
+                                                              onclick="searchSymbol('${symbol.symbol}')">
+                                                            ${symbol.symbol}
+                                                        </span>
+                                                        <span class="bg-blue-50 text-blue-700 px-3 py-1.5 cursor-pointer hover:bg-blue-100 transition-colors"
+                                                              onclick="searchSector('${symbol.sector}')"
+                                                              data-sector="${symbol.sector}">
+                                                            ${symbol.sector}
+                                                        </span>
+                                                    </div>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                    ` : ''}
+
+                                    <!-- AI Sentiment Rating -->
+                                    ${article.summary.ai_sentiment_rating != null ? `
+                                        <div class="mt-2 flex items-center space-x-2">
+                                            <span class="inline-flex items-center px-2.5 py-1.5 rounded-full text-sm font-medium ${
+                                                article.summary.ai_sentiment_rating > 50 ? 'bg-green-200 text-green-900 border border-green-300' :
+                                                article.summary.ai_sentiment_rating > 10 ? 'bg-green-100 text-green-800 border border-green-200' :
+                                                article.summary.ai_sentiment_rating >= -10 ? 'bg-gray-100 text-gray-800 border border-gray-200' :
+                                                article.summary.ai_sentiment_rating >= -50 ? 'bg-red-100 text-red-800 border border-red-200' :
+                                                'bg-red-200 text-red-900 border border-red-300'
+                                            }">
+                                                ${article.summary.ai_sentiment_rating > 50 ? 'Strong Positive' :
+                                                  article.summary.ai_sentiment_rating > 10 ? 'Positive' :
+                                                  article.summary.ai_sentiment_rating >= -10 ? 'Neutral' :
+                                                  article.summary.ai_sentiment_rating >= -50 ? 'Negative' :
+                                                  'Strong Negative'}
+                                                (${article.summary.ai_sentiment_rating})
+                                            </span>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `;
+                        }).join('');
+                } else {
+                    resultsCount.textContent = 'No articles found';
+                    articlesContainer.innerHTML = `
+                        <div class="text-center text-gray-500 py-8">
+                            No articles found for the current search criteria
+                        </div>
+                    `;
+                }
+            };
+
+            // Handle form submission
+            searchForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const symbol = symbolInput.value.trim();
+                if (!symbol) {
+                    alert('Please enter a stock symbol or "latest"');
+                    return;
+                }
+
+                try {
+                    searchButton.disabled = true;
+                    const params = new URLSearchParams({ symbol });
+                    
+                    const response = await fetch(`/news/search?${params}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    if (!response.ok) throw new Error('Search failed');
+                    
+                    const data = await response.json();
+                    updateResults(data);
+                } catch (error) {
+                    console.error('Search error:', error);
+                    alert('Failed to search news: ' + error.message);
+                } finally {
+                    searchButton.disabled = false;
+                }
+            });
+
+            // Initialize with any existing search params
+            if (symbolInput.value) {
+                searchForm.dispatchEvent(new Event('submit'));
+            }
+        });
+    </script>
 </body>
 </html>
