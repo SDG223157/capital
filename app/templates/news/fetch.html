@@ -282,7 +282,8 @@
                         const progress = ((i + 1) / DEFAULT_SYMBOLS.length) * 100;
                         document.getElementById('progressBar').style.width = `${progress}%`;
                         document.getElementById('progressText').textContent = 
-                            `Processing: ${i + 1}/${selectedSymbols.length} symbols`;
+                            `Processing: ${i + 1}/${selectedSymbols.length} - Current Symbol: ${selectedSymbols[i]}`;
+                    
                     }
 
                     renderArticles(allArticles);
