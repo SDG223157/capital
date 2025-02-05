@@ -224,27 +224,51 @@
                 for (const [sector, symbols] of Object.entries(sectors)) {
                     if (symbols.includes(symbol)) return sector;
                 }
-                return 'Other';
+                return 'Other'; // This will be used internally but not displayed
             };
 
             // Function to handle sector search
-            window.searchSector = async (sector) => {
-                const symbols = sectors[sector] || [];
-                if (symbols.length === 0) return;
+            window.searchSector = async (sectorName) => {
+                console.log('Searching sector:', sectorName);
+                
+                // Get symbols for the sector
+                const sectorSymbols = sectors[sectorName];
+                if (!sectorSymbols || sectorSymbols.length === 0) {
+                    console.error('No symbols found for sector:', sectorName);
+                    return;
+                }
                 
                 try {
-                    const symbolsParam = symbols.join(',');
+                    // Show loading state
+                    searchButton.disabled = true;
+                    resultsCount.textContent = `Loading ${sectorName} sector news...`;
+                    
+                    // Join all symbols with commas for the API
+                    const symbolsParam = sectorSymbols.join(',');
+                    console.log('Searching for symbols:', symbolsParam);
+                    
                     const params = new URLSearchParams({ symbol: symbolsParam });
                     const response = await fetch(`/news/search?${params}`, {
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        headers: { 
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Content-Type': 'application/json'
+                        }
                     });
                     
                     if (!response.ok) throw new Error('Search failed');
                     const data = await response.json();
-                    updateResults(data, `${sector} Sector News`);
+                    
+                    // Update the results with sector context
+                    updateResults(data, `${sectorName} Sector News`);
+                    
+                    // Update the search input to show current sector
+                    symbolInput.value = `[${sectorName} Sector]`;
                 } catch (error) {
                     console.error('Sector search error:', error);
                     alert('Failed to search sector news: ' + error.message);
+                    resultsCount.textContent = `Error loading ${sectorName} sector news`;
+                } finally {
+                    searchButton.disabled = false;
                 }
             };
 
@@ -303,7 +327,7 @@
                                                             ${symbol.symbol}
                                                         </span>
                                                         <span class="bg-blue-50 text-blue-700 px-3 py-1.5 cursor-pointer hover:bg-blue-100 transition-colors"
-                                                              onclick="searchSector('${symbol.sector}')"
+                                                              onclick="searchSector('${symbol.sector}', '${sectors[symbol.sector]}')"
                                                               data-sector="${symbol.sector}">
                                                             ${symbol.sector}
                                                         </span>
