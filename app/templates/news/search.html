@@ -229,46 +229,54 @@
 
             // Function to handle sector search
             window.searchSector = async (sectorName) => {
-                console.log('Searching sector:', sectorName);
+                console.log(`Searching for sector: ${sectorName}`);
+                console.log(`Available sectors:`, sectors);
                 
-                // Get symbols for the sector
                 const sectorSymbols = sectors[sectorName];
+                console.log(`Symbols for sector ${sectorName}:`, sectorSymbols);
+                
                 if (!sectorSymbols || sectorSymbols.length === 0) {
-                    console.error('No symbols found for sector:', sectorName);
+                    console.error(`No symbols found for sector: ${sectorName}`);
                     return;
                 }
-                
+
                 try {
                     // Show loading state
-                    searchButton.disabled = true;
+                    if (searchButton) searchButton.disabled = true;
                     resultsCount.textContent = `Loading ${sectorName} sector news...`;
+
+                    // Create a URL-encoded string of all symbols
+                    const symbolsString = sectorSymbols.join(',');
+                    const searchUrl = `/news/search?symbol=${encodeURIComponent(symbolsString)}`;
                     
-                    // Join all symbols with commas for the API
-                    const symbolsParam = sectorSymbols.join(',');
-                    console.log('Searching for symbols:', symbolsParam);
+                    console.log(`Fetching from URL: ${searchUrl}`);
                     
-                    const params = new URLSearchParams({ symbol: symbolsParam });
-                    const response = await fetch(`/news/search?${params}`, {
-                        headers: { 
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'Content-Type': 'application/json'
+                    const response = await fetch(searchUrl, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
                         }
                     });
-                    
-                    if (!response.ok) throw new Error('Search failed');
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
                     const data = await response.json();
-                    
-                    // Update the results with sector context
-                    updateResults(data, `${sectorName} Sector News`);
-                    
-                    // Update the search input to show current sector
-                    symbolInput.value = `[${sectorName} Sector]`;
+                    console.log(`Received data:`, data);
+
+                    // Sort articles by date
+                    if (data.articles) {
+                        data.articles.sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
+                    }
+
+                    // Update the results
+                    updateResults(data, `${sectorName} Sector`);
+
                 } catch (error) {
-                    console.error('Sector search error:', error);
-                    alert('Failed to search sector news: ' + error.message);
-                    resultsCount.textContent = `Error loading ${sectorName} sector news`;
+                    console.error('Error in sector search:', error);
+                    resultsCount.textContent = `Error loading ${sectorName} sector news: ${error.message}`;
                 } finally {
-                    searchButton.disabled = false;
+                    if (searchButton) searchButton.disabled = false;
                 }
             };
 
