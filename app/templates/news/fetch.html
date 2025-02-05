@@ -240,6 +240,16 @@
                 try {
                     loadingIndicator.classList.remove('hidden');
                     batchFetchButton.disabled = true;
+                    function shuffle(array) {
+                        const newArray = [...array];
+                        for (let i = newArray.length - 1; i > 0; i--) {
+                            const j = Math.floor(Math.random() * (i + 1));
+                            [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+                        }
+                        return newArray;
+                    }
+
+                    const selectedSymbols = shuffle(DEFAULT_SYMBOLS);
                     
                     const progressDiv = document.createElement('div');
                     progressDiv.innerHTML = `
@@ -253,14 +263,14 @@
                     loadingIndicator.appendChild(progressDiv);
 
                     let allArticles = [];
-                    for (let i = 0; i < DEFAULT_SYMBOLS.length; i++) {
+                    for (let i = 0; i < selectedSymbols.length; i++) {
                         const response = await fetch('/news/api/fetch', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({
-                                symbols: [DEFAULT_SYMBOLS[i]],
+                                symbols: [selectedSymbols[i]],
                                 limit: 2
                             })
                         });
@@ -272,7 +282,7 @@
                         const progress = ((i + 1) / DEFAULT_SYMBOLS.length) * 100;
                         document.getElementById('progressBar').style.width = `${progress}%`;
                         document.getElementById('progressText').textContent = 
-                            `Processing: ${i + 1}/${DEFAULT_SYMBOLS.length} symbols`;
+                            `Processing: ${i + 1}/${selectedSymbols.length} symbols`;
                     }
 
                     renderArticles(allArticles);
