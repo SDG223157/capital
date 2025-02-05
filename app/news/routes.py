@@ -314,16 +314,18 @@ def get_latest_articles_wrapup():
     except Exception as e:
         logger.error(f"Error in get_latest_articles_wrapup: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
 @bp.route('/api/update-summaries', methods=['POST'])
 @login_required
 def update_ai_summaries():
     try:
-        # initialize_articles(cutoff_time="2025-01-01 00:00:00")
-        # exit()
         import requests
+        from time import sleep
 
         OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
         OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+        MAX_RETRIES = 3
+        RETRY_DELAY = 2  # seconds between retries
 
         headers = {
             "Authorization": f"Bearer {OPENROUTER_API_KEY}",
@@ -337,46 +339,58 @@ def update_ai_summaries():
                 NewsArticle.ai_sentiment_rating.is_(None)
             ),
             NewsArticle.content.isnot(None)
-        ).order_by(NewsArticle.id.desc()).limit(10).all()
+        ).order_by(NewsArticle.id.desc()).limit(30).all()
 
         processed = 0
         results = []
 
+        def make_api_request(payload, retry_count=0):
+            try:
+                response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload)
+                response.raise_for_status()
+                return response.json()['choices'][0]['message']['content']
+            except Exception as e:
+                if retry_count < MAX_RETRIES - 1:
+                    logger.warning(f"API request failed (attempt {retry_count + 1}): {str(e)}")
+                    sleep(RETRY_DELAY * (retry_count + 1))  # Exponential backoff
+                    return make_api_request(payload, retry_count + 1)
+                else:
+                    raise
+
         for article in articles:
             try:
+                # Summary generation with retry
                 if not article.ai_summary:
                     summary_payload = {
-                        "model": "anthropic/claude-3.5-sonnet:beta", # You can choose a different model if needed
+                        "model": "anthropic/claude-3.5-sonnet:beta",
                         "messages": [
                             {
                                 "role": "user",
-                                "content": f"Generate a concise summary of this news article with a maximum of 300 words,show key words and concepts, context and background, and key points with markdown format, just return the text of the summary, nothing else like 'Here is a 100-word summary of the news article:' : {article.content}"
+                                "content": f"Generate a concise summary of this news article with a maximum of 200 words,show key words or concepts, context and background, and key points with markdown format, just return the text of the summary, nothing else like 'Here is a 100-word summary of the news article:' : {article.content}"
                             }
                         ],
                         "max_tokens": 500
                     }
-                    summary_response = requests.post(OPENROUTER_API_URL, headers=headers, json=summary_payload)
-                    summary_response.raise_for_status()
-                    article.ai_summary = summary_response.json()['choices'][0]['message']['content']
+                    article.ai_summary = make_api_request(summary_payload)
 
+                # Insights generation with retry
                 if not article.ai_insights:
                     insights_payload = {
-                        "model": "anthropic/claude-3.5-sonnet:beta",  # You can choose a different model if needed
+                        "model": "anthropic/claude-3.5-sonnet:beta",
                         "messages": [
                             {
                                 "role": "user",
-                                "content": f"Extract key financial insights , market implications, and hidden correlations and causes from this article with a maximum of 300 words, ending with conclusion with one sentence with noticible visibility. Focus on actionable information(risks, opportunities, etc) for investors, use markdown format, just return the text of the insights and market implications, nothing else like 'Here are the key financial insights and market implications from the article:' : {article.content}"
+                                "content": f"Extract key financial insights and market implications from this article with a maximum of 200 words. Focus on actionable information(risks, opportunities, etc) for investors, use markdown format, just return the text of the insights and market implications, nothing else like 'Here are the key financial insights and market implications from the article:' : {article.content}"
                             }
                         ],
                         "max_tokens": 500
                     }
-                    insights_response = requests.post(OPENROUTER_API_URL, headers=headers, json=insights_payload)
-                    insights_response.raise_for_status()
-                    article.ai_insights = insights_response.json()['choices'][0]['message']['content']
+                    article.ai_insights = make_api_request(insights_payload)
 
+                # Sentiment analysis with retry
                 if article.ai_sentiment_rating is None:
                     sentiment_payload = {
-                        "model":  "anthropic/claude-3.5-sonnet:beta",  # You can choose a different model if needed
+                        "model": "anthropic/claude-3.5-sonnet:beta",
                         "messages": [
                             {
                                 "role": "user",
@@ -385,11 +399,9 @@ def update_ai_summaries():
                         ],
                         "max_tokens": 10
                     }
-                    sentiment_response = requests.post(OPENROUTER_API_URL, headers=headers, json=sentiment_payload)
-                    sentiment_response.raise_for_status()
                     try:
-                        rating = int(sentiment_response.json()['choices'][0]['message']['content'].strip())
-                        # Ensure rating is within bounds
+                        sentiment_response = make_api_request(sentiment_payload)
+                        rating = int(sentiment_response.strip())
                         article.ai_sentiment_rating = max(min(rating, 100), -100)
                     except ValueError:
                         logger.error(f"Could not parse sentiment rating for article {article.id}")
