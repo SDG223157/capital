@@ -230,6 +230,9 @@
             // Function to handle sector click
             window.handleSectorClick = async (sector) => {
                 const sectorSymbols = sectors[sector];
+                console.log('Sector:', sector);
+                console.log('Sector symbols:', sectorSymbols);
+
                 if (!sectorSymbols || !Array.isArray(sectorSymbols)) {
                     console.error('Invalid sector or no symbols found:', sector);
                     return;
@@ -243,40 +246,56 @@
                     // Update UI to show loading
                     resultsCount.textContent = `Loading news for ${sector} sector...`;
 
-                    // Create search query with all sector symbols
-                    const symbolsQuery = sectorSymbols.join(',');
-                    const encodedQuery = encodeURIComponent(symbolsQuery);
+                    // Take first 5 symbols from the sector to avoid too long URL
+                    const limitedSymbols = sectorSymbols.slice(0, 5);
                     
+                    // Create search query with limited symbols
+                    const symbolsQuery = limitedSymbols.join(',');
+                    console.log('Search query:', symbolsQuery);
+
                     // Make the API call
-                    const response = await fetch(`/news/search?symbol=${encodedQuery}`, {
+                    const response = await fetch(`/news/search?symbol=${symbolsQuery}`, {
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest'
                         }
                     });
 
-                    if (!response.ok) {
-                        throw new Error(`Failed to fetch sector news (${response.status})`);
-                    }
-
+                    console.log('Response status:', response.status);
                     const data = await response.json();
+                    console.log('Response data:', data);
 
                     // Sort articles by date (newest first)
-                    if (data.articles) {
+                    if (data.articles && data.articles.length > 0) {
                         data.articles.sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
+                        
+                        // Update results with sector context
+                        updateResults(data, sector);
+                    } else {
+                        // No articles found
+                        resultsCount.textContent = `No recent news found for ${sector} sector`;
+                        articlesContainer.innerHTML = `
+                            <div class="text-center text-gray-500 py-8">
+                                <p>No recent news articles found for ${sector} sector</p>
+                                <p class="text-sm mt-2">Searched symbols: ${limitedSymbols.join(', ')}</p>
+                            </div>
+                        `;
                     }
-
-                    // Update results with sector context
-                    updateResults(data, sector);
                     
                     // Update input to show current sector
                     const symbolInput = document.getElementById('symbol');
                     if (symbolInput) {
-                        symbolInput.value = `[${sector} Sector]`;
+                        symbolInput.value = `${sector} (${limitedSymbols.join(', ')})`;
                     }
 
                 } catch (error) {
                     console.error('Sector search failed:', error);
                     resultsCount.textContent = `Failed to load ${sector} sector news`;
+                    articlesContainer.innerHTML = `
+                        <div class="text-center text-red-500 py-8">
+                            <p>Error loading news for ${sector} sector</p>
+                            <p class="text-sm mt-2">Error: ${error.message}</p>
+                        </div>
+                    `;
                 } finally {
                     // Re-enable button
                     if (searchButton) searchButton.disabled = false;
@@ -284,9 +303,52 @@
             };
 
             // Function to handle symbol search
-            window.searchSymbol = (symbol) => {
-                symbolInput.value = symbol;
-                searchForm.dispatchEvent(new Event('submit'));
+            window.searchSymbol = async (symbol) => {
+                console.log('Searching for symbol:', symbol);
+                try {
+                    const searchButton = document.getElementById('searchButton');
+                    if (searchButton) searchButton.disabled = true;
+                    
+                    resultsCount.textContent = `Loading news for ${symbol}...`;
+                    
+                    const response = await fetch(`/news/search?symbol=${symbol}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    console.log('Response status:', response.status);
+                    const data = await response.json();
+                    console.log('Response data:', data);
+
+                    if (data.articles && data.articles.length > 0) {
+                        updateResults(data);
+                    } else {
+                        resultsCount.textContent = `No recent news found for ${symbol}`;
+                        articlesContainer.innerHTML = `
+                            <div class="text-center text-gray-500 py-8">
+                                <p>No recent news articles found for ${symbol}</p>
+                            </div>
+                        `;
+                    }
+
+                    // Update input to show current symbol
+                    const symbolInput = document.getElementById('symbol');
+                    if (symbolInput) {
+                        symbolInput.value = symbol;
+                    }
+                } catch (error) {
+                    console.error('Symbol search failed:', error);
+                    resultsCount.textContent = `Failed to load news for ${symbol}`;
+                    articlesContainer.innerHTML = `
+                        <div class="text-center text-red-500 py-8">
+                            <p>Error loading news for ${symbol}</p>
+                            <p class="text-sm mt-2">Error: ${error.message}</p>
+                        </div>
+                    `;
+                } finally {
+                    if (searchButton) searchButton.disabled = false;
+                }
             };
 
             // Function to render markdown
