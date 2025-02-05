@@ -309,9 +309,13 @@
                     const searchButton = document.getElementById('searchButton');
                     if (searchButton) searchButton.disabled = true;
                     
+                    // Try searching with just the symbol part (without exchange)
+                    const simplifiedSymbol = symbol.split(':').pop();
+                    console.log('Simplified symbol:', simplifiedSymbol);
+                    
                     resultsCount.textContent = `Loading news for ${symbol}...`;
                     
-                    const response = await fetch(`/news/search?symbol=${symbol}`, {
+                    const response = await fetch(`/news/search?symbol=${encodeURIComponent(simplifiedSymbol)}`, {
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest'
                         }
@@ -322,20 +326,23 @@
                     console.log('Response data:', data);
 
                     if (data.articles && data.articles.length > 0) {
+                        // Sort articles by date (newest first)
+                        data.articles.sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
                         updateResults(data);
+                        
+                        // Update input to show current symbol
+                        const symbolInput = document.getElementById('symbol');
+                        if (symbolInput) {
+                            symbolInput.value = symbol;
+                        }
                     } else {
-                        resultsCount.textContent = `No recent news found for ${symbol}`;
+                        resultsCount.textContent = `No articles found for ${symbol}`;
                         articlesContainer.innerHTML = `
                             <div class="text-center text-gray-500 py-8">
                                 <p>No recent news articles found for ${symbol}</p>
+                                <p class="text-sm mt-2">Tried searching for: ${simplifiedSymbol}</p>
                             </div>
                         `;
-                    }
-
-                    // Update input to show current symbol
-                    const symbolInput = document.getElementById('symbol');
-                    if (symbolInput) {
-                        symbolInput.value = symbol;
                     }
                 } catch (error) {
                     console.error('Symbol search failed:', error);
