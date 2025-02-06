@@ -165,12 +165,13 @@ class NewsService:
             query = query.filter(NewsArticle.published_at >= start_date)
             query = query.filter(NewsArticle.published_at <= end_date)
 
-            # Apply symbol filter with join and distinct
+            # Match exact symbol with exchange prefix
             if symbol:
-                symbol = symbol.upper()  # Normalize to uppercase
+                # Use symbol exactly as stored in database
+                exact_symbol = symbol.strip().upper()  # Normalize to uppercase
                 query = query.join(NewsArticle.symbols)
-                query = query.filter(ArticleSymbol.symbol == symbol)
-                query = query.distinct(NewsArticle.id)  # Avoid duplicate entries
+                query = query.filter(ArticleSymbol.symbol == exact_symbol)
+                query = query.distinct(NewsArticle.id)
 
             # Execute query with pagination
             query = query.order_by(NewsArticle.published_at.desc())
