@@ -93,7 +93,11 @@ def index():
 def fetch():
     """Render the Fetch News page"""
     return render_template('news/fetch.html')
-
+@bp.route('/sentiment')
+@login_required
+def sentiment_analysis():
+    """Render the sentiment analysis page"""
+    return render_template('news/sentiment.html')
 @bp.route('/search')
 @login_required
 def search():
