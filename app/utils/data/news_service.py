@@ -307,62 +307,90 @@ class NewsService:
             return False
 
     def get_sentiment_summary(self, days=7, symbol=None):
-        """Get sentiment analysis with exact symbol matching"""
+        """Get sentiment analysis with precise UTC date handling"""
         try:
-            # 1. Get all articles for the symbol first
-            all_articles, _ = self.get_articles_by_date_range(
-                start_date=datetime.min,  # Get all historical articles
-                end_date=datetime.utcnow(),
-                symbol=symbol,
-                per_page=0  # Get all records
-            )
-
-            # 2. Filter to requested time period
-            end_date = datetime.utcnow().replace(hour=23, minute=59, second=59)
-            start_date = end_date - timedelta(days=days-1)
+            # 1. Get UTC date range
+            utc_now = datetime.now(timezone.utc)
+            end_date = utc_now.replace(hour=23, minute=59, second=59)
+            start_date = (end_date - timedelta(days=days-1)).replace(hour=0, minute=0, second=0)
             
-            # Convert to date objects for comparison
-            period_dates = {
+            # 2. Generate complete date range in UTC
+            date_range = [
                 (start_date + timedelta(days=i)).date()
                 for i in range(days)
+            ]
+            
+            # 3. Get articles with UTC date filtering
+            articles, _ = self.get_articles_by_date_range(
+                start_date=start_date,
+                end_date=end_date,
+                symbol=symbol,
+                per_page=0
+            )
+
+            # 4. Initialize daily data with UTC dates
+            daily_data = {
+                d.strftime("%Y-%m-%d"): {
+                    'total_sentiment': 0,
+                    'article_count': 0
+                } for d in date_range
             }
 
-            # 3. Process articles within date range
-            daily_data = {d.strftime("%Y-%m-%d"): {'total': 0, 'count': 0} 
-                         for d in period_dates}
-            
-            for article in all_articles:
-                pub_date = datetime.fromisoformat(
+            # 5. Process articles with strict UTC dates
+            for article in articles:
+                # Parse as UTC datetime
+                pub_dt = datetime.fromisoformat(
                     article['published_at'].replace('Z', '+00:00')
-                ).date()
+                ).astimezone(timezone.utc)
                 
-                if pub_date in period_dates:
-                    date_str = pub_date.strftime("%Y-%m-%d")
+                date_str = pub_dt.date().strftime("%Y-%m-%d")
+                
+                if date_str in daily_data:
                     sentiment = article.get('ai_sentiment_rating') or 0
-                    daily_data[date_str]['total'] += sentiment
-                    daily_data[date_str]['count'] += 1
+                    daily_data[date_str]['total_sentiment'] += sentiment
+                    daily_data[date_str]['article_count'] += 1
 
-            # 4. Generate complete timeline
-            sorted_dates = sorted(
-                (start_date + timedelta(days=i)).date() 
-                for i in range(days)
-            )
-            
-            # 5. Format response with all dates
+            # 6. Generate ordered response
+            sorted_dates = [d.strftime("%Y-%m-%d") for d in date_range]
+            daily_sentiment = {date: daily_data[date] for date in sorted_dates}
+
+            # 7. Calculate average sentiment
+            total_sentiment = 0
+            total_articles = 0
+            for date_str in sorted_dates:
+                data = daily_data[date_str]
+                avg = data['total_sentiment'] / data['article_count'] if data['article_count'] > 0 else 0
+                daily_sentiment[date_str] = {
+                    'average_sentiment': round(avg, 2),
+                    'article_count': data['article_count']
+                }
+
+                if data['article_count'] > 0:
+                    total_sentiment += avg
+                    total_articles += data['article_count']
+
+            # 8. Generate complete response
             result = {
-                "average_sentiment": 0,
-                "daily_sentiment": {},
+                "average_sentiment": round(total_sentiment / total_articles, 2) if total_articles > 0 else 0,
+                "daily_sentiment": daily_sentiment,
                 "highest_day": {"date": None, "value": -1},
                 "lowest_day": {"date": None, "value": 1},
-                "total_articles": 0
+                "total_articles": total_articles
             }
 
-            # ... rest of the calculation logic ...
+            # Update highest and lowest day
+            for date_str in sorted_dates:
+                data = daily_data[date_str]
+                if data['article_count'] > 0:
+                    if data['total_sentiment'] > result['highest_day']['value']:
+                        result['highest_day'] = {'date': date_str, 'value': data['total_sentiment'] / data['article_count']}
+                    if data['total_sentiment'] < result['lowest_day']['value']:
+                        result['lowest_day'] = {'date': date_str, 'value': data['total_sentiment'] / data['article_count']}
 
             return result
 
         except Exception as e:
-            self.logger.error(f"Sentiment analysis error: {str(e)}")
+            self.logger.error(f"Sentiment error: {str(e)}")
             return self._empty_sentiment_response(days)
 
     def _empty_sentiment_response(self, days):
