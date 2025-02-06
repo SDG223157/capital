@@ -34,7 +34,7 @@
                       id="symbol" 
                       name="symbol" 
                       value="{{ search_params.get('symbol') or '' }}"
-                      placeholder="NASDAQ:AAPL or 'latest'" 
+                      placeholder="NASDAQ:AAPL or 'latest', 'highest', 'lowest'" 
                       class="w-full p-4 text-lg rounded-xl border border-gray-200 mb-4">
                
                <button type="submit" 
@@ -128,7 +128,7 @@
                
                const symbol = symbolInput.value.trim();
                if (!symbol) {
-                   alert('Please enter a stock symbol or "latest"');
+                   alert('Please enter a stock symbol or one of: latest, highest, lowest');
                    return;
                }
 

@@ -101,14 +101,21 @@ def search():
         symbol = request.args.get('symbol')
         symbol = None if symbol in ['None', '', None] else symbol
         
-        # Handle "latest" keyword
-        if symbol and symbol.lower() == "latest":
-            # Fetch the latest 30 articles with highest sentiment
-            articles = NewsArticle.query.filter(
-                NewsArticle.ai_sentiment_rating.isnot(None)
-            ).order_by(
-                NewsArticle.ai_sentiment_rating.desc()
-            ).limit(30).all()
+        # Handle special keywords (case-insensitive)
+        if symbol and symbol.lower() in ['latest', 'highest', 'lowest']:
+            query = NewsArticle.query
+            keyword = symbol.lower()  # Normalize to lowercase
+            
+            if keyword == 'latest':
+                query = query.order_by(NewsArticle.published_at.desc())
+            elif keyword == 'highest':
+                query = query.filter(NewsArticle.ai_sentiment_rating.isnot(None))
+                query = query.order_by(NewsArticle.ai_sentiment_rating.desc())
+            elif keyword == 'lowest':
+                query = query.filter(NewsArticle.ai_sentiment_rating.isnot(None))
+                query = query.order_by(NewsArticle.ai_sentiment_rating.asc())
+            
+            articles = query.limit(30).all()
             articles_data = [article.to_dict() for article in articles]
             return jsonify({
                 'status': 'success',
