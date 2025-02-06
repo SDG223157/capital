@@ -39,6 +39,9 @@
                             {% if not request.endpoint == 'news.search' %}
                                 <a href="{{ url_for('news.search') }}" class="dropdown-item text-sm">News</a>
                             {% endif %}
+                            {% if not request.endpoint == 'news.analysis' %}
+                                <a href="{{ url_for('news.analysis') }}" class="dropdown-item text-sm">Sentiment</a>
+                            {% endif %}
                             {% if not request.endpoint == 'main.index' %}
                                 <a href="{{ url_for('main.index') }}" class="dropdown-item text-sm">Trend</a>
                             {% endif %}
