@@ -148,7 +148,12 @@ class NewsService:
     def get_articles_by_date_range(self, start_date, end_date, symbol=None, page=1, per_page=20):
         try:
             query = NewsArticle.query
-
+            
+            # When per_page=0, return all results without pagination
+            if per_page == 0:
+                articles = query.all()
+                return [article.to_dict() for article in articles], len(articles)
+            
             # Convert string dates to datetime objects
             if isinstance(start_date, str):
                 start_date = datetime.strptime(start_date, "%Y-%m-%d")
@@ -300,21 +305,21 @@ class NewsService:
             return False
 
     def get_sentiment_summary(self, days=7, symbol=None):
-        """Get symbol's sentiment analysis for given days"""
+        """Get complete daily sentiment analysis for the period"""
         try:
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=days-1)
+            end_date = datetime.now().replace(hour=23, minute=59, second=59)
+            start_date = end_date - timedelta(days=days)  # Proper N-day range
             
-            # Get articles for symbol and date range
+            # Get ALL articles without pagination
             articles, total = self.get_articles_by_date_range(
-                start_date=start_date.date(),
-                end_date=end_date.date(),
+                start_date=start_date,
+                end_date=end_date,
                 symbol=symbol,
-                per_page=1000  # Get all articles in period
+                per_page=0  # Special value to get all articles
             )
 
-            # Initialize daily data structure
-            date_range = [start_date + timedelta(days=i) for i in range(days)]
+            # Generate complete date range
+            date_range = [start_date + timedelta(days=i) for i in range(days + 1)]
             daily_data = {
                 d.strftime("%Y-%m-%d"): {
                     'total_sentiment': 0,
@@ -322,16 +327,17 @@ class NewsService:
                 } for d in date_range
             }
 
-            # Process articles
+            # Process articles with proper timezone-aware comparison
             for article in articles:
-                date_str = article['published_at'][:10]
+                article_date = datetime.fromisoformat(article['published_at']).date()
+                date_str = article_date.strftime("%Y-%m-%d")
                 if date_str in daily_data:
-                    # Use AI sentiment rating if available
                     sentiment = article.get('ai_sentiment_rating') or 0
                     daily_data[date_str]['total_sentiment'] += sentiment
                     daily_data[date_str]['article_count'] += 1
 
-            # Calculate averages and metrics
+            # Calculate metrics for ALL dates
+            sorted_dates = sorted(daily_data.keys())
             daily_sentiment = {}
             max_day = {'date': None, 'value': -1}
             min_day = {'date': None, 'value': 1}
@@ -365,5 +371,21 @@ class NewsService:
                 "total_articles": total_articles
             }
         except Exception as e:
-            self.logger.error(f"Error getting sentiment summary: {str(e)}")
-            return None
+            self.logger.error(f"Error in sentiment summary: {str(e)}")
+            return self._empty_sentiment_response(days)
+
+    def _empty_sentiment_response(self, days):
+        """Generate empty response structure with all dates"""
+        end_date = datetime.now()
+        return {
+            "average_sentiment": 0,
+            "daily_sentiment": {
+                (end_date - timedelta(days=i)).strftime("%Y-%m-%d"): {
+                    "average_sentiment": 0,
+                    "article_count": 0
+                } for i in range(days)
+            },
+            "highest_day": {"date": None, "value": 0},
+            "lowest_day": {"date": None, "value": 0},
+            "total_articles": 0
+        }
