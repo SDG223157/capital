@@ -95,7 +95,7 @@ def fetch():
     return render_template('news/fetch.html')
 @bp.route('/sentiment')
 @login_required
-def sentiment_analysis():
+def sentiment_page():
     """Render the sentiment analysis page"""
     return render_template('news/sentiment.html')
 @bp.route('/search')
@@ -523,10 +523,10 @@ def update_ai_summaries():
 @bp.route('/api/sentiment')
 @login_required
 def get_sentiment():
-    """Get sentiment analysis for specified parameters"""
+    """Get sentiment analysis data"""
     try:
         symbol = request.args.get('symbol')
-        days = min(int(request.args.get('days', 7)), 90)  # Cap at 90 days
+        days = min(int(request.args.get('days', 7)), 90)
         
         summary = news_service.get_sentiment_summary(
             days=days,
@@ -535,13 +535,7 @@ def get_sentiment():
         
         return jsonify({
             'status': 'success',
-            'data': {
-                'average_sentiment': summary['average_sentiment'],
-                'daily_sentiment': summary['daily_sentiment'],
-                'highest_day': summary['highest_day'],
-                'lowest_day': summary['lowest_day'],
-                'total_articles': summary['total_articles']
-            }
+            'data': summary
         })
         
     except Exception as e:
@@ -729,9 +723,3 @@ def admin_required(f):
             abort(403)  # HTTP 403 Forbidden
         return f(*args, **kwargs)
     return decorated_function
-
-@bp.route('/sentiment')
-@login_required
-def sentiment_analysis():
-    """Render the sentiment analysis page"""
-    return render_template('news/sentiment.html')
