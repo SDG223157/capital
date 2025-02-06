@@ -95,7 +95,7 @@ def fetch():
     return render_template('news/fetch.html')
 @bp.route('/sentiment')
 def analysis():
-    return render_template('sentiment.html')
+    return render_template('news/sentiment.html')
 @bp.route('/search')
 @login_required
 def search():
