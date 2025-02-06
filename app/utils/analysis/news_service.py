@@ -29,18 +29,90 @@ class NewsAnalysisService:
             self.logger.error(f"Error getting articles by date range: {str(e)}")
             return [], 0
 
-    def get_sentiment_summary(self, days=7):
-        return {
-            'total_articles': 0,
-            'average_sentiment': 0,
-            'sentiment_distribution': {
-                'positive': 0,
-                'negative': 0,
-                'neutral': 0
-            },
-            'metrics': {},
-            'trending_topics': []
-        }
+    def get_sentiment_summary(self, days=7, symbol=None):
+        """Get detailed sentiment analysis including daily breakdown"""
+        try:
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=days)
+            
+            articles, total = self.db.get_articles_by_date_range(
+                start_date=start_date.strftime("%Y-%m-%d"),
+                end_date=end_date.strftime("%Y-%m-%d"),
+                symbol=symbol
+            )
+            
+            if not articles:
+                return {
+                    "average_sentiment": 0,
+                    "daily_sentiment": {},
+                    "highest_day": {"date": None, "value": 0},
+                    "lowest_day": {"date": None, "value": 0},
+                    "total_articles": 0
+                }
+
+            # Group articles by date
+            daily_data = {}
+            for article in articles:
+                date_str = article['published_at'][:10]  # Extract YYYY-MM-DD
+                sentiment = article['summary']['ai_sentiment_rating'] or 0
+                
+                if date_str not in daily_data:
+                    daily_data[date_str] = {
+                        'total_sentiment': 0,
+                        'article_count': 0
+                    }
+                
+                daily_data[date_str]['total_sentiment'] += sentiment
+                daily_data[date_str]['article_count'] += 1
+
+            # Calculate daily averages and find extremes
+            daily_sentiment = {}
+            max_sentiment = -float('inf')
+            min_sentiment = float('inf')
+            total_sentiment = 0
+            total_articles = 0
+            
+            for date, data in daily_data.items():
+                avg = data['total_sentiment'] / data['article_count']
+                daily_sentiment[date] = {
+                    'average_sentiment': avg,
+                    'article_count': data['article_count']
+                }
+                
+                total_sentiment += data['total_sentiment']
+                total_articles += data['article_count']
+                
+                if avg > max_sentiment:
+                    max_sentiment = avg
+                    max_date = date
+                    
+                if avg < min_sentiment:
+                    min_sentiment = avg
+                    min_date = date
+
+            return {
+                "average_sentiment": total_sentiment / total_articles if total_articles else 0,
+                "daily_sentiment": daily_sentiment,
+                "highest_day": {
+                    "date": max_date,
+                    "value": round(max_sentiment, 1)
+                },
+                "lowest_day": {
+                    "date": min_date,
+                    "value": round(min_sentiment, 1)
+                },
+                "total_articles": total_articles
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Error getting sentiment summary: {str(e)}")
+            return {
+                "average_sentiment": 0,
+                "daily_sentiment": {},
+                "highest_day": {"date": None, "value": 0},
+                "lowest_day": {"date": None, "value": 0},
+                "total_articles": 0
+            }
 
     def search_articles(self, keyword=None, symbol=None, start_date=None, 
                        end_date=None, sentiment=None, page=1, per_page=20):

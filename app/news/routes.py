@@ -519,22 +519,33 @@ def update_ai_summaries():
 @bp.route('/api/sentiment')
 @login_required
 def get_sentiment():
-    """Get sentiment analysis summary"""
+    """Get sentiment analysis for specified parameters"""
     try:
-        date = request.args.get('date')
         symbol = request.args.get('symbol')
-        days = int(request.args.get('days', 7))
+        days = min(int(request.args.get('days', 7)), 90)  # Cap at 90 days
         
         summary = news_service.get_sentiment_summary(
-            date=date,
-            symbol=symbol,
-            days=days
+            days=days,
+            symbol=symbol
         )
         
-        return jsonify(summary)
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'average_sentiment': summary['average_sentiment'],
+                'daily_sentiment': summary['daily_sentiment'],
+                'highest_day': summary['highest_day'],
+                'lowest_day': summary['lowest_day'],
+                'total_articles': summary['total_articles']
+            }
+        })
+        
     except Exception as e:
-        logger.error(f"Error getting sentiment summary: {str(e)}")
-        return jsonify({'error': 'Failed to get sentiment summary'}), 500
+        logger.error(f"Error getting sentiment summary: {str(e)}", exc_info=True)
+        return jsonify({
+            'status': 'error',
+            'message': 'Failed to get sentiment analysis'
+        }), HTTPStatus.INTERNAL_SERVER_ERROR
 
 @bp.route('/api/trending')
 @login_required
@@ -714,3 +725,9 @@ def admin_required(f):
             abort(403)  # HTTP 403 Forbidden
         return f(*args, **kwargs)
     return decorated_function
+
+@bp.route('/sentiment')
+@login_required
+def sentiment_analysis():
+    """Render the sentiment analysis page"""
+    return render_template('news/sentiment.html')
