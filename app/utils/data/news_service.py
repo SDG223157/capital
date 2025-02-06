@@ -2,7 +2,7 @@
 
 from typing import Dict, List, Tuple, Optional
 import logging
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, timezone
 from sqlalchemy.exc import SQLAlchemyError
 from app import db
 from app.models import NewsArticle, ArticleSymbol, ArticleMetric
@@ -149,19 +149,19 @@ class NewsService:
         try:
             query = NewsArticle.query
 
-            # Ensure datetime objects
-            if isinstance(start_date, date) and not isinstance(start_date, datetime):
-                start_date = datetime.combine(start_date, datetime.min.time())
-            if isinstance(end_date, date) and not isinstance(end_date, datetime):
-                end_date = datetime.combine(end_date, datetime.min.time())
+            # Ensure UTC datetime objects
+            if isinstance(start_date, (date, datetime)):
+                start_date = datetime.combine(start_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+            if isinstance(end_date, (date, datetime)):
+                end_date = datetime.combine(end_date, datetime.min.time()).replace(tzinfo=timezone.utc) + timedelta(days=1)
 
-            # Convert string dates
+            # Convert string dates to UTC
             if isinstance(start_date, str):
-                start_date = datetime.fromisoformat(start_date)
+                start_date = datetime.fromisoformat(start_date).astimezone(timezone.utc)
             if isinstance(end_date, str):
-                end_date = datetime.fromisoformat(end_date)
+                end_date = datetime.fromisoformat(end_date).astimezone(timezone.utc)
 
-            # Apply inclusive date range
+            # Apply inclusive UTC date range
             query = query.filter(NewsArticle.published_at >= start_date)
             query = query.filter(NewsArticle.published_at <= end_date)
 
@@ -308,20 +308,25 @@ class NewsService:
     def get_sentiment_summary(self, days=7, symbol=None):
         """Get complete daily sentiment analysis for the period"""
         try:
-            # Get proper date range (inclusive start and end dates)
-            end_date = datetime.now().replace(hour=23, minute=59, second=59)
-            start_date = end_date - timedelta(days=days-1)  # Correct N-day range
+            # Use UTC for all datetime operations
+            end_date = datetime.utcnow().replace(hour=23, minute=59, second=59)
+            start_date = end_date - timedelta(days=days-1)
             
-            # Get ALL articles without pagination
+            # Generate complete UTC date range
+            date_range = [
+                (start_date + timedelta(days=i)).date()
+                for i in range(days)
+            ]
+            
+            # Get articles with proper UTC filtering
             articles, total = self.get_articles_by_date_range(
-                start_date=start_date.date(),
-                end_date=end_date.date(),
+                start_date=start_date,
+                end_date=end_date,
                 symbol=symbol,
-                per_page=0  # Get all articles
+                per_page=0
             )
 
-            # Generate complete date range (days entries)
-            date_range = [start_date + timedelta(days=i) for i in range(days)]
+            # Initialize daily data structure
             daily_data = {
                 d.strftime("%Y-%m-%d"): {
                     'total_sentiment': 0,
@@ -329,11 +334,11 @@ class NewsService:
                 } for d in date_range
             }
 
-            # Process articles with proper date comparison
+            # Process articles with UTC timestamps
             for article in articles:
-                # Parse article date without timezone info
-                article_date = datetime.fromisoformat(article['published_at'].replace('Z', '')).date()
-                date_str = article_date.strftime("%Y-%m-%d")
+                # Parse as UTC datetime object
+                pub_date = datetime.fromisoformat(article['published_at'].replace('Z', '+00:00')).astimezone(timezone.utc)
+                date_str = pub_date.strftime("%Y-%m-%d")
                 
                 if date_str in daily_data:
                     sentiment = article.get('ai_sentiment_rating') or 0
