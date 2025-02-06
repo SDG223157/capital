@@ -1,4 +1,3 @@
-
 # app/news/routes.py
 
 import os
@@ -104,8 +103,12 @@ def search():
         
         # Handle "latest" keyword
         if symbol and symbol.lower() == "latest":
-            # Fetch the latest 20 articles
-            articles = NewsArticle.query.order_by(NewsArticle.published_at.desc()).limit(20).all()
+            # Fetch the latest 30 articles with highest sentiment
+            articles = NewsArticle.query.filter(
+                NewsArticle.ai_sentiment_rating.isnot(None)
+            ).order_by(
+                NewsArticle.ai_sentiment_rating.desc()
+            ).limit(30).all()
             articles_data = [article.to_dict() for article in articles]
             return jsonify({
                 'status': 'success',
