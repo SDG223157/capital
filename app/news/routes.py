@@ -549,7 +549,6 @@ def get_sentiment():
                 'total_articles': summary.get('total_articles', 0)
             }
         })
-        
     except ValueError as e:
         logger.error(f"Invalid input: {str(e)}")
         return jsonify({

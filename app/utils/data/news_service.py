@@ -2,7 +2,7 @@
 
 from typing import Dict, List, Tuple, Optional
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy.exc import SQLAlchemyError
 from app import db
 from app.models import NewsArticle, ArticleSymbol, ArticleMetric
@@ -145,50 +145,36 @@ class NewsService:
                         )
                     )
 
-    def get_articles_by_date_range(
-        self,
-        start_date: str,
-        end_date: str,
-        symbol: str = None,
-        page: int = 1,
-        per_page: int = 20
-    ) -> Tuple[List[Dict], int]:
-        """
-        Get articles within date range with pagination
-        
-        Args:
-            start_date (str): Start date in ISO format
-            end_date (str): End date in ISO format
-            symbol (str, optional): Filter by stock symbol
-            page (int): Page number for pagination
-            per_page (int): Number of items per page
-            
-        Returns:
-            Tuple[List[Dict], int]: List of articles and total count
-        """
+    def get_articles_by_date_range(self, start_date, end_date, symbol=None, page=1, per_page=20):
         try:
             query = NewsArticle.query
 
-            # Apply date range filter
-            query = query.filter(
-                NewsArticle.published_at.between(start_date, end_date)
-            )
+            # Convert string dates to datetime objects
+            if isinstance(start_date, str):
+                start_date = datetime.strptime(start_date, "%Y-%m-%d")
+            if isinstance(end_date, str):
+                end_date = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)  # Include full end day
 
-            # Apply symbol filter if provided
+            # Apply date filters
+            query = query.filter(NewsArticle.published_at >= start_date)
+            query = query.filter(NewsArticle.published_at < end_date)  # Use exclusive end date
+
+            # Apply symbol filter with join and distinct
             if symbol:
-                query = query.join(NewsArticle.symbols).filter(
-                    ArticleSymbol.symbol == symbol
-                )
+                symbol = symbol.upper()  # Normalize to uppercase
+                query = query.join(NewsArticle.symbols)
+                query = query.filter(ArticleSymbol.symbol == symbol)
+                query = query.distinct(NewsArticle.id)  # Avoid duplicate entries
 
-            # Get total count
-            total = query.count()
+            # Execute query with pagination
+            query = query.order_by(NewsArticle.published_at.desc())
+            paginated_articles = query.paginate(page=page, per_page=per_page, error_out=False)
+            
+            return [article.to_dict() for article in paginated_articles.items], paginated_articles.total
 
-            # Apply pagination and ordering
-            paginated_articles = query.order_by(NewsArticle.published_at.desc())\
-                                    .paginate(page=page, per_page=per_page, error_out=False)
-
-            return [article.to_dict() for article in paginated_articles.items], total
-
+        except ValueError as e:
+            self.logger.error(f"Invalid date format: {str(e)}")
+            return [], 0
         except Exception as e:
             self.logger.error(f"Error getting articles by date range: {str(e)}")
             return [], 0
@@ -312,3 +298,72 @@ class NewsService:
             self.logger.error(f"Error deleting article: {str(e)}")
             db.session.rollback()
             return False
+
+    def get_sentiment_summary(self, days=7, symbol=None):
+        """Get symbol's sentiment analysis for given days"""
+        try:
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=days-1)
+            
+            # Get articles for symbol and date range
+            articles, total = self.get_articles_by_date_range(
+                start_date=start_date.date(),
+                end_date=end_date.date(),
+                symbol=symbol,
+                per_page=1000  # Get all articles in period
+            )
+
+            # Initialize daily data structure
+            date_range = [start_date + timedelta(days=i) for i in range(days)]
+            daily_data = {
+                d.strftime("%Y-%m-%d"): {
+                    'total_sentiment': 0,
+                    'article_count': 0
+                } for d in date_range
+            }
+
+            # Process articles
+            for article in articles:
+                date_str = article['published_at'][:10]
+                if date_str in daily_data:
+                    # Use AI sentiment rating if available
+                    sentiment = article.get('ai_sentiment_rating') or 0
+                    daily_data[date_str]['total_sentiment'] += sentiment
+                    daily_data[date_str]['article_count'] += 1
+
+            # Calculate averages and metrics
+            daily_sentiment = {}
+            max_day = {'date': None, 'value': -1}
+            min_day = {'date': None, 'value': 1}
+            total_sentiment = 0
+            total_articles = 0
+
+            for date_str in daily_data:
+                data = daily_data[date_str]
+                avg = data['total_sentiment'] / data['article_count'] if data['article_count'] > 0 else 0
+                
+                daily_sentiment[date_str] = {
+                    'average_sentiment': round(avg, 2),
+                    'article_count': data['article_count']
+                }
+
+                if data['article_count'] > 0:
+                    total_sentiment += avg
+                    total_articles += data['article_count']
+
+                    # Track highest/lowest days
+                    if avg > max_day['value']:
+                        max_day = {'date': date_str, 'value': avg}
+                    if avg < min_day['value']:
+                        min_day = {'date': date_str, 'value': avg}
+
+            return {
+                "average_sentiment": round(total_sentiment / total_articles, 2) if total_articles else 0,
+                "daily_sentiment": daily_sentiment,
+                "highest_day": max_day,
+                "lowest_day": min_day,
+                "total_articles": total_articles
+            }
+        except Exception as e:
+            self.logger.error(f"Error getting sentiment summary: {str(e)}")
+            return None
