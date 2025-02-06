@@ -78,9 +78,13 @@
 
             try {
                 const response = await fetch(`/api/sentiment?symbol=${encodeURIComponent(symbol)}&days=${days}`);
-                if (!response.ok) throw new Error('Failed to fetch sentiment data');
+                const result = await response.json();
                 
-                const data = await response.json();
+                if (!response.ok || result.status !== 'success') {
+                    throw new Error(result.message || 'Failed to fetch sentiment data');
+                }
+                
+                const data = result.data;
                 
                 // Destroy existing chart
                 if (chartInstance) {
@@ -146,8 +150,10 @@
 
                 // Update stats
                 document.getElementById('avgSentiment').textContent = data.average_sentiment.toFixed(1);
-                document.getElementById('highestDay').textContent = `${data.highest_day.date} (${data.highest_day.value})`;
-                document.getElementById('lowestDay').textContent = `${data.lowest_day.date} (${data.lowest_day.value})`;
+                document.getElementById('highestDay').textContent = data.highest_day.value > 0 ? 
+                    `${data.highest_day.date} (${data.highest_day.value})` : '-';
+                document.getElementById('lowestDay').textContent = data.lowest_day.value < 0 ? 
+                    `${data.lowest_day.date} (${data.lowest_day.value})` : '-';
 
             } catch (error) {
                 console.error('Error:', error);

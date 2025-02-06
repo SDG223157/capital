@@ -528,6 +528,12 @@ def get_sentiment():
         symbol = request.args.get('symbol')
         days = min(int(request.args.get('days', 7)), 90)
         
+        if not symbol:
+            return jsonify({
+                'status': 'error',
+                'message': 'Missing required symbol parameter'
+            }), HTTPStatus.BAD_REQUEST
+
         summary = news_service.get_sentiment_summary(
             days=days,
             symbol=symbol
@@ -535,14 +541,26 @@ def get_sentiment():
         
         return jsonify({
             'status': 'success',
-            'data': summary
+            'data': {
+                'average_sentiment': summary.get('average_sentiment', 0),
+                'daily_sentiment': summary.get('daily_sentiment', {}),
+                'highest_day': summary.get('highest_day', {'date': None, 'value': 0}),
+                'lowest_day': summary.get('lowest_day', {'date': None, 'value': 0}),
+                'total_articles': summary.get('total_articles', 0)
+            }
         })
         
+    except ValueError as e:
+        logger.error(f"Invalid input: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': 'Invalid input parameters'
+        }), HTTPStatus.BAD_REQUEST
     except Exception as e:
         logger.error(f"Error getting sentiment summary: {str(e)}", exc_info=True)
         return jsonify({
             'status': 'error',
-            'message': 'Failed to get sentiment analysis'
+            'message': 'Internal server error while processing sentiment data'
         }), HTTPStatus.INTERNAL_SERVER_ERROR
 
 @bp.route('/api/trending')
