@@ -2,7 +2,7 @@
 
 from typing import Dict, List, Tuple, Optional
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from sqlalchemy.exc import SQLAlchemyError
 from app import db
 from app.models import NewsArticle, ArticleSymbol, ArticleMetric
@@ -148,21 +148,22 @@ class NewsService:
     def get_articles_by_date_range(self, start_date, end_date, symbol=None, page=1, per_page=20):
         try:
             query = NewsArticle.query
-            
-            # When per_page=0, return all results without pagination
-            if per_page == 0:
-                articles = query.all()
-                return [article.to_dict() for article in articles], len(articles)
-            
-            # Convert string dates to datetime objects
-            if isinstance(start_date, str):
-                start_date = datetime.strptime(start_date, "%Y-%m-%d")
-            if isinstance(end_date, str):
-                end_date = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)  # Include full end day
 
-            # Apply date filters
+            # Ensure datetime objects
+            if isinstance(start_date, date) and not isinstance(start_date, datetime):
+                start_date = datetime.combine(start_date, datetime.min.time())
+            if isinstance(end_date, date) and not isinstance(end_date, datetime):
+                end_date = datetime.combine(end_date, datetime.min.time())
+
+            # Convert string dates
+            if isinstance(start_date, str):
+                start_date = datetime.fromisoformat(start_date)
+            if isinstance(end_date, str):
+                end_date = datetime.fromisoformat(end_date)
+
+            # Apply inclusive date range
             query = query.filter(NewsArticle.published_at >= start_date)
-            query = query.filter(NewsArticle.published_at < end_date)  # Use exclusive end date
+            query = query.filter(NewsArticle.published_at <= end_date)
 
             # Apply symbol filter with join and distinct
             if symbol:
@@ -307,19 +308,20 @@ class NewsService:
     def get_sentiment_summary(self, days=7, symbol=None):
         """Get complete daily sentiment analysis for the period"""
         try:
+            # Get proper date range (inclusive start and end dates)
             end_date = datetime.now().replace(hour=23, minute=59, second=59)
-            start_date = end_date - timedelta(days=days)  # Proper N-day range
+            start_date = end_date - timedelta(days=days-1)  # Correct N-day range
             
             # Get ALL articles without pagination
             articles, total = self.get_articles_by_date_range(
-                start_date=start_date,
-                end_date=end_date,
+                start_date=start_date.date(),
+                end_date=end_date.date(),
                 symbol=symbol,
-                per_page=0  # Special value to get all articles
+                per_page=0  # Get all articles
             )
 
-            # Generate complete date range
-            date_range = [start_date + timedelta(days=i) for i in range(days + 1)]
+            # Generate complete date range (days entries)
+            date_range = [start_date + timedelta(days=i) for i in range(days)]
             daily_data = {
                 d.strftime("%Y-%m-%d"): {
                     'total_sentiment': 0,
@@ -327,10 +329,12 @@ class NewsService:
                 } for d in date_range
             }
 
-            # Process articles with proper timezone-aware comparison
+            # Process articles with proper date comparison
             for article in articles:
-                article_date = datetime.fromisoformat(article['published_at']).date()
+                # Parse article date without timezone info
+                article_date = datetime.fromisoformat(article['published_at'].replace('Z', '')).date()
                 date_str = article_date.strftime("%Y-%m-%d")
+                
                 if date_str in daily_data:
                     sentiment = article.get('ai_sentiment_rating') or 0
                     daily_data[date_str]['total_sentiment'] += sentiment
