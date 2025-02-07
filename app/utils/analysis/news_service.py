@@ -11,6 +11,7 @@ from app.utils.data.news_service import NewsService
 from .news_analyzer import NewsAnalyzer
 from app.models import NewsArticle, ArticleSymbol  # Add at top
 from sqlalchemy import func  # Add this import
+from app import db  # Add this import
 
 class NewsAnalysisService:
     def __init__(self):
@@ -342,7 +343,7 @@ class NewsAnalysisService:
     def get_sentiment_timeseries(self, symbol: str, days: int):
         """Get daily sentiment averages for a specific symbol"""
         # Check total articles
-        total_query = self.db.session.query(NewsArticle)\
+        total_query = db.session.query(NewsArticle)\
             .join(NewsArticle.symbols)\
             .filter(func.upper(ArticleSymbol.symbol) == symbol.upper())
         
@@ -362,7 +363,7 @@ class NewsAnalysisService:
         self.logger.info(f"Date range: {start_date} to {end_date}")
 
         # Use direct database session instead of NewsService to avoid pagination
-        query = self.db.session.query(
+        query = db.session.query(
             func.date(NewsArticle.published_at).label('date'),
             func.avg(NewsArticle.ai_sentiment_rating).label('avg_sentiment'),
             func.count(NewsArticle.id).label('article_count')
