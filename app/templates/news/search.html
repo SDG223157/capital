@@ -110,12 +110,12 @@
 
                    {% if article.ai_sentiment_rating is not none %}
                    <div class="text-sm text-gray-500 mt-2">
-                       <span class="ml-2 px-2 py-1 rounded-full text-sm font-medium 
-                           {% if article.ai_sentiment_rating > 50 %}bg-green-100 text-green-800
-                           {% elif article.ai_sentiment_rating < -50 %}bg-red-100 text-red-800
-                           {% else %}bg-yellow-100 text-yellow-800{% endif %}">
-                           AI Sentiment Rating {{ article.ai_sentiment_rating }}
-                       </span>
+                       <span class="px-2 py-1 rounded-full text-sm font-medium 
+                            {% if article.ai_sentiment_rating > 50 %}bg-green-100 text-green-800
+                            {% elif article.ai_sentiment_rating < -50 %}bg-red-100 text-red-800
+                            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                            AI Sentiment Rating {{ article.ai_sentiment_rating }}
+                        </span>
                    </div>
                    {% endif %}
 
