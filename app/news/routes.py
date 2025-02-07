@@ -13,12 +13,13 @@ from http import HTTPStatus
 from functools import wraps
 from flask import abort
 from flask_login import current_user
-from app.models import NewsArticle
+from app.models import NewsArticle, ArticleSymbol
 from openai import OpenAI
 from app import db
 # import httpx
 # from app.utils.config.news_config import DEFAULT_SYMBOLS
 import time
+from sqlalchemy import or_
 logger = logging.getLogger(__name__)
 bp = Blueprint('news', __name__)
 
@@ -129,12 +130,15 @@ def search():
                 query = query.filter(NewsArticle.ai_sentiment_rating.isnot(None))
                 query = query.order_by(NewsArticle.ai_sentiment_rating.asc())
         else:
-            # Search for symbol in the title
+            # Search for specific symbol
             query = query.filter(
-                NewsArticle.title.ilike(f'%{symbol}%')
+                or_(
+                    NewsArticle.symbols.any(ArticleSymbol.symbol == symbol_upper),
+                    NewsArticle.title.ilike(f'%{symbol}%')
+                )
             ).order_by(NewsArticle.published_at.desc())
 
-        # Paginate the results
+        # Paginate the results - 5 items per page
         pagination = query.paginate(page=page, per_page=5, error_out=False)
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -145,7 +149,8 @@ def search():
                     'published_at': article.published_at.strftime('%Y-%m-%d %H:%M:%S'),
                     'ai_summary': article.ai_summary,
                     'ai_insights': article.ai_insights,
-                    'ai_sentiment_rating': article.ai_sentiment_rating
+                    'ai_sentiment_rating': article.ai_sentiment_rating,
+                    'symbols': [{'symbol': s.symbol} for s in article.symbols]
                 } for article in pagination.items],
                 'has_next': pagination.has_next,
                 'has_prev': pagination.has_prev,
@@ -164,7 +169,6 @@ def search():
     except Exception as e:
         current_app.logger.error(f"Error in search route: {str(e)}", exc_info=True)
         error_msg = f"An error occurred while searching: {str(e)}"
-        # Always include search_params in error case
         return render_template(
             'news/search.html',
             error=error_msg,
