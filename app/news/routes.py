@@ -568,32 +568,45 @@ def get_sentiment():
                 'message': 'Missing required symbol parameter'
             }), HTTPStatus.BAD_REQUEST
 
-        summary = news_service.get_sentiment_summary(
-            days=days,
-            symbol=symbol
+        # Use get_sentiment_timeseries instead of get_sentiment_summary
+        daily_data = news_service.get_sentiment_timeseries(
+            symbol=symbol,
+            days=days
         )
+        
+        # Calculate overall statistics
+        total_sentiment = 0
+        total_articles = 0
+        highest_day = {'date': None, 'value': -100}
+        lowest_day = {'date': None, 'value': 100}
+        
+        for date, data in daily_data.items():
+            if data['article_count'] > 0:
+                total_articles += data['article_count']
+                total_sentiment += data['average_sentiment'] * data['article_count']
+                
+                if data['average_sentiment'] > highest_day['value']:
+                    highest_day = {'date': date, 'value': data['average_sentiment']}
+                if data['average_sentiment'] < lowest_day['value']:
+                    lowest_day = {'date': date, 'value': data['average_sentiment']}
+        
+        average_sentiment = round(total_sentiment / total_articles, 2) if total_articles > 0 else 0
         
         return jsonify({
             'status': 'success',
             'data': {
-                'average_sentiment': summary.get('average_sentiment', 0),
-                'daily_sentiment': summary.get('daily_sentiment', {}),
-                'highest_day': summary.get('highest_day', {'date': None, 'value': 0}),
-                'lowest_day': summary.get('lowest_day', {'date': None, 'value': 0}),
-                'total_articles': summary.get('total_articles', 0)
+                'average_sentiment': average_sentiment,
+                'daily_sentiment': daily_data,
+                'highest_day': highest_day,
+                'lowest_day': lowest_day,
+                'total_articles': total_articles
             }
         })
-    except ValueError as e:
-        logger.error(f"Invalid input: {str(e)}")
-        return jsonify({
-            'status': 'error',
-            'message': 'Invalid input parameters'
-        }), HTTPStatus.BAD_REQUEST
     except Exception as e:
-        logger.error(f"Error getting sentiment summary: {str(e)}", exc_info=True)
+        logger.error(f"Error getting sentiment data: {str(e)}", exc_info=True)
         return jsonify({
             'status': 'error',
-            'message': 'Internal server error while processing sentiment data'
+            'message': str(e)
         }), HTTPStatus.INTERNAL_SERVER_ERROR
 
 @bp.route('/api/trending')
