@@ -76,6 +76,14 @@
                    
                    <div class="text-gray-500 mb-2">
                        Published: {{ article.published_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                       {% if article.symbols %}
+                       <div class="mt-1">
+                           Related Symbols: 
+                           {% for symbol in article.symbols %}
+                           <span class="bg-gray-100 px-2 py-1 rounded text-sm">{{ symbol.symbol }}</span>
+                           {% endfor %}
+                       </div>
+                       {% endif %}
                    </div>
 
                    {% if article.ai_summary %}
@@ -93,13 +101,13 @@
                    {% endif %}
 
                    {% if article.ai_sentiment_rating is not none %}
-                   <div class="text-sm text-gray-500">
-                       Sentiment Rating: 
+                   <div class="text-sm text-gray-500 mt-2">
+                       AI Sentiment Rating: 
                        <span class="font-medium 
-                           {% if article.ai_sentiment_rating > 0.6 %}text-green-600
-                           {% elif article.ai_sentiment_rating < 0.4 %}text-red-600
+                           {% if article.ai_sentiment_rating > 50 %}text-green-600
+                           {% elif article.ai_sentiment_rating < -50 %}text-red-600
                            {% else %}text-yellow-600{% endif %}">
-                           {{ "%.2f"|format(article.ai_sentiment_rating) }}
+                           {{ article.ai_sentiment_rating }}
                        </span>
                    </div>
                    {% endif %}
