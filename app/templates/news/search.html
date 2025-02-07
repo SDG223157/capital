@@ -144,19 +144,8 @@
        document.addEventListener('DOMContentLoaded', () => {
            const searchForm = document.getElementById('searchForm');
            const symbolInput = document.getElementById('symbol');
-           const searchButton = document.getElementById('searchButton');
            const articlesContainer = document.getElementById('articlesContainer');
            const resultsCount = document.getElementById('resultsCount');
-
-           const renderMarkdown = (markdown) => {
-               return marked.parse(markdown || '');
-           };
-
-           // Function to handle symbol search when clicking related symbols
-           window.searchSymbol = (symbol) => {
-               symbolInput.value = symbol; // Set the symbol in the search input
-               searchForm.dispatchEvent(new Event('submit')); // Trigger the search form submission
-           };
 
            searchForm.addEventListener('submit', async (e) => {
                e.preventDefault();
@@ -168,84 +157,11 @@
                }
 
                try {
-                   searchButton.disabled = true;
                    const params = new URLSearchParams({ symbol });
-                   
-                   const response = await fetch(`/news/search?${params}`, {
-                       headers: {
-                           'X-Requested-With': 'XMLHttpRequest'
-                       }
-                   });
-
-                   if (!response.ok) throw new Error('Search failed');
-                   
-                   const data = await response.json();
-                   
-                   if (data.articles?.length > 0) {
-                       resultsCount.textContent = `${data.articles.length} articles found`;
-                       articlesContainer.innerHTML = data.articles
-                           .map(article => `
-                               <div class="border-b border-gray-100 pb-6 last:border-b-0">
-                                   <a href="${article.url}" target="_blank" class="block text-blue-500 text-lg font-medium mb-2 hover:text-blue-600">
-                                       ${article.title}
-                                   </a>
-                                   <div class="text-gray-500 mb-2">Published on: ${article.published_at}</div>
-                                   
-                                   <!-- AI Summary -->
-                                   <div class="text-gray-600 mb-4 markdown-content">
-                                       ${renderMarkdown(article.summary.ai_summary)}
-                                   </div>
-                                   
-                                   <!-- AI Insights -->
-                                   <div class="text-gray-600 mb-4 markdown-content">
-                                       ${renderMarkdown(article.summary.ai_insights)}
-                                   </div>
-
-                                   <!-- Related Symbols -->
-                                   ${article.symbols?.length > 0 ? `
-                                       <div class="text-gray-600 mb-4">
-                                           <span class="font-medium">Related Symbols:</span>
-                                           <div class="flex flex-wrap gap-2 mt-2">
-                                               ${article.symbols.map(symbol => `
-                                                   <span class="bg-gray-200 text-gray-800 px-2 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-300"
-                                                         onclick="searchSymbol('${symbol.symbol}')">
-                                                       ${symbol.symbol}
-                                                   </span>
-                                               `).join('')}
-                                           </div>
-                                       </div>
-                                   ` : ''}
-
-                                   <!-- AI Sentiment Rating -->
-                                   ${article.summary.ai_sentiment_rating != null ? 
-                                       `<div class="mt-2 flex items-center space-x-2">
-                                           <span class="inline-flex items-center px-2.5 py-1.5 rounded-full text-sm font-medium ${
-                                               article.summary.ai_sentiment_rating > 50 ? 'bg-green-200 text-green-900 border border-green-300' :
-                                               article.summary.ai_sentiment_rating > 10 ? 'bg-green-100 text-green-800 border border-green-200' :
-                                               article.summary.ai_sentiment_rating >= -10 ? 'bg-gray-100 text-gray-800 border border-gray-200' :
-                                               article.summary.ai_sentiment_rating >= -50 ? 'bg-red-100 text-red-800 border border-red-200' :
-                                               'bg-red-200 text-red-900 border border-red-300'
-                                           }">
-                                               ${article.summary.ai_sentiment_rating > 50 ? 'Strong Positive' :
-                                                 article.summary.ai_sentiment_rating > 10 ? 'Positive' :
-                                                 article.summary.ai_sentiment_rating >= -10 ? 'Neutral' :
-                                                 article.summary.ai_sentiment_rating >= -50 ? 'Negative' :
-                                                 'Strong Negative'}
-                                               (${article.summary.ai_sentiment_rating})
-                                           </span>
-                                       </div>` : ''
-                                   }
-                               </div>
-                           `).join('');
-                   } else {
-                       resultsCount.textContent = 'No articles found';
-                       articlesContainer.innerHTML = '';
-                   }
+                   window.location.href = `/news/search?${params.toString()}`;
                } catch (error) {
                    console.error('Search error:', error);
                    alert('Failed to search news: ' + error.message);
-               } finally {
-                   searchButton.disabled = false;
                }
            });
        });
