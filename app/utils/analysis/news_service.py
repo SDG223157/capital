@@ -341,7 +341,14 @@ class NewsAnalysisService:
 
     def get_sentiment_timeseries(self, symbol: str, days: int):
         """Get daily sentiment averages for a specific symbol"""
-        end_date = datetime.now()
+        # Get the latest article date instead of using current time
+        latest_article = self.db.session.query(
+            func.max(NewsArticle.published_at)
+        ).join(NewsArticle.symbols).filter(
+            ArticleSymbol.symbol == symbol.upper()
+        ).scalar()
+
+        end_date = latest_article or datetime.now()
         start_date = end_date - timedelta(days=days)
         
         # Get base query
