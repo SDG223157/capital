@@ -342,7 +342,7 @@ class NewsAnalysisService:
 
     def get_sentiment_timeseries(self, symbol: str, days: int):
         """Get daily sentiment averages for a specific symbol"""
-        latest_article = self.db.session.query(
+        latest_article = db.session.query(
             func.max(NewsArticle.published_at)
         ).join(NewsArticle.symbols)\
         .filter(func.upper(ArticleSymbol.symbol) == symbol.upper())\
@@ -352,25 +352,30 @@ class NewsAnalysisService:
         start_date = end_date - timedelta(days=days)
 
         # Get all articles without pagination
-        articles, total = self.db.get_articles_by_date_range(
-            start_date=start_date,
-            end_date=end_date,
-            symbol=symbol,
-            per_page=0  # This will now return all articles
-        )
+        query = db.session.query(
+            func.date(NewsArticle.published_at).label('date'),
+            func.avg(NewsArticle.ai_sentiment_rating).label('avg_sentiment'),
+            func.count(NewsArticle.id).label('article_count')
+        ).join(NewsArticle.symbols).filter(
+            func.upper(ArticleSymbol.symbol) == symbol.upper(),
+            NewsArticle.published_at >= start_date,
+            NewsArticle.published_at <= end_date,
+            NewsArticle.ai_sentiment_rating.isnot(None)
+        ).group_by(func.date(NewsArticle.published_at)).order_by('date')
+
+        results = query.all()
 
         # Process articles into daily buckets
         date_dict = {}
-        for article in articles:
-            date_str = datetime.fromisoformat(article['published_at']).strftime('%Y-%m-%d')
+        for result in results:
+            date_str = result['date'].strftime('%Y-%m-%d')
             if date_str not in date_dict:
                 date_dict[date_str] = {
                     'total_sentiment': 0,
                     'count': 0
                 }
-            if article.get('ai_sentiment_rating') is not None:
-                date_dict[date_str]['total_sentiment'] += article['ai_sentiment_rating']
-                date_dict[date_str]['count'] += 1
+            date_dict[date_str]['total_sentiment'] += result['avg_sentiment']
+            date_dict[date_str]['count'] += result['article_count']
 
         # Calculate averages and format response
         result = {}
