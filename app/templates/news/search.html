@@ -24,7 +24,13 @@
 </head>
 <body class="bg-gray-50">
    <div class="container mx-auto p-4">
-       <h1 class="text-2xl font-bold mb-6">News Search</h1>
+       <div class="flex justify-between items-center mb-6">
+           <h1 class="text-2xl font-bold">News Search</h1>
+           <a href="{{ url_for('main.index') }}" 
+              class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors">
+               Home
+           </a>
+       </div>
 
        <div class="mb-8 flex justify-between items-center">
            <form id="searchForm" method="GET" action="{{ url_for('news.search') }}" class="space-y-4 flex-grow">
