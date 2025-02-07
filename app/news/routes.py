@@ -138,8 +138,8 @@ def search():
                 )
             ).order_by(NewsArticle.published_at.desc())
 
-        # Paginate the results - 5 items per page
-        pagination = query.paginate(page=page, per_page=5, error_out=False)
+        # Paginate the results - 1 item per page
+        pagination = query.paginate(page=page, per_page=1, error_out=False)
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({

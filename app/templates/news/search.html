@@ -58,7 +58,7 @@
 
        <div id="resultsCount" class="text-lg text-gray-600 mb-4">
            {% if articles and articles.total > 0 %}
-               Showing {{ (articles.page - 1) * 5 + 1 }}-{{ min(articles.page * 5, articles.total) }} 
+               Showing {{ (articles.page - 1) * 1 + 1 }}-{{ min(articles.page * 1, articles.total) }} 
                of {{ articles.total }} articles
            {% elif search_params.symbol %}
                No articles found for "{{ search_params.symbol }}"
