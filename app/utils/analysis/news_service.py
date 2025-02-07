@@ -345,7 +345,7 @@ class NewsAnalysisService:
         start_date = end_date - timedelta(days=days)
         
         # Get base query
-        query = self.session.query(
+        query = self.db.session.query(
             func.date(NewsArticle.published_at).label('date'),
             func.avg(NewsArticle.ai_sentiment_rating).label('avg_sentiment'),
             func.count(NewsArticle.id).label('article_count')
