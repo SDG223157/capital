@@ -9,6 +9,8 @@ import traceback
 from app.utils.config.news_config import NewsConfig
 from app.utils.data.news_service import NewsService
 from .news_analyzer import NewsAnalyzer
+from app.models import NewsArticle, ArticleSymbol  # Add at top
+from sqlalchemy import func  # Add this import
 
 class NewsAnalysisService:
     def __init__(self):
@@ -336,3 +338,44 @@ class NewsAnalysisService:
             self.db.close()
         except Exception as e:
             self.logger.error(f"Error closing resources: {str(e)}")
+
+    def get_sentiment_timeseries(self, symbol: str, days: int):
+        """Get daily sentiment averages for a specific symbol"""
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days)
+        
+        # Get base query
+        query = self.session.query(
+            func.date(NewsArticle.published_at).label('date'),
+            func.avg(NewsArticle.ai_sentiment_rating).label('avg_sentiment'),
+            func.count(NewsArticle.id).label('article_count')
+        ).join(NewsArticle.symbols).filter(
+            ArticleSymbol.symbol == symbol.upper(),
+            NewsArticle.published_at >= start_date,
+            NewsArticle.published_at <= end_date,
+            NewsArticle.ai_sentiment_rating.isnot(None)
+        ).group_by('date').order_by('date')
+
+        # Execute query and format results
+        results = query.all()
+        
+        # Create complete date range
+        date_dict = {}
+        current_date = start_date
+        while current_date <= end_date:
+            date_str = current_date.strftime('%Y-%m-%d')
+            date_dict[date_str] = {
+                'average_sentiment': 0,
+                'article_count': 0
+            }
+            current_date += timedelta(days=1)
+
+        # Fill with actual data
+        for date, avg, count in results:
+            date_str = date.strftime('%Y-%m-%d')
+            date_dict[date_str] = {
+                'average_sentiment': round(float(avg), 2) if avg else 0,
+                'article_count': count
+            }
+
+        return date_dict
