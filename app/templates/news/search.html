@@ -11,9 +11,16 @@
            @apply space-y-4;
        }
        .markdown-content ul {
-           list-style-type: disc !important;
+           list-style: disc !important;
            padding-left: 2rem !important;
            margin-bottom: 1rem !important;
+       }
+       .markdown-content ul ul {
+           list-style: circle !important;
+           padding-left: 2rem !important;
+       }
+       .markdown-content ul ul ul {
+           list-style: square !important;
        }
        .markdown-content li {
            display: list-item !important;
@@ -32,6 +39,9 @@
            font-weight: 600;
            margin-top: 1rem;
            margin-bottom: 0.5rem;
+       }
+       .markdown-content h4 {
+           @apply font-medium text-gray-700 mt-4 mb-2 text-base;
        }
    </style>
 </head>

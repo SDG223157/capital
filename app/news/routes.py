@@ -374,7 +374,20 @@ def update_ai_summaries():
                         "messages": [
                             {
                                 "role": "user",
-                                "content": f"Generate a concise summary of this news article with a maximum of 300 words,show key words and concepts, context and background, and key points with markdown format, just return the text of the summary, nothing else like 'Here is a 100-word summary of the news article:' : {article.content}"
+                                "content": f"""Generate summary with STRICT markdown formatting:
+**Key Concepts/Keywords**  
+- Keyword 1  
+- Keyword 2  
+
+**Key Points**  
+- Point 1  
+- Point 2  
+
+**Context**  
+- Background 1  
+- Background 2  
+
+Use proper line breaks between list items. Article: {article.content}"""
                             }
                         ],
                         "max_tokens": 500
@@ -389,7 +402,19 @@ def update_ai_summaries():
                         "messages": [
                             {
                                 "role": "user",
-                               "content": f"Extract key financial insights , market implications, and hidden correlations and causes from this article with a maximum of 300 words, ending with conclusion with one sentence with noticible visibility. Focus on actionable information(risks, opportunities, etc) for investors, use markdown format, just return the text of the insights and market implications, nothing else like 'Here are the key financial insights and market implications from the article:' : {article.content}"
+                               "content": f"""Generate financial insights with STRICT markdown formatting:
+**Key Insights**  
+- Insight 1  
+- Insight 2  
+
+**Market Implications**  
+- Implication 1  
+- Implication 2  
+
+**Conclusion**  
+- Clear one-sentence conclusion  
+
+Use proper line breaks between list items. Article: {article.content}"""
                             }
                         ],
                         "max_tokens": 500
