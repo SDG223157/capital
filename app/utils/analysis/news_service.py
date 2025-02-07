@@ -368,14 +368,14 @@ class NewsAnalysisService:
         # Process articles into daily buckets
         date_dict = {}
         for result in results:
-            date_str = result['date'].strftime('%Y-%m-%d')
+            date_str = result[0].strftime('%Y-%m-%d')
             if date_str not in date_dict:
                 date_dict[date_str] = {
                     'total_sentiment': 0,
                     'count': 0
                 }
-            date_dict[date_str]['total_sentiment'] += result['avg_sentiment']
-            date_dict[date_str]['count'] += result['article_count']
+            date_dict[date_str]['total_sentiment'] += result[1] if result[1] else 0
+            date_dict[date_str]['count'] += result[2]
 
         # Calculate averages and format response
         result = {}
