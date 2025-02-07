@@ -103,28 +103,38 @@ def search():
         symbol = request.args.get('symbol', '').strip()
         page = request.args.get('page', 1, type=int)
         
+        # Always initialize search_params
+        search_params = {'symbol': symbol}
+        
         if not symbol:
-            return render_template('news/search.html', articles=None)
+            return render_template(
+                'news/search.html',
+                articles=None,
+                search_params=search_params,
+                min=min
+            )
 
         # Build the base query
         query = NewsArticle.query
 
         # Handle special keywords (case insensitive)
         symbol_upper = symbol.upper()
-        if symbol_upper == 'LATEST':
-            query = query.order_by(NewsArticle.published_at.desc())
-        elif symbol_upper == 'HIGHEST':
-            query = query.filter(NewsArticle.ai_sentiment_rating.isnot(None))
-            query = query.order_by(NewsArticle.ai_sentiment_rating.desc())
-        elif symbol_upper == 'LOWEST':
-            query = query.filter(NewsArticle.ai_sentiment_rating.isnot(None))
-            query = query.order_by(NewsArticle.ai_sentiment_rating.asc())
+        if symbol_upper in ['LATEST', 'HIGHEST', 'LOWEST']:
+            if symbol_upper == 'LATEST':
+                query = query.order_by(NewsArticle.published_at.desc())
+            elif symbol_upper == 'HIGHEST':
+                query = query.filter(NewsArticle.ai_sentiment_rating.isnot(None))
+                query = query.order_by(NewsArticle.ai_sentiment_rating.desc())
+            elif symbol_upper == 'LOWEST':
+                query = query.filter(NewsArticle.ai_sentiment_rating.isnot(None))
+                query = query.order_by(NewsArticle.ai_sentiment_rating.asc())
         else:
-            # Keep your existing search logic
-            query = query.filter(NewsArticle.title.ilike(f'%{symbol}%'))
-            query = query.order_by(NewsArticle.published_at.desc())
+            # Search for symbol in the title
+            query = query.filter(
+                NewsArticle.title.ilike(f'%{symbol}%')
+            ).order_by(NewsArticle.published_at.desc())
 
-        # Add pagination - 5 items per page
+        # Paginate the results
         pagination = query.paginate(page=page, per_page=5, error_out=False)
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -147,18 +157,19 @@ def search():
         return render_template(
             'news/search.html',
             articles=pagination,
-            search_params={'symbol': symbol},
+            search_params=search_params,
             min=min
         )
 
     except Exception as e:
         current_app.logger.error(f"Error in search route: {str(e)}", exc_info=True)
         error_msg = f"An error occurred while searching: {str(e)}"
+        # Always include search_params in error case
         return render_template(
             'news/search.html',
             error=error_msg,
-            articles=NewsArticle.query.paginate(page=1, per_page=5, error_out=False),
-            search_params={'symbol': symbol},
+            articles=None,
+            search_params={'symbol': symbol if symbol else ''},
             min=min
         )
 

@@ -27,126 +27,117 @@
    <div class="container mx-auto p-4">
        <h1 class="text-2xl font-bold mb-6">News Search</h1>
 
-       <div class="bg-white rounded-xl shadow p-6 mb-6">
-           <form id="searchForm">
-               <label for="symbol" class="block text-gray-700 text-lg mb-2">Stock Symbol</label>
-               <input type="text" 
-                      id="symbol" 
-                      name="symbol" 
-                      value="{{ search_params.get('symbol') or '' }}"
-                      placeholder="NASDAQ:AAPL or 'latest', 'highest', 'lowest'" 
-                      class="w-full p-4 text-lg rounded-xl border border-gray-200 mb-4">
+       <div class="mb-8">
+           <form id="searchForm" method="GET" action="{{ url_for('news.search') }}" class="space-y-4">
+               <div class="flex flex-col space-y-2">
+                   <label for="symbol" class="text-gray-700 font-medium">Enter Stock Symbol or Special Keyword:</label>
+                   <div class="flex space-x-4">
+                       <input type="text" 
+                              id="symbol" 
+                              name="symbol" 
+                              value="{{ search_params.symbol }}"
+                              class="form-input rounded-md border-gray-300 shadow-sm w-full"
+                              placeholder="Enter symbol (e.g., AAPL) or keyword (latest/highest/lowest)">
+                       <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
+                           Search
+                       </button>
+                   </div>
+               </div>
                
-               <button type="submit" 
-                       id="searchButton" 
-                       class="w-full bg-blue-500 text-white p-4 rounded-xl text-lg font-medium hover:bg-blue-600 transition-colors">
-                   Search News
-               </button>
+               <!-- Special keywords helper -->
+               <div class="text-sm text-gray-600">
+                   <p>Special keywords:</p>
+                   <ul class="list-disc list-inside ml-4">
+                       <li><strong>latest</strong> - Most recent articles</li>
+                       <li><strong>highest</strong> - Highest sentiment rated articles</li>
+                       <li><strong>lowest</strong> - Lowest sentiment rated articles</li>
+                   </ul>
+               </div>
            </form>
        </div>
 
-       <div class="bg-white rounded-xl shadow p-6">
-           <div id="resultsCount" class="text-lg text-gray-600 mb-4">
-               {% if articles %}{{ articles|length }} articles found{% endif %}
-           </div>
-
-           <div id="articlesContainer" class="space-y-6">
-               {% if articles %}
-                   {% for article in articles %}
-                   <div class="border-b border-gray-100 pb-6 last:border-b-0">
-                       <a href="{{ article.url }}" target="_blank" class="block text-blue-500 text-lg font-medium mb-2 hover:text-blue-600">
-                           {{ article.title }}
-                       </a>
-                       <div class="text-gray-500 mb-2">Published on: {{ article.published_at }}</div>
-                       
-                       <!-- AI Summary -->
-                       <div class="text-gray-600 mb-4 markdown-content">{{ article.summary.ai_summary | safe }}</div>
-
-                       <!-- AI Insights -->
-                       <div class="text-gray-600 mb-4 markdown-content">{{ article.summary.ai_insights | safe }}</div>
-                       
-                       <!-- Related Symbols -->
-                       {% if article.symbols %}
-                       <div class="text-gray-600 mb-4">
-                           <span class="font-medium">Related Symbols:</span>
-                           <div class="flex flex-wrap gap-2 mt-2">
-                               {% for symbol in article.symbols %}
-                                   <span class="bg-gray-200 text-gray-800 px-2 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-300"
-                                         onclick="searchSymbol('{{ symbol.symbol }}')">
-                                       {{ symbol.symbol }}
-                                   </span>
-                               {% endfor %}
-                           </div>
-                       </div>
-                       {% endif %}
-
-                       <!-- AI Sentiment Rating -->
-                       {% if article.summary.ai_sentiment_rating is not none %}
-                       <div class="mt-2 flex items-center space-x-2">
-                           <span class="inline-flex items-center px-2.5 py-1.5 rounded-full text-sm font-medium
-                               {% if article.summary.ai_sentiment_rating > 50 %}bg-green-200 text-green-900 border border-green-300
-                               {% elif article.summary.ai_sentiment_rating > 10 %}bg-green-100 text-green-800 border border-green-200
-                               {% elif article.summary.ai_sentiment_rating >= -10 %}bg-gray-100 text-gray-800 border border-gray-200
-                               {% elif article.summary.ai_sentiment_rating >= -50 %}bg-red-100 text-red-800 border border-red-200
-                               {% else %}bg-red-200 text-red-900 border border-red-300{% endif %}">
-                               {% if article.summary.ai_sentiment_rating > 50 %}Strong Positive
-                               {% elif article.summary.ai_sentiment_rating > 10 %}Positive
-                               {% elif article.summary.ai_sentiment_rating >= -10 %}Neutral
-                               {% elif article.summary.ai_sentiment_rating >= -50 %}Negative
-                               {% else %}Strong Negative{% endif %}
-                               ({{ article.summary.ai_sentiment_rating }})
-                           </span>
-                       </div>
-                       {% endif %}
-                   </div>
-                   {% endfor %}
-               {% endif %}
-           </div>
+       <div id="resultsCount" class="text-lg text-gray-600 mb-4">
+           {% if articles and articles.total > 0 %}
+               Showing {{ (articles.page - 1) * 5 + 1 }}-{{ min(articles.page * 5, articles.total) }} 
+               of {{ articles.total }} articles
+           {% elif search_params.symbol %}
+               No articles found for "{{ search_params.symbol }}"
+           {% endif %}
        </div>
 
-       <!-- Pagination controls -->
-       {% if articles and articles.pages > 1 %}
-       <div class="flex justify-center space-x-2 mt-6">
-           {% if articles.has_prev %}
-           <a href="{{ url_for('news.search', page=articles.prev_num, symbol=search_params.symbol) }}"
-              class="px-3 py-1 border rounded hover:bg-gray-100">
-               Previous
-           </a>
-           {% endif %}
-
-           {% for page_num in articles.iter_pages(left_edge=2, left_current=2, right_current=2, right_edge=2) %}
-               {% if page_num %}
-                   {% if page_num == articles.page %}
-                   <span class="px-3 py-1 border rounded bg-blue-500 text-white">
-                       {{ page_num }}
-                   </span>
-                   {% else %}
-                   <a href="{{ url_for('news.search', page=page_num, symbol=search_params.symbol) }}"
-                      class="px-3 py-1 border rounded hover:bg-gray-100">
-                       {{ page_num }}
+       <div id="articlesContainer" class="space-y-6">
+           {% if articles and articles.items %}
+               {% for article in articles.items %}
+               <div class="border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                   <a href="{{ article.url }}" target="_blank" 
+                      class="block text-blue-500 text-lg font-medium mb-2 hover:text-blue-600">
+                       {{ article.title }}
                    </a>
-                   {% endif %}
-               {% else %}
-                   <span class="px-3 py-1">…</span>
-               {% endif %}
-           {% endfor %}
+                   
+                   <div class="text-gray-500 mb-2">
+                       Published: {{ article.published_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                   </div>
 
-           {% if articles.has_next %}
-           <a href="{{ url_for('news.search', page=articles.next_num, symbol=search_params.symbol) }}"
-              class="px-3 py-1 border rounded hover:bg-gray-100">
-               Next
-           </a>
+                   {% if article.ai_summary %}
+                   <div class="text-gray-600 mb-4 markdown-content">
+                       <h3 class="font-medium text-gray-700 mb-1">AI Summary:</h3>
+                       {{ article.ai_summary | safe }}
+                   </div>
+                   {% endif %}
+
+                   {% if article.ai_insights %}
+                   <div class="text-gray-600 mb-4 markdown-content">
+                       <h3 class="font-medium text-gray-700 mb-1">AI Insights:</h3>
+                       {{ article.ai_insights | safe }}
+                   </div>
+                   {% endif %}
+
+                   {% if article.ai_sentiment_rating is not none %}
+                   <div class="text-sm text-gray-500">
+                       Sentiment Rating: 
+                       <span class="font-medium 
+                           {% if article.ai_sentiment_rating > 0.6 %}text-green-600
+                           {% elif article.ai_sentiment_rating < 0.4 %}text-red-600
+                           {% else %}text-yellow-600{% endif %}">
+                           {{ "%.2f"|format(article.ai_sentiment_rating) }}
+                       </span>
+                   </div>
+                   {% endif %}
+               </div>
+               {% endfor %}
+
+               {% if articles.pages > 1 %}
+               <div class="flex justify-center space-x-2 mt-6">
+                   {% if articles.has_prev %}
+                   <a href="{{ url_for('news.search', page=articles.prev_num, symbol=search_params.symbol) }}"
+                      class="px-3 py-1 border rounded hover:bg-gray-100">Previous</a>
+                   {% endif %}
+
+                   {% for page_num in articles.iter_pages(left_edge=2, left_current=2, right_current=2, right_edge=2) %}
+                       {% if page_num %}
+                           {% if page_num == articles.page %}
+                           <span class="px-3 py-1 border rounded bg-blue-500 text-white">
+                               {{ page_num }}
+                           </span>
+                           {% else %}
+                           <a href="{{ url_for('news.search', page=page_num, symbol=search_params.symbol) }}"
+                              class="px-3 py-1 border rounded hover:bg-gray-100">
+                               {{ page_num }}
+                           </a>
+                           {% endif %}
+                       {% else %}
+                           <span class="px-3 py-1">…</span>
+                       {% endif %}
+                   {% endfor %}
+
+                   {% if articles.has_next %}
+                   <a href="{{ url_for('news.search', page=articles.next_num, symbol=search_params.symbol) }}"
+                      class="px-3 py-1 border rounded hover:bg-gray-100">Next</a>
+                   {% endif %}
+               </div>
+               {% endif %}
            {% endif %}
        </div>
-       {% endif %}
-
-       <!-- Optional: Add a results counter -->
-       {% if articles and articles.total > 0 %}
-       <div class="text-gray-600 text-sm mt-4 text-center">
-           Showing {{ (articles.page - 1) * 5 + 1 }}-{{ min(articles.page * 5, articles.total) }} 
-           of {{ articles.total }} articles
-       </div>
-       {% endif %}
    </div>
 
    <script>
