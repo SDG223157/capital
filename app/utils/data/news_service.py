@@ -175,9 +175,12 @@ class NewsService:
 
             # Execute query with pagination
             query = query.order_by(NewsArticle.published_at.desc())
-            paginated_articles = query.paginate(page=page, per_page=per_page, error_out=False)
-            
-            return [article.to_dict() for article in paginated_articles.items], paginated_articles.total
+            if per_page == 0:  # If per_page is 0, return all results
+                articles = query.all()
+                return [article.to_dict() for article in articles], len(articles)
+            else:  # Otherwise use pagination
+                paginated_articles = query.paginate(page=page, per_page=per_page, error_out=False)
+                return [article.to_dict() for article in paginated_articles.items], paginated_articles.total
 
         except ValueError as e:
             self.logger.error(f"Invalid date format: {str(e)}")

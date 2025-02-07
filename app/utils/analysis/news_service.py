@@ -356,7 +356,7 @@ class NewsAnalysisService:
             start_date=start_date,
             end_date=end_date,
             symbol=symbol,
-            per_page=1000000  # Set very high to get all articles
+            per_page=0  # This will now return all articles
         )
 
         # Process articles into daily buckets
