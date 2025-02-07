@@ -20,6 +20,7 @@ from app import db
 # from app.utils.config.news_config import DEFAULT_SYMBOLS
 import time
 from sqlalchemy import or_
+import markdown  # Add at top
 logger = logging.getLogger(__name__)
 bp = Blueprint('news', __name__)
 
@@ -152,8 +153,8 @@ def search():
                     'url': article.url,
                     'title': article.title,
                     'published_at': article.published_at.strftime('%Y-%m-%d %H:%M:%S'),
-                    'ai_summary': article.ai_summary,
-                    'ai_insights': article.ai_insights,
+                    'ai_summary': markdown.markdown(article.ai_summary, extensions=['fenced_code', 'tables']),
+                    'ai_insights': markdown.markdown(article.ai_insights, extensions=['fenced_code', 'tables']),
                     'ai_sentiment_rating': article.ai_sentiment_rating,
                     'symbols': [{'symbol': s.symbol} for s in article.symbols]
                 } for article in pagination.items],
