@@ -11,13 +11,18 @@
            @apply space-y-4;
        }
        .markdown-content ul {
-           list-style: disc !important;
-           padding-left: 1.5rem !important;
+           list-style-type: disc !important;
+           padding-left: 2rem !important;
            margin-bottom: 1rem !important;
        }
        .markdown-content li {
-           margin-bottom: 0.5rem !important;
            display: list-item !important;
+           list-style-position: outside !important;
+           margin-bottom: 0.5rem !important;
+       }
+       .markdown-content li::marker {
+           color: #4a5568;  /* Match text color */
+           font-size: 1.1em;
        }
        .markdown-content h3 {
            @apply text-lg font-semibold mt-4 mb-2;
