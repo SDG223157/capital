@@ -37,7 +37,7 @@
                               name="symbol" 
                               value="{{ search_params.symbol }}"
                               class="form-input rounded-md border-gray-300 shadow-sm w-full"
-                              placeholder="Enter symbol (e.g., AAPL) or keyword (latest/highest/lowest)">
+                              placeholder="NASDAQ:AAPL or special keyword">
                        <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
                            Search
                        </button>
@@ -107,12 +107,11 @@
 
                    {% if article.ai_sentiment_rating is not none %}
                    <div class="text-sm text-gray-500 mt-2">
-                       AI Sentiment Rating
                        <span class="ml-2 px-2 py-1 rounded-full text-sm font-medium 
                            {% if article.ai_sentiment_rating > 50 %}bg-green-100 text-green-800
                            {% elif article.ai_sentiment_rating < -50 %}bg-red-100 text-red-800
                            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
-                           {{ article.ai_sentiment_rating }}
+                           AI Sentiment Rating {{ article.ai_sentiment_rating }}
                        </span>
                    </div>
                    {% endif %}
