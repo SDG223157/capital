@@ -341,28 +341,38 @@ class NewsAnalysisService:
 
     def get_sentiment_timeseries(self, symbol: str, days: int):
         """Get daily sentiment averages for a specific symbol"""
-        # Get the latest article date instead of using current time
+        # First, check how many articles exist for this symbol
+        article_count = self.db.session.query(func.count(NewsArticle.id))\
+            .join(NewsArticle.symbols)\
+            .filter(func.upper(ArticleSymbol.symbol) == symbol.upper())\
+            .scalar()
+        
+        self.logger.info(f"Found {article_count} total articles for {symbol}")
+        
         latest_article = self.db.session.query(
             func.max(NewsArticle.published_at)
-        ).join(NewsArticle.symbols).filter(
-            ArticleSymbol.symbol == symbol.upper()
-        ).scalar()
+        ).join(NewsArticle.symbols)\
+        .filter(func.upper(ArticleSymbol.symbol) == symbol.upper())\
+        .scalar()
 
         end_date = latest_article or datetime.now()
         start_date = end_date - timedelta(days=days)
         
-        # Get base query
+        # Get base query with case-insensitive symbol comparison
         query = self.db.session.query(
             func.date(NewsArticle.published_at).label('date'),
             func.avg(NewsArticle.ai_sentiment_rating).label('avg_sentiment'),
             func.count(NewsArticle.id).label('article_count')
         ).join(NewsArticle.symbols).filter(
-            ArticleSymbol.symbol == symbol.upper(),
+            func.upper(ArticleSymbol.symbol) == symbol.upper(),
             NewsArticle.published_at >= start_date,
             NewsArticle.published_at <= end_date,
             NewsArticle.ai_sentiment_rating.isnot(None)
         ).group_by('date').order_by('date')
 
+        # Log the SQL query for debugging
+        self.logger.info(f"SQL Query: {query}")
+        
         # Execute query and format results
         results = query.all()
         
