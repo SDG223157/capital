@@ -28,3 +28,4 @@ openai
 anthropic
 httpx
 flask-limiter
+markdown>=3.6

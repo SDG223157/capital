@@ -81,14 +81,14 @@
                    {% if article.ai_summary %}
                    <div class="text-gray-600 mb-4 markdown-content">
                        <h3 class="font-medium text-gray-700 mb-1">AI Summary:</h3>
-                       {{ article.ai_summary | safe }}
+                       {{ article.ai_summary|markdown|safe }}
                    </div>
                    {% endif %}
 
                    {% if article.ai_insights %}
                    <div class="text-gray-600 mb-4 markdown-content">
                        <h3 class="font-medium text-gray-700 mb-1">AI Insights:</h3>
-                       {{ article.ai_insights | safe }}
+                       {{ article.ai_insights|markdown|safe }}
                    </div>
                    {% endif %}
 

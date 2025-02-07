@@ -7,6 +7,7 @@ from app.config import Config
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_migrate import Migrate  # Import Migrate
 # from app.models import NewsArticle, ArticleMetric, ArticleSymbol, User  # Import models after db is initialized
+import markdown
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -16,6 +17,9 @@ migrate = Migrate()  # Initialize Migrate instance
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
 login_manager.login_message_category = 'error'
+
+def markdown_to_html(text):
+    return markdown.markdown(text or '', extensions=['fenced_code', 'tables'])
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -125,6 +129,9 @@ def create_app(config_class=Config):
         def internal_error(error):
             db.session.rollback()
             return 'Internal server error', 500
+
+        # Add Markdown filter to Jinja2 environment
+        app.jinja_env.filters['markdown'] = markdown_to_html
 
     return app
 
