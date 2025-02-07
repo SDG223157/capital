@@ -374,7 +374,7 @@ class NewsAnalysisService:
                     'total_sentiment': 0,
                     'count': 0
                 }
-            date_dict[date_str]['total_sentiment'] += result[1] if result[1] else 0
+            date_dict[date_str]['total_sentiment'] += float(result[1]) if result[1] else 0
             date_dict[date_str]['count'] += result[2]
 
         # Calculate averages and format response
