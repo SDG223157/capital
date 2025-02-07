@@ -7,18 +7,26 @@
    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
    <style>
+       .markdown-content {
+           @apply space-y-4;
+       }
+       .markdown-content ul {
+           list-style: disc !important;
+           padding-left: 1.5rem !important;
+           margin-bottom: 1rem !important;
+       }
+       .markdown-content li {
+           margin-bottom: 0.5rem !important;
+           display: list-item !important;
+       }
+       .markdown-content h3 {
+           @apply text-lg font-semibold mt-4 mb-2;
+       }
        .markdown-content h2 {
            font-size: 1.25rem;
            font-weight: 600;
            margin-top: 1rem;
            margin-bottom: 0.5rem;
-       }
-       .markdown-content ul {
-           list-style-type: disc !important;
-           padding-left: 1.5rem !important;
-       }
-       .markdown-content li {
-           margin-bottom: 0.5rem !important;
        }
    </style>
 </head>
