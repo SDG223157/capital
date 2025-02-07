@@ -342,57 +342,46 @@ class NewsAnalysisService:
 
     def get_sentiment_timeseries(self, symbol: str, days: int):
         """Get daily sentiment averages for a specific symbol"""
-        # Check total articles
-        total_query = db.session.query(NewsArticle)\
-            .join(NewsArticle.symbols)\
-            .filter(func.upper(ArticleSymbol.symbol) == symbol.upper())
-        
-        self.logger.info(f"Total articles: {total_query.count()}")
-        
-        # Check articles with sentiment
-        with_sentiment = total_query.filter(NewsArticle.ai_sentiment_rating.isnot(None))
-        self.logger.info(f"Articles with sentiment: {with_sentiment.count()}")
-        
-        # Check date range
-        latest_article = with_sentiment.order_by(NewsArticle.published_at.desc()).first()
-        if latest_article:
-            self.logger.info(f"Latest article date: {latest_article.published_at}")
+        latest_article = self.db.session.query(
+            func.max(NewsArticle.published_at)
+        ).join(NewsArticle.symbols)\
+        .filter(func.upper(ArticleSymbol.symbol) == symbol.upper())\
+        .scalar()
             
-        end_date = latest_article.published_at if latest_article else datetime.now()
+        end_date = latest_article if latest_article else datetime.now()
         start_date = end_date - timedelta(days=days)
-        self.logger.info(f"Date range: {start_date} to {end_date}")
 
-        # Use direct database session instead of NewsService to avoid pagination
-        query = db.session.query(
-            func.date(NewsArticle.published_at).label('date'),
-            func.avg(NewsArticle.ai_sentiment_rating).label('avg_sentiment'),
-            func.count(NewsArticle.id).label('article_count')
-        ).join(NewsArticle.symbols).filter(
-            func.upper(ArticleSymbol.symbol) == symbol.upper(),
-            NewsArticle.published_at >= start_date,
-            NewsArticle.published_at <= end_date,
-            NewsArticle.ai_sentiment_rating.isnot(None)
-        ).group_by(func.date(NewsArticle.published_at)).order_by('date')
+        # Get all articles without pagination
+        articles, total = self.db.get_articles_by_date_range(
+            start_date=start_date,
+            end_date=end_date,
+            symbol=symbol,
+            per_page=1000000  # Set very high to get all articles
+        )
 
-        results = query.all()
-        
-        # Create complete date range
+        # Process articles into daily buckets
         date_dict = {}
+        for article in articles:
+            date_str = datetime.fromisoformat(article['published_at']).strftime('%Y-%m-%d')
+            if date_str not in date_dict:
+                date_dict[date_str] = {
+                    'total_sentiment': 0,
+                    'count': 0
+                }
+            if article.get('ai_sentiment_rating') is not None:
+                date_dict[date_str]['total_sentiment'] += article['ai_sentiment_rating']
+                date_dict[date_str]['count'] += 1
+
+        # Calculate averages and format response
+        result = {}
         current_date = start_date
         while current_date <= end_date:
             date_str = current_date.strftime('%Y-%m-%d')
-            date_dict[date_str] = {
-                'average_sentiment': 0,
-                'article_count': 0
+            daily_data = date_dict.get(date_str, {'total_sentiment': 0, 'count': 0})
+            result[date_str] = {
+                'average_sentiment': round(daily_data['total_sentiment'] / daily_data['count'], 2) if daily_data['count'] > 0 else 0,
+                'article_count': daily_data['count']
             }
             current_date += timedelta(days=1)
 
-        # Fill with actual data
-        for date, avg, count in results:
-            date_str = date.strftime('%Y-%m-%d')
-            date_dict[date_str] = {
-                'average_sentiment': round(float(avg), 2) if avg else 0,
-                'article_count': count
-            }
-
-        return date_dict
+        return result
