@@ -125,7 +125,7 @@
 
                    {% if article.ai_summary %}
                    <div class="text-gray-600 mb-4 markdown-content">
-                       <span class="px-4 py-2 mb-3 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                       <span class="px-4 py-2 mb-4 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                            AI Summary
                        </span>
                        {{ article.ai_summary|markdown|safe }}
@@ -134,7 +134,7 @@
 
                    {% if article.ai_insights %}
                    <div class="text-gray-600 mb-4 markdown-content">
-                       <span class="px-4 py-2 mb-3 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                       <span class="px-4 py-2 mb-4 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
                            AI Insights
                        </span>
                        {{ article.ai_insights|markdown|safe }}
@@ -143,7 +143,7 @@
 
                    {% if article.ai_sentiment_rating is not none %}
                    <div class="text-sm text-gray-500 mt-4 border-t pt-4">
-                       <span class="px-4 py-2 rounded-full text-sm font-medium 
+                       <span class="px-4 py-2 mb-4 rounded-full text-sm font-medium 
                            {% if article.ai_sentiment_rating > 50 %}bg-green-100 text-green-800
                            {% elif article.ai_sentiment_rating < -50 %}bg-red-100 text-red-800
                            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
