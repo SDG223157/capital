@@ -103,6 +103,50 @@
                {% endif %}
            </div>
        </div>
+
+       <!-- Pagination controls -->
+       {% if articles and articles.pages > 1 %}
+       <div class="flex justify-center space-x-2 mt-6">
+           {% if articles.has_prev %}
+           <a href="{{ url_for('news.search', page=articles.prev_num, symbol=search_params.symbol) }}"
+              class="px-3 py-1 border rounded hover:bg-gray-100">
+               Previous
+           </a>
+           {% endif %}
+
+           {% for page_num in articles.iter_pages(left_edge=2, left_current=2, right_current=2, right_edge=2) %}
+               {% if page_num %}
+                   {% if page_num == articles.page %}
+                   <span class="px-3 py-1 border rounded bg-blue-500 text-white">
+                       {{ page_num }}
+                   </span>
+                   {% else %}
+                   <a href="{{ url_for('news.search', page=page_num, symbol=search_params.symbol) }}"
+                      class="px-3 py-1 border rounded hover:bg-gray-100">
+                       {{ page_num }}
+                   </a>
+                   {% endif %}
+               {% else %}
+                   <span class="px-3 py-1">…</span>
+               {% endif %}
+           {% endfor %}
+
+           {% if articles.has_next %}
+           <a href="{{ url_for('news.search', page=articles.next_num, symbol=search_params.symbol) }}"
+              class="px-3 py-1 border rounded hover:bg-gray-100">
+               Next
+           </a>
+           {% endif %}
+       </div>
+       {% endif %}
+
+       <!-- Optional: Add a results counter -->
+       {% if articles and articles.total > 0 %}
+       <div class="text-gray-600 text-sm mt-4 text-center">
+           Showing {{ (articles.page - 1) * 5 + 1 }}-{{ min(articles.page * 5, articles.total) }} 
+           of {{ articles.total }} articles
+       </div>
+       {% endif %}
    </div>
 
    <script>

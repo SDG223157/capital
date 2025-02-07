@@ -100,76 +100,66 @@ def analysis():
 @login_required
 def search():
     try:
-        symbol = request.args.get('symbol')
-        symbol = None if symbol in ['None', '', None] else symbol
+        symbol = request.args.get('symbol', '').strip()
+        page = request.args.get('page', 1, type=int)
         
-        # Handle special keywords (case-insensitive)
-        if symbol and symbol.lower() in ['latest', 'highest', 'lowest']:
-            query = NewsArticle.query
-            keyword = symbol.lower()  # Normalize to lowercase
-            
-            if keyword == 'latest':
-                query = query.order_by(NewsArticle.published_at.desc())
-            elif keyword == 'highest':
-                query = query.filter(NewsArticle.ai_sentiment_rating.isnot(None))
-                query = query.order_by(NewsArticle.ai_sentiment_rating.desc())
-            elif keyword == 'lowest':
-                query = query.filter(NewsArticle.ai_sentiment_rating.isnot(None))
-                query = query.order_by(NewsArticle.ai_sentiment_rating.asc())
-            
-            articles = query.limit(30).all()
-            articles_data = [article.to_dict() for article in articles]
-            return jsonify({
-                'status': 'success',
-                'articles': articles_data,
-                'total': len(articles_data)
-            })
-        
-        # Return no articles if no symbol is provided
         if not symbol:
-            return render_template(
-                'news/search.html',
-                articles=[],
-                total=0,
-                search_params={'symbol': symbol}
-            )
-        
-        page = max(1, int(request.args.get('page', 1)))
-        per_page = min(50, int(request.args.get('per_page', 20)))
+            return render_template('news/search.html', articles=None)
 
-        articles, total = news_service.search_articles(
-            symbol=symbol,
-            page=page,
-            per_page=per_page
-        )
+        # Build the base query
+        query = NewsArticle.query
+
+        # Handle special keywords (case insensitive)
+        symbol_upper = symbol.upper()
+        if symbol_upper == 'LATEST':
+            query = query.order_by(NewsArticle.published_at.desc())
+        elif symbol_upper == 'HIGHEST':
+            query = query.filter(NewsArticle.ai_sentiment_rating.isnot(None))
+            query = query.order_by(NewsArticle.ai_sentiment_rating.desc())
+        elif symbol_upper == 'LOWEST':
+            query = query.filter(NewsArticle.ai_sentiment_rating.isnot(None))
+            query = query.order_by(NewsArticle.ai_sentiment_rating.asc())
+        else:
+            # Keep your existing search logic
+            query = query.filter(NewsArticle.title.ilike(f'%{symbol}%'))
+            query = query.order_by(NewsArticle.published_at.desc())
+
+        # Add pagination - 5 items per page
+        pagination = query.paginate(page=page, per_page=5, error_out=False)
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({
-                'status': 'success',
-                'articles': articles,
-                'total': total
+                'articles': [{
+                    'url': article.url,
+                    'title': article.title,
+                    'published_at': article.published_at.strftime('%Y-%m-%d %H:%M:%S'),
+                    'ai_summary': article.ai_summary,
+                    'ai_insights': article.ai_insights,
+                    'ai_sentiment_rating': article.ai_sentiment_rating
+                } for article in pagination.items],
+                'has_next': pagination.has_next,
+                'has_prev': pagination.has_prev,
+                'page': pagination.page,
+                'pages': pagination.pages,
+                'total': pagination.total
             })
-        
+
         return render_template(
             'news/search.html',
-            articles=articles,
-            total=total,
-            search_params={'symbol': symbol}
+            articles=pagination,
+            search_params={'symbol': symbol},
+            min=min
         )
-        
+
     except Exception as e:
-        logger.error(f"Error in search route: {str(e)}", exc_info=True)
-        error_msg = 'Search failed. Please try again.'
-        
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({'status': 'error', 'message': error_msg}), 500
-        
+        current_app.logger.error(f"Error in search route: {str(e)}", exc_info=True)
+        error_msg = f"An error occurred while searching: {str(e)}"
         return render_template(
             'news/search.html',
             error=error_msg,
-            articles=[],
-            total=0,
-            search_params={'symbol': symbol}
+            articles=NewsArticle.query.paginate(page=1, per_page=5, error_out=False),
+            search_params={'symbol': symbol},
+            min=min
         )
 
 @bp.route('/api/fetch', methods=['POST'])
