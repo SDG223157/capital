@@ -107,11 +107,11 @@
 
                    {% if article.ai_sentiment_rating is not none %}
                    <div class="text-sm text-gray-500 mt-2">
-                       AI Sentiment Rating: 
-                       <span class="font-medium 
-                           {% if article.ai_sentiment_rating > 50 %}text-green-600
-                           {% elif article.ai_sentiment_rating < -50 %}text-red-600
-                           {% else %}text-yellow-600{% endif %}">
+                       AI Sentiment Rating
+                       <span class="ml-2 px-2 py-1 rounded-full text-sm font-medium 
+                           {% if article.ai_sentiment_rating > 50 %}bg-green-100 text-green-800
+                           {% elif article.ai_sentiment_rating < -50 %}bg-red-100 text-red-800
+                           {% else %}bg-yellow-100 text-yellow-800{% endif %}">
                            {{ article.ai_sentiment_rating }}
                        </span>
                    </div>
