@@ -2,7 +2,7 @@
 
 import os
 import re
-from flask import Blueprint, render_template, request, jsonify, current_app
+from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for
 from flask_login import login_required
 from app.utils.analysis.news_service import NewsAnalysisService
 from app.utils.analytics.news_analytics import NewsAnalytics
@@ -100,8 +100,13 @@ def analysis():
 @bp.route('/search')
 @login_required
 def search():
+    symbol = request.args.get('symbol', '').strip()
+    
+    # Redirect if empty symbol parameter exists
+    if 'symbol' in request.args and not symbol:
+        return redirect(url_for('news.search'))
+
     try:
-        symbol = request.args.get('symbol', '').strip()
         page = request.args.get('page', 1, type=int)
         
         # Always initialize search_params
