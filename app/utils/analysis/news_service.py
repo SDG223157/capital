@@ -341,46 +341,38 @@ class NewsAnalysisService:
 
     def get_sentiment_timeseries(self, symbol: str, days: int):
         """Get daily sentiment averages for a specific symbol"""
-        # First, check how many articles exist for this symbol
-        article_count = self.db.session.query(func.count(NewsArticle.id))\
+        # Check total articles
+        total_query = self.db.session.query(NewsArticle)\
             .join(NewsArticle.symbols)\
-            .filter(func.upper(ArticleSymbol.symbol) == symbol.upper())\
-            .scalar()
+            .filter(func.upper(ArticleSymbol.symbol) == symbol.upper())
         
-        self.logger.info(f"Found {article_count} total articles for {symbol}")
+        self.logger.info(f"Total articles: {total_query.count()}")
         
-        latest_article = self.db.session.query(
-            func.max(NewsArticle.published_at)
-        ).join(NewsArticle.symbols)\
-        .filter(func.upper(ArticleSymbol.symbol) == symbol.upper())\
-        .scalar()
-
-        end_date = latest_article or datetime.now()
-        start_date = end_date - timedelta(days=days)
+        # Check articles with sentiment
+        with_sentiment = total_query.filter(NewsArticle.ai_sentiment_rating.isnot(None))
+        self.logger.info(f"Articles with sentiment: {with_sentiment.count()}")
         
-        # Use subquery to avoid any pagination limits
-        subquery = self.db.session.query(NewsArticle.id)\
-            .join(NewsArticle.symbols)\
-            .filter(
-                func.upper(ArticleSymbol.symbol) == symbol.upper(),
-                NewsArticle.published_at >= start_date,
-                NewsArticle.published_at <= end_date
-            ).subquery()
+        # Check date range
+        latest_article = with_sentiment.order_by(NewsArticle.published_at.desc()).first()
+        if latest_article:
+            self.logger.info(f"Latest article date: {latest_article.published_at}")
             
-        # Main query using the subquery
+        end_date = latest_article.published_at if latest_article else datetime.now()
+        start_date = end_date - timedelta(days=days)
+        self.logger.info(f"Date range: {start_date} to {end_date}")
+
+        # Query without pagination
         query = self.db.session.query(
             func.date(NewsArticle.published_at).label('date'),
             func.avg(NewsArticle.ai_sentiment_rating).label('avg_sentiment'),
             func.count(NewsArticle.id).label('article_count')
-        ).filter(
-            NewsArticle.id.in_(subquery),
+        ).join(NewsArticle.symbols).filter(
+            func.upper(ArticleSymbol.symbol) == symbol.upper(),
+            NewsArticle.published_at >= start_date,
+            NewsArticle.published_at <= end_date,
             NewsArticle.ai_sentiment_rating.isnot(None)
-        ).group_by('date').order_by('date')
+        ).group_by(func.date(NewsArticle.published_at)).order_by('date')
 
-        # Log the SQL query for debugging
-        self.logger.info(f"SQL Query: {query}")
-        
-        # Execute query and format results
         results = query.all()
         
         # Create complete date range
