@@ -358,15 +358,22 @@ class NewsAnalysisService:
         end_date = latest_article or datetime.now()
         start_date = end_date - timedelta(days=days)
         
-        # Get base query with case-insensitive symbol comparison
+        # Use subquery to avoid any pagination limits
+        subquery = self.db.session.query(NewsArticle.id)\
+            .join(NewsArticle.symbols)\
+            .filter(
+                func.upper(ArticleSymbol.symbol) == symbol.upper(),
+                NewsArticle.published_at >= start_date,
+                NewsArticle.published_at <= end_date
+            ).subquery()
+            
+        # Main query using the subquery
         query = self.db.session.query(
             func.date(NewsArticle.published_at).label('date'),
             func.avg(NewsArticle.ai_sentiment_rating).label('avg_sentiment'),
             func.count(NewsArticle.id).label('article_count')
-        ).join(NewsArticle.symbols).filter(
-            func.upper(ArticleSymbol.symbol) == symbol.upper(),
-            NewsArticle.published_at >= start_date,
-            NewsArticle.published_at <= end_date,
+        ).filter(
+            NewsArticle.id.in_(subquery),
             NewsArticle.ai_sentiment_rating.isnot(None)
         ).group_by('date').order_by('date')
 
