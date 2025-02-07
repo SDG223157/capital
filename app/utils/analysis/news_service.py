@@ -361,7 +361,7 @@ class NewsAnalysisService:
         start_date = end_date - timedelta(days=days)
         self.logger.info(f"Date range: {start_date} to {end_date}")
 
-        # Query without pagination
+        # Use direct database session instead of NewsService to avoid pagination
         query = self.db.session.query(
             func.date(NewsArticle.published_at).label('date'),
             func.avg(NewsArticle.ai_sentiment_rating).label('avg_sentiment'),
