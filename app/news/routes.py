@@ -878,3 +878,52 @@ def admin_required(f):
             abort(403)  # HTTP 403 Forbidden
         return f(*args, **kwargs)
     return decorated_function
+
+@bp.route('/articles/manage')
+@admin_required
+def manage_articles():
+    """Show editable table of articles"""
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = 20
+
+        # Get paginated articles
+        articles = NewsArticle.query.order_by(NewsArticle.published_at.desc())\
+            .paginate(page=page, per_page=per_page, error_out=False)
+
+        return render_template(
+            'news/manage_articles.html',
+            articles=articles
+        )
+
+    except Exception as e:
+        logger.error(f"Error managing articles: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@bp.route('/articles/update/<int:article_id>', methods=['POST'])
+@admin_required
+def update_article(article_id):
+    """Update article content"""
+    try:
+        article = NewsArticle.query.get_or_404(article_id)
+        data = request.get_json()
+
+        # Update fields if provided
+        if 'title' in data:
+            article.title = data['title']
+        if 'content' in data:
+            article.content = data['content']
+        if 'ai_summary' in data:
+            article.ai_summary = data['ai_summary']
+        if 'ai_insights' in data:
+            article.ai_insights = data['ai_insights']
+        if 'ai_sentiment_rating' in data:
+            article.ai_sentiment_rating = float(data['ai_sentiment_rating'])
+
+        db.session.commit()
+        return jsonify({'status': 'success'})
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error updating article {article_id}: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
