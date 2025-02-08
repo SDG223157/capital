@@ -346,9 +346,9 @@ class NewsAnalysisService:
         query = db.session.query(func.max(NewsArticle.published_at))
         if symbol.lower() == 'all':
             pass
-        elif isinstance(symbol_filter, (list, tuple)):
+        elif symbol_filter:
             query = query.join(NewsArticle.symbols)
-            query = query.filter(or_(*symbol_filter))
+            query = query.filter(or_(*[ArticleSymbol.symbol.ilike(f"%{symbol}%") for symbol in symbol_filter]))
         else:
             query = query.join(NewsArticle.symbols)\
                 .filter(func.upper(ArticleSymbol.symbol) == symbol.upper())
@@ -367,9 +367,9 @@ class NewsAnalysisService:
         # Apply symbol filter only if not "all"
         if symbol.lower() == 'all':
             pass
-        elif isinstance(symbol_filter, (list, tuple)):
+        elif symbol_filter:
             query = query.join(NewsArticle.symbols)
-            query = query.filter(or_(*symbol_filter))
+            query = query.filter(or_(*[ArticleSymbol.symbol.ilike(f"%{symbol}%") for symbol in symbol_filter]))
         else:
             query = query.join(NewsArticle.symbols)\
                 .filter(func.upper(ArticleSymbol.symbol) == symbol.upper())
