@@ -161,13 +161,13 @@ def search():
                 query = query.filter(NewsArticle.ai_sentiment_rating.isnot(None))
                 query = query.order_by(NewsArticle.ai_sentiment_rating.asc())
         else:
-            # Check if it's a common futures name
+            # Check if it's a futures commodity
             if symbol_upper in FUTURES_MAPPING:
                 futures_symbols = FUTURES_MAPPING[symbol_upper]
-                symbol_filter = or_(*[ArticleSymbol.symbol == sym for sym in futures_symbols])
+                symbol_filter = [ArticleSymbol.symbol == sym for sym in futures_symbols]
             elif ':' not in symbol_upper:
                 # Try to match with any exchange prefix or without prefix
-                symbol_filter = or_(
+                symbol_filter = [
                     ArticleSymbol.symbol == f"NASDAQ:{symbol_upper}",
                     ArticleSymbol.symbol == f"NYSE:{symbol_upper}",
                     ArticleSymbol.symbol == f"HKEX:{symbol_upper}",
@@ -188,9 +188,9 @@ def search():
                     ArticleSymbol.symbol == f"NYMEX:{symbol_upper}",   # NY Mercantile Exchange
                     ArticleSymbol.symbol == f"TVC:{symbol_upper}",     # TradingView
                     ArticleSymbol.symbol == symbol_upper
-                )
+                ]
             else:
-                symbol_filter = ArticleSymbol.symbol == symbol_upper
+                symbol_filter = [ArticleSymbol.symbol == symbol_upper]
 
             query = query.filter(
                 NewsArticle.symbols.any(symbol_filter)
@@ -629,10 +629,10 @@ def get_sentiment():
             # Check if it's a futures commodity
             if symbol_upper in FUTURES_MAPPING:
                 futures_symbols = FUTURES_MAPPING[symbol_upper]
-                symbol_filter = or_(*[ArticleSymbol.symbol == sym for sym in futures_symbols])
+                symbol_filter = [ArticleSymbol.symbol == sym for sym in futures_symbols]
             elif ':' not in symbol_upper:
                 # Try to match with any exchange prefix or without prefix
-                symbol_filter = or_(
+                symbol_filter = [
                     ArticleSymbol.symbol == f"NASDAQ:{symbol_upper}",
                     ArticleSymbol.symbol == f"NYSE:{symbol_upper}",
                     ArticleSymbol.symbol == f"HKEX:{symbol_upper}",
@@ -653,9 +653,9 @@ def get_sentiment():
                     ArticleSymbol.symbol == f"NYMEX:{symbol_upper}",   # NY Mercantile Exchange
                     ArticleSymbol.symbol == f"TVC:{symbol_upper}",     # TradingView
                     ArticleSymbol.symbol == symbol_upper
-                )
+                ]
             else:
-                symbol_filter = ArticleSymbol.symbol == symbol_upper
+                symbol_filter = [ArticleSymbol.symbol == symbol_upper]
 
         daily_data = news_service.get_sentiment_timeseries(
             symbol=symbol,

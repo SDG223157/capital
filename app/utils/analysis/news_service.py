@@ -10,7 +10,7 @@ from app.utils.config.news_config import NewsConfig
 from app.utils.data.news_service import NewsService
 from .news_analyzer import NewsAnalyzer
 from app.models import NewsArticle, ArticleSymbol  # Add at top
-from sqlalchemy import func  # Add this import
+from sqlalchemy import func, or_  # Add this import
 from app import db  # Add this import
 
 class NewsAnalysisService:
@@ -344,9 +344,12 @@ class NewsAnalysisService:
         """Get daily sentiment averages for a specific symbol or all articles"""
         # Get latest article date
         query = db.session.query(func.max(NewsArticle.published_at))
-        if symbol_filter:
-            query = query.join(NewsArticle.symbols).filter(symbol_filter)
-        elif symbol.lower() != 'all':
+        if symbol.lower() == 'all':
+            pass
+        elif isinstance(symbol_filter, (list, tuple)):
+            query = query.join(NewsArticle.symbols)
+            query = query.filter(or_(*symbol_filter))
+        else:
             query = query.join(NewsArticle.symbols)\
                 .filter(func.upper(ArticleSymbol.symbol) == symbol.upper())
         latest_article = query.scalar()
@@ -362,9 +365,12 @@ class NewsAnalysisService:
         )
 
         # Apply symbol filter only if not "all"
-        if symbol_filter:
-            query = query.join(NewsArticle.symbols).filter(symbol_filter)
-        elif symbol.lower() != 'all':
+        if symbol.lower() == 'all':
+            pass
+        elif isinstance(symbol_filter, (list, tuple)):
+            query = query.join(NewsArticle.symbols)
+            query = query.filter(or_(*symbol_filter))
+        else:
             query = query.join(NewsArticle.symbols)\
                 .filter(func.upper(ArticleSymbol.symbol) == symbol.upper())
 
