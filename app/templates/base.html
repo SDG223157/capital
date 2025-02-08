@@ -49,7 +49,6 @@
                                 <a href="{{ url_for('news.fetch') }}" class="dropdown-item text-sm">Fetch</a>
                             {% endif %}
                             <div class="dropdown-menu" aria-labelledby="analyticsDropdown">
-                                <a href="{{ url_for('main.analyze') }}" class="dropdown-item text-sm">Analyze</a>
                                 {% if current_user.is_admin %}
                                     <a href="{{ url_for('news.fetch') }}" class="dropdown-item text-sm">Fetch</a>
                                     <a href="{{ url_for('news.manage_articles') }}" class="dropdown-item text-sm">Manage Articles</a>
