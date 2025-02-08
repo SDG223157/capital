@@ -444,10 +444,37 @@ def quick_analyze():
             crossover_days=ANALYZE_CONFIG['crossover_days']  # Default crossover
         )
         
-        html_content = fig.to_html(
+        # Create HTML content with navigation buttons
+        nav_buttons = f"""
+        <div class="fixed bottom-4 right-4 flex space-x-4">
+            <a href="{url_for('main.index')}" 
+               class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors">
+                Home
+            </a>
+            <a href="{url_for('news.search', symbol=ticker_input)}" 
+               class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors">
+                News
+            </a>
+        </div>
+        """
+        
+        # Add Tailwind CSS CDN
+        tailwind_css = '<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">'
+        
+        # Get the plotly figure HTML
+        plot_html = fig.to_html(
             full_html=True,
             include_plotlyjs=True,
             config={'responsive': True}
+        )
+        
+        # Insert Tailwind CSS and navigation buttons before closing body tag
+        html_content = plot_html.replace(
+            '</body>',
+            f'{nav_buttons}</body>'
+        ).replace(
+            '</head>',
+            f'{tailwind_css}</head>'
         )
         
         response = make_response(html_content)
@@ -460,7 +487,7 @@ def quick_analyze():
         return render_template('error.html', error=error_msg), 500
 
 @bp.route('/analyze', methods=['POST'])
-@login_required  # Add login requirement for full analysis
+@login_required
 def analyze():
     try:
         ticker_input = request.form.get('ticker', '').split()[0].upper()
@@ -492,10 +519,37 @@ def analyze():
             crossover_days=crossover_days
         )
         
-        html_content = fig.to_html(
+        # Create HTML content with navigation buttons
+        nav_buttons = f"""
+        <div class="fixed bottom-4 right-4 flex space-x-4">
+            <a href="{url_for('main.index')}" 
+               class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors">
+                Home
+            </a>
+            <a href="{url_for('news.search', symbol=ticker_input)}" 
+               class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors">
+                News
+            </a>
+        </div>
+        """
+        
+        # Add Tailwind CSS CDN
+        tailwind_css = '<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">'
+        
+        # Get the plotly figure HTML
+        plot_html = fig.to_html(
             full_html=True,
             include_plotlyjs=True,
             config={'responsive': True}
+        )
+        
+        # Insert Tailwind CSS and navigation buttons before closing body tag
+        html_content = plot_html.replace(
+            '</body>',
+            f'{nav_buttons}</body>'
+        ).replace(
+            '</head>',
+            f'{tailwind_css}</head>'
         )
         
         response = make_response(html_content)
@@ -1208,4 +1262,3 @@ def progress():
 # app/routes.py
 
 # app/routes.py
-
