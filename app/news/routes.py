@@ -939,3 +939,17 @@ def update_article(article_id):
         db.session.rollback()
         logger.error(f"Error updating article {article_id}: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@bp.route('/articles/view/<int:article_id>')
+@admin_required
+def view_article(article_id):
+    """View article details"""
+    try:
+        article = NewsArticle.query.get_or_404(article_id)
+        return render_template(
+            'news/view_article.html',
+            article=article
+        )
+    except Exception as e:
+        logger.error(f"Error viewing article {article_id}: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
