@@ -49,6 +49,31 @@ DEFAULT_SYMBOLS = [
 #     "HKEX:0762", "HKEX:0823", "HKEX:0960", "HKEX:1038", "HKEX:1109"
 # ]
 
+# Add at the top with other constants
+FUTURES_MAPPING = {
+    # Metals
+    'GOLD': ['COMEX:GC1!', 'COMEX:GC'],
+    'SILVER': ['COMEX:SI1!', 'COMEX:SI'],
+    'COPPER': ['COMEX:HG1!', 'COMEX:HG'],
+    'PLATINUM': ['NYMEX:PL1!', 'NYMEX:PL'],
+    
+    # Energy
+    'OIL': ['NYMEX:CL1!', 'NYMEX:CL', 'NYMEX:WTI'],
+    'BRENT': ['NYMEX:BZ1!', 'NYMEX:BZ'],
+    'GAS': ['NYMEX:NG1!', 'NYMEX:NG'],
+    
+    # Agriculture
+    'CORN': ['CBOT:ZC1!', 'CBOT:ZC'],
+    'WHEAT': ['CBOT:ZW1!', 'CBOT:ZW'],
+    'SOYBEANS': ['CBOT:ZS1!', 'CBOT:ZS'],
+    'COFFEE': ['NYMEX:KC1!', 'NYMEX:KC'],
+    
+    # Indices Futures
+    'SP500': ['CME:ES1!', 'SP:SPX'],
+    'NASDAQ': ['CME:NQ1!', 'NASDAQ:IXIC'],
+    'DOW': ['CBOT:YM1!', 'DJ:DJI']
+}
+
 def init_analytics():
     """Initialize analytics with database session"""
     return NewsAnalytics(current_app.db.session)
@@ -136,12 +161,39 @@ def search():
                 query = query.filter(NewsArticle.ai_sentiment_rating.isnot(None))
                 query = query.order_by(NewsArticle.ai_sentiment_rating.asc())
         else:
-            # Search for specific symbol
-            query = query.filter(
-                or_(
-                    NewsArticle.symbols.any(ArticleSymbol.symbol == symbol_upper),
-                    NewsArticle.title.ilike(f'%{symbol}%')
+            # Check if it's a common futures name
+            if symbol_upper in FUTURES_MAPPING:
+                futures_symbols = FUTURES_MAPPING[symbol_upper]
+                symbol_filter = or_(*[ArticleSymbol.symbol == sym for sym in futures_symbols])
+            elif ':' not in symbol_upper:
+                # Try to match with any exchange prefix or without prefix
+                symbol_filter = or_(
+                    ArticleSymbol.symbol == f"NASDAQ:{symbol_upper}",
+                    ArticleSymbol.symbol == f"NYSE:{symbol_upper}",
+                    ArticleSymbol.symbol == f"HKEX:{symbol_upper}",
+                    ArticleSymbol.symbol == f"SSE:{symbol_upper}",     # Shanghai Stock Exchange
+                    ArticleSymbol.symbol == f"SZSE:{symbol_upper}",    # Shenzhen Stock Exchange
+                    ArticleSymbol.symbol == f"LSE:{symbol_upper}",     # London Stock Exchange
+                    ArticleSymbol.symbol == f"TSE:{symbol_upper}",     # Tokyo Stock Exchange
+                    ArticleSymbol.symbol == f"TSX:{symbol_upper}",     # Toronto Stock Exchange
+                    ArticleSymbol.symbol == f"ASX:{symbol_upper}",     # Australian Securities Exchange
+                    ArticleSymbol.symbol == f"AMEX:{symbol_upper}",    # American Stock Exchange
+                    ArticleSymbol.symbol == f"EURONEXT:{symbol_upper}", # European Exchange
+                    ArticleSymbol.symbol == f"XETR:{symbol_upper}",    # German Exchange
+                    ArticleSymbol.symbol == f"SP:{symbol_upper}",      # S&P
+                    ArticleSymbol.symbol == f"DJ:{symbol_upper}",      # Dow Jones
+                    ArticleSymbol.symbol == f"FOREXCOM:{symbol_upper}", # Forex
+                    ArticleSymbol.symbol == f"BITSTAMP:{symbol_upper}", # Crypto
+                    ArticleSymbol.symbol == f"COMEX:{symbol_upper}",   # Commodities Exchange
+                    ArticleSymbol.symbol == f"NYMEX:{symbol_upper}",   # NY Mercantile Exchange
+                    ArticleSymbol.symbol == f"TVC:{symbol_upper}",     # TradingView
+                    ArticleSymbol.symbol == symbol_upper
                 )
+            else:
+                symbol_filter = ArticleSymbol.symbol == symbol_upper
+
+            query = query.filter(
+                NewsArticle.symbols.any(symbol_filter)
             ).order_by(NewsArticle.published_at.desc())
 
         # Paginate the results - 1 item per page
