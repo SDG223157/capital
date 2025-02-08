@@ -48,6 +48,10 @@
                             {% if current_user.is_administrator %}
                                 <a href="{{ url_for('news.fetch') }}" class="dropdown-item text-sm">Fetch</a>
                             {% endif %}
+                            <a href="{{ url_for('news.manage_articles') }}"
+                               class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                Manage Articles
+                            </a>
                         </div>
                     </div>
                     <div class="user-dropdown">
