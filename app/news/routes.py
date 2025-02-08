@@ -659,7 +659,8 @@ def get_sentiment():
 
         daily_data = news_service.get_sentiment_timeseries(
             symbol=symbol,
-            days=days
+            days=days,
+            symbol_filter=symbol_filter
         )
         
         # Calculate overall statistics
