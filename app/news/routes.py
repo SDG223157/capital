@@ -900,12 +900,24 @@ def manage_articles():
         logger.error(f"Error managing articles: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
-@bp.route('/articles/update/<int:article_id>', methods=['POST'])
+@bp.route('/articles/update/<int:article_id>', methods=['GET', 'POST'])
 @admin_required
 def update_article(article_id):
     """Update article content"""
     try:
         article = NewsArticle.query.get_or_404(article_id)
+        
+        # Handle GET request to fetch article data
+        if request.method == 'GET':
+            return jsonify({
+                'title': article.title,
+                'content': article.content,
+                'ai_summary': article.ai_summary,
+                'ai_insights': article.ai_insights,
+                'ai_sentiment_rating': article.ai_sentiment_rating
+            })
+
+        # Handle POST request to update article
         data = request.get_json()
 
         # Update fields if provided
