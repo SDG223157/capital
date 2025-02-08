@@ -622,6 +622,7 @@ def get_sentiment():
             }), HTTPStatus.BAD_REQUEST
 
         symbol_upper = symbol.upper()
+        symbol_filter = None  # Initialize symbol_filter
         
         # Handle special cases
         if symbol_upper == 'ALL':
