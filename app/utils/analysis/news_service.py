@@ -341,23 +341,31 @@ class NewsAnalysisService:
             self.logger.error(f"Error closing resources: {str(e)}")
 
     def get_sentiment_timeseries(self, symbol: str, days: int):
-        """Get daily sentiment averages for a specific symbol"""
-        latest_article = db.session.query(
-            func.max(NewsArticle.published_at)
-        ).join(NewsArticle.symbols)\
-        .filter(func.upper(ArticleSymbol.symbol) == symbol.upper())\
-        .scalar()
+        """Get daily sentiment averages for a specific symbol or all articles"""
+        # Get latest article date
+        query = db.session.query(func.max(NewsArticle.published_at))
+        if symbol.lower() != 'all':
+            query = query.join(NewsArticle.symbols)\
+                .filter(func.upper(ArticleSymbol.symbol) == symbol.upper())
+        latest_article = query.scalar()
             
         end_date = latest_article if latest_article else datetime.now()
         start_date = end_date - timedelta(days=days)
 
-        # Get all articles without pagination
+        # Base query for sentiment analysis
         query = db.session.query(
             func.date(NewsArticle.published_at).label('date'),
             func.avg(NewsArticle.ai_sentiment_rating).label('avg_sentiment'),
             func.count(NewsArticle.id).label('article_count')
-        ).join(NewsArticle.symbols).filter(
-            func.upper(ArticleSymbol.symbol) == symbol.upper(),
+        )
+
+        # Apply symbol filter only if not "all"
+        if symbol.lower() != 'all':
+            query = query.join(NewsArticle.symbols)\
+                .filter(func.upper(ArticleSymbol.symbol) == symbol.upper())
+
+        # Apply date range and other filters
+        query = query.filter(
             NewsArticle.published_at >= start_date,
             NewsArticle.published_at <= end_date,
             NewsArticle.ai_sentiment_rating.isnot(None)
