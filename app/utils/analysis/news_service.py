@@ -340,11 +340,13 @@ class NewsAnalysisService:
         except Exception as e:
             self.logger.error(f"Error closing resources: {str(e)}")
 
-    def get_sentiment_timeseries(self, symbol: str, days: int):
+    def get_sentiment_timeseries(self, symbol: str, days: int, symbol_filter=None):
         """Get daily sentiment averages for a specific symbol or all articles"""
         # Get latest article date
         query = db.session.query(func.max(NewsArticle.published_at))
-        if symbol.lower() != 'all':
+        if symbol_filter:
+            query = query.join(NewsArticle.symbols).filter(symbol_filter)
+        elif symbol.lower() != 'all':
             query = query.join(NewsArticle.symbols)\
                 .filter(func.upper(ArticleSymbol.symbol) == symbol.upper())
         latest_article = query.scalar()
@@ -360,7 +362,9 @@ class NewsAnalysisService:
         )
 
         # Apply symbol filter only if not "all"
-        if symbol.lower() != 'all':
+        if symbol_filter:
+            query = query.join(NewsArticle.symbols).filter(symbol_filter)
+        elif symbol.lower() != 'all':
             query = query.join(NewsArticle.symbols)\
                 .filter(func.upper(ArticleSymbol.symbol) == symbol.upper())
 
