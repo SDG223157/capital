@@ -620,7 +620,43 @@ def get_sentiment():
                 'message': 'Missing required symbol parameter'
             }), HTTPStatus.BAD_REQUEST
 
-        # Use get_sentiment_timeseries instead of get_sentiment_summary
+        symbol_upper = symbol.upper()
+        
+        # Handle special cases
+        if symbol_upper == 'ALL':
+            pass  # Keep existing behavior for 'all'
+        else:
+            # Check if it's a futures commodity
+            if symbol_upper in FUTURES_MAPPING:
+                futures_symbols = FUTURES_MAPPING[symbol_upper]
+                symbol_filter = or_(*[ArticleSymbol.symbol == sym for sym in futures_symbols])
+            elif ':' not in symbol_upper:
+                # Try to match with any exchange prefix or without prefix
+                symbol_filter = or_(
+                    ArticleSymbol.symbol == f"NASDAQ:{symbol_upper}",
+                    ArticleSymbol.symbol == f"NYSE:{symbol_upper}",
+                    ArticleSymbol.symbol == f"HKEX:{symbol_upper}",
+                    ArticleSymbol.symbol == f"SSE:{symbol_upper}",     # Shanghai Stock Exchange
+                    ArticleSymbol.symbol == f"SZSE:{symbol_upper}",    # Shenzhen Stock Exchange
+                    ArticleSymbol.symbol == f"LSE:{symbol_upper}",     # London Stock Exchange
+                    ArticleSymbol.symbol == f"TSE:{symbol_upper}",     # Tokyo Stock Exchange
+                    ArticleSymbol.symbol == f"TSX:{symbol_upper}",     # Toronto Stock Exchange
+                    ArticleSymbol.symbol == f"ASX:{symbol_upper}",     # Australian Securities Exchange
+                    ArticleSymbol.symbol == f"AMEX:{symbol_upper}",    # American Stock Exchange
+                    ArticleSymbol.symbol == f"EURONEXT:{symbol_upper}", # European Exchange
+                    ArticleSymbol.symbol == f"XETR:{symbol_upper}",    # German Exchange
+                    ArticleSymbol.symbol == f"SP:{symbol_upper}",      # S&P
+                    ArticleSymbol.symbol == f"DJ:{symbol_upper}",      # Dow Jones
+                    ArticleSymbol.symbol == f"FOREXCOM:{symbol_upper}", # Forex
+                    ArticleSymbol.symbol == f"BITSTAMP:{symbol_upper}", # Crypto
+                    ArticleSymbol.symbol == f"COMEX:{symbol_upper}",   # Commodities Exchange
+                    ArticleSymbol.symbol == f"NYMEX:{symbol_upper}",   # NY Mercantile Exchange
+                    ArticleSymbol.symbol == f"TVC:{symbol_upper}",     # TradingView
+                    ArticleSymbol.symbol == symbol_upper
+                )
+            else:
+                symbol_filter = ArticleSymbol.symbol == symbol_upper
+
         daily_data = news_service.get_sentiment_timeseries(
             symbol=symbol,
             days=days
