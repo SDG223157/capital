@@ -45,15 +45,10 @@
                             {% if not request.endpoint == 'main.index' %}
                                 <a href="{{ url_for('main.index') }}" class="dropdown-item text-sm">Trend</a>
                             {% endif %}
-                            {% if current_user.is_administrator %}
+                            {% if current_user.is_admin %}
                                 <a href="{{ url_for('news.fetch') }}" class="dropdown-item text-sm">Fetch</a>
+                                <a href="{{ url_for('news.manage_articles') }}" class="dropdown-item text-sm">Manage Articles</a>
                             {% endif %}
-                            <div class="dropdown-menu" aria-labelledby="analyticsDropdown">
-                                {% if current_user.is_admin %}
-                                    <a href="{{ url_for('news.fetch') }}" class="dropdown-item text-sm">Fetch</a>
-                                    <a href="{{ url_for('news.manage_articles') }}" class="dropdown-item text-sm">Manage Articles</a>
-                                {% endif %}
-                            </div>
                         </div>
                     </div>
                     <div class="user-dropdown">
