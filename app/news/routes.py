@@ -52,13 +52,13 @@ DEFAULT_SYMBOLS = [
 # Add at the top with other constants
 FUTURES_MAPPING = {
     # Metals
-    'GOLD': ['COMEX:GC1!', 'COMEX:GC'],
-    'SILVER': ['COMEX:SI1!', 'COMEX:SI'],
-    'COPPER': ['COMEX:HG1!', 'COMEX:HG'],
-    'PLATINUM': ['NYMEX:PL1!', 'NYMEX:PL'],
+    'GOLD': ['COMEX:GC1!', 'COMEX:GC', 'TVC:GOLD', 'FXCM:GOLD'],
+    'SILVER': ['COMEX:SI1!', 'COMEX:SI', 'TVC:SILVER', 'FXCM:SILVER'],
+    'COPPER': ['COMEX:HG1!', 'COMEX:HG', 'TVC:COPPER', 'FXCM:COPPER'],
+    'PLATINUM': ['NYMEX:PL1!', 'NYMEX:PL', 'TVC:PLATINUM', 'FXCM:PLATINUM'],
     
     # Energy
-    'OIL': ['NYMEX:CL1!', 'NYMEX:CL', 'NYMEX:WTI'],
+    'OIL': ['NYMEX:CL1!', 'NYMEX:CL', 'NYMEX:WTI', 'TVC:USOIL', 'FXCM:OIL'],
     'BRENT': ['NYMEX:BZ1!', 'NYMEX:BZ'],
     'GAS': ['NYMEX:NG1!', 'NYMEX:NG'],
     
