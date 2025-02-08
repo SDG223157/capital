@@ -886,14 +886,22 @@ def manage_articles():
     try:
         page = request.args.get('page', 1, type=int)
         per_page = 20
+        search = request.args.get('search', '')
 
         # Get paginated articles
-        articles = NewsArticle.query.order_by(NewsArticle.published_at.desc())\
+        query = NewsArticle.query
+        
+        if search:
+            search = f"%{search}%"
+            query = query.filter(NewsArticle.title.ilike(search))
+            
+        articles = query.order_by(NewsArticle.published_at.desc())\
             .paginate(page=page, per_page=per_page, error_out=False)
 
         return render_template(
             'news/manage_articles.html',
-            articles=articles
+            articles=articles,
+            search=search
         )
 
     except Exception as e:

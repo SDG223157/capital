@@ -10,11 +10,41 @@
     <div class="container mx-auto p-4">
         <div class="flex justify-between items-center mb-6">
             <h1 class="text-2xl font-bold">Manage Articles</h1>
-            <a href="{{ url_for('main.index') }}" 
-               class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors">
-                Home
-            </a>
+            <div class="flex items-center space-x-4">
+                <!-- Search Form -->
+                <form method="get" class="flex items-center">
+                    <input type="text" 
+                           name="search" 
+                           value="{{ search }}"
+                           placeholder="Search by title..." 
+                           class="border rounded-l px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button type="submit" 
+                            class="bg-blue-500 text-white px-4 py-2 rounded-r hover:bg-blue-600 transition-colors">
+                        Search
+                    </button>
+                </form>
+                
+                <!-- Clear Search -->
+                {% if search %}
+                <a href="{{ url_for('news.manage_articles') }}" 
+                   class="text-gray-600 hover:text-gray-800">
+                    Clear Search
+                </a>
+                {% endif %}
+                
+                <!-- Home Link -->
+                <a href="{{ url_for('main.index') }}" 
+                   class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors">
+                    Home
+                </a>
+            </div>
         </div>
+
+        {% if search %}
+        <div class="mb-4 text-gray-600">
+            Showing results for: "{{ search }}"
+        </div>
+        {% endif %}
 
         <div class="bg-white rounded-lg shadow overflow-x-auto">
             <table class="min-w-full">
@@ -58,14 +88,14 @@
         <!-- Pagination -->
         <div class="mt-4 flex justify-center">
             {% if articles.has_prev %}
-            <a href="{{ url_for('news.manage_articles', page=articles.prev_num) }}"
+            <a href="{{ url_for('news.manage_articles', page=articles.prev_num, search=search) }}"
                class="px-3 py-1 border rounded hover:bg-gray-100 mr-2">Previous</a>
             {% endif %}
             
             <span class="px-3 py-1">Page {{ articles.page }} of {{ articles.pages }}</span>
             
             {% if articles.has_next %}
-            <a href="{{ url_for('news.manage_articles', page=articles.next_num) }}"
+            <a href="{{ url_for('news.manage_articles', page=articles.next_num, search=search) }}"
                class="px-3 py-1 border rounded hover:bg-gray-100 ml-2">Next</a>
             {% endif %}
         </div>
