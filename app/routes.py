@@ -470,7 +470,7 @@ def quick_analyze():
         # Insert Tailwind CSS and navigation buttons
         html_content = plot_html.replace(
             '</body>',
-            f'<div class="fixed top-4 left-4 flex space-x-4">{nav_buttons_html}</div></body>'
+            f'<div class="fixed top-4 left-4 flex space-x-4" style="margin-bottom: 60px;">{nav_buttons_html}</div></body>'
         ).replace(
             '</head>',
             f'{tailwind_css}</head>'
@@ -545,7 +545,7 @@ def analyze():
         # Insert Tailwind CSS and navigation buttons
         html_content = plot_html.replace(
             '</body>',
-            f'<div class="fixed top-4 left-4 flex space-x-4">{nav_buttons_html}</div></body>'
+            f'<div class="fixed top-4 left-4 flex space-x-4" style="margin-bottom: 60px;">{nav_buttons_html}</div></body>'
         ).replace(
             '</head>',
             f'{tailwind_css}</head>'
