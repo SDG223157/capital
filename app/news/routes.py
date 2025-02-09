@@ -996,6 +996,24 @@ def clear_all_content():
             if article.content is not None:
                 article.content = None
                 count += 1
+            if article.sentiment_label is not None:
+                article.sentiment_label = None
+                count += 1
+            if article.sentiment_score is not None:
+                article.sentiment_score = None
+                count += 1
+            if article.sentiment_explanation is not None:
+                article.sentiment_explanation = None
+                count += 1
+            if article.brief_summary is not None:
+                article.brief_summary = None
+                count += 1
+            if article.key_points is not None:
+                article.key_points = None
+                count += 1
+            if article.market_impact_summary is not None:
+                article.market_impact_summary = None
+                count += 1
 
         db.session.commit()
         return jsonify({

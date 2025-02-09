@@ -82,9 +82,9 @@ class NewsAnalyzer:
             
             # Add analysis
             analyzed.update({
-                "sentiment": self.analyze_sentiment(content),
-                "summary": self.generate_summary(content),
-                "metrics": self.extract_metrics(content)
+                "sentiment": None,
+                "summary": None,
+                "metrics": None
             })
             
             return analyzed
