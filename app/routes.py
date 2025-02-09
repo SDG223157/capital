@@ -430,7 +430,6 @@ def determine_asset_type(symbol: str, name: str) -> str:
 
 @bp.route('/quick_analyze', methods=['POST'])
 def quick_analyze():
-    """Quick analysis route for non-logged-in users"""
     try:
         ticker_input = request.form.get('ticker', '').split()[0].upper()
         if not ticker_input:
@@ -450,6 +449,14 @@ def quick_analyze():
             {'url': url_for('news.search', symbol=ticker_input), 'text': 'News', 'class': 'btn-info'}
         ]
         
+        # Generate HTML for navigation buttons
+        nav_buttons_html = ''.join([
+            f'<a href="{button["url"]}" '
+            f'class="px-4 py-2 bg-{button["class"]} text-white rounded-md hover:bg-{button["class"]}-600 '
+            f'transition-colors">{button["text"]}</a>'
+            for button in nav_buttons
+        ])
+        
         # Add Tailwind CSS CDN
         tailwind_css = '<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">'
         
@@ -460,10 +467,10 @@ def quick_analyze():
             config={'responsive': True}
         )
         
-        # Insert Tailwind CSS and navigation buttons before closing body tag
+        # Insert Tailwind CSS and navigation buttons
         html_content = plot_html.replace(
             '</body>',
-            f'<div class="fixed bottom-4 right-4 flex space-x-4">{nav_buttons_html}</div></body>'
+            f'<div class="fixed top-4 right-4 flex space-x-4">{nav_buttons_html}</div></body>'
         ).replace(
             '</head>',
             f'{tailwind_css}</head>'
@@ -476,7 +483,7 @@ def quick_analyze():
     except Exception as e:
         error_msg = f"Error analyzing {ticker_input}: {str(e)}"
         logger.error(f"{error_msg}\n{traceback.format_exc()}")
-        return render_template('error.html', error=error_msg), 500
+        return f'<div class="text-red-500">Error: {error_msg}</div>', 500
 
 @bp.route('/analyze', methods=['POST'])
 @login_required
@@ -517,6 +524,14 @@ def analyze():
             {'url': url_for('news.search', symbol=ticker_input), 'text': 'News', 'class': 'btn-info'}
         ]
         
+        # Generate HTML for navigation buttons
+        nav_buttons_html = ''.join([
+            f'<a href="{button["url"]}" '
+            f'class="px-4 py-2 bg-{button["class"]} text-white rounded-md hover:bg-{button["class"]}-600 '
+            f'transition-colors">{button["text"]}</a>'
+            for button in nav_buttons
+        ])
+        
         # Add Tailwind CSS CDN
         tailwind_css = '<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">'
         
@@ -527,10 +542,10 @@ def analyze():
             config={'responsive': True}
         )
         
-        # Insert Tailwind CSS and navigation buttons before closing body tag
+        # Insert Tailwind CSS and navigation buttons
         html_content = plot_html.replace(
             '</body>',
-            f'<div class="fixed bottom-4 right-4 flex space-x-4">{nav_buttons_html}</div></body>'
+            f'<div class="fixed top-4 right-4 flex space-x-4">{nav_buttons_html}</div></body>'
         ).replace(
             '</head>',
             f'{tailwind_css}</head>'
@@ -543,7 +558,7 @@ def analyze():
     except Exception as e:
         error_msg = f"Error analyzing {ticker_input}: {str(e)}"
         logger.error(f"{error_msg}\n{traceback.format_exc()}")
-        return render_template('error.html', error=error_msg), 500
+        return f'<div class="text-red-500">Error: {error_msg}</div>', 500
 
 @bp.route('/tables')
 @admin_required
