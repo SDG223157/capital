@@ -161,6 +161,17 @@ def search():
                 query = query.filter(NewsArticle.ai_sentiment_rating.isnot(None))
                 query = query.order_by(NewsArticle.ai_sentiment_rating.asc())
         else:
+            # Convert Yahoo Finance symbols to TradingView format
+            if re.match(r'^\d{4}\.HK$', symbol_upper):
+                # Convert HK stocks (e.g., 0700.HK -> HKEX:700)
+                symbol_upper = f"HKEX:{int(symbol_upper.replace('.HK', '').replace('.hk', '')):d}"
+            elif re.search(r'\.SS$', symbol_upper):
+                # Convert Shanghai stocks (e.g., 600519.SS -> SSE:600519)
+                symbol_upper = f"SSE:{symbol_upper.replace('.SS', '')}"
+            elif re.search(r'\.SZ$', symbol_upper):
+                # Convert Shenzhen stocks (e.g., 000001.SZ -> SZSE:000001)
+                symbol_upper = f"SZSE:{symbol_upper.replace('.SZ', '')}"
+
             # Check if it's a futures commodity
             if symbol_upper in FUTURES_MAPPING:
                 futures_symbols = FUTURES_MAPPING[symbol_upper]
@@ -854,9 +865,9 @@ def get_tradingview_symbol(symbol):
     
     # Hong Kong stocks
     if re.match(r'^\d{4}\.HK$', symbol, re.IGNORECASE):
-        return f"HKEX:{symbol.replace('.HK', '').replace('.hk', '')}"
+        return f"HKEX:{int(symbol.replace('.HK', '').replace('.hk', '')):d}"
     elif symbol.startswith('0') and re.search(r'\.HK$', symbol, re.IGNORECASE):
-        return f"HKEX:{symbol.replace('0', '').replace('.HK', '').replace('.hk', '')}"
+        return f"HKEX:{int(symbol.replace('.HK', '').replace('.hk', '')):d}"
         
     # Shanghai stocks
     elif re.search(r'\.SS$', symbol, re.IGNORECASE):
