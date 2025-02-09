@@ -445,14 +445,14 @@ def quick_analyze():
         
         # Create HTML content with navigation buttons
         nav_buttons = [
-            {'url': url_for('main.index'), 'text': 'Home', 'class': 'btn-primary'},
-            {'url': url_for('news.search', symbol=ticker_input), 'text': 'News', 'class': 'btn-info'}
+            {'url': url_for('main.index'), 'text': 'Home', 'class': 'blue-500'},
+            {'url': url_for('news.search', symbol=ticker_input), 'text': 'News', 'class': 'green-500'}
         ]
         
         # Generate HTML for navigation buttons
         nav_buttons_html = ''.join([
             f'<a href="{button["url"]}" '
-            f'class="px-4 py-2 bg-{button["class"]} text-white rounded-md hover:bg-{button["class"]}-600 '
+            f'class="px-4 py-2 bg-{button["class"]} text-white rounded-md hover:bg-{button["class"]}/80 '
             f'transition-colors">{button["text"]}</a>'
             for button in nav_buttons
         ])
@@ -520,14 +520,14 @@ def analyze():
         
         # Create HTML content with navigation buttons
         nav_buttons = [
-            {'url': url_for('main.index'), 'text': 'Home', 'class': 'btn-primary'},
-            {'url': url_for('news.search', symbol=ticker_input), 'text': 'News', 'class': 'btn-info'}
+            {'url': url_for('main.index'), 'text': 'Home', 'class': 'blue-500'},
+            {'url': url_for('news.search', symbol=ticker_input), 'text': 'News', 'class': 'green-500'}
         ]
         
         # Generate HTML for navigation buttons
         nav_buttons_html = ''.join([
             f'<a href="{button["url"]}" '
-            f'class="px-4 py-2 bg-{button["class"]} text-white rounded-md hover:bg-{button["class"]}-600 '
+            f'class="px-4 py-2 bg-{button["class"]} text-white rounded-md hover:bg-{button["class"]}/80 '
             f'transition-colors">{button["text"]}</a>'
             for button in nav_buttons
         ])
