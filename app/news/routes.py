@@ -251,6 +251,22 @@ def fetch_news():
             
         limit = min(int(data.get('limit', 10)), 50)  # Cap limit at 50
         
+        # Delete articles with no content and no insights
+        try:
+            articles_to_delete = NewsArticle.query.filter(
+                NewsArticle.content.is_(None),
+                NewsArticle.ai_insights.is_(None)
+            ).all()
+            
+            for article in articles_to_delete:
+                db.session.delete(article)
+            
+            db.session.commit()
+            logger.info(f"Deleted {len(articles_to_delete)} articles with no content and insights")
+        except Exception as e:
+            logger.error(f"Error deleting empty articles: {str(e)}")
+            db.session.rollback()
+        
         logger.info(f"Fetching news for symbols: {symbols}, limit: {limit}")
         articles = news_service.fetch_and_analyze_news(symbols=symbols, limit=limit)
         
