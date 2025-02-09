@@ -445,18 +445,10 @@ def quick_analyze():
         )
         
         # Create HTML content with navigation buttons
-        nav_buttons = f"""
-        <div class="fixed bottom-4 right-4 flex space-x-4">
-            <a href="{url_for('main.index')}" 
-               class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors">
-                Home
-            </a>
-            <a href="{url_for('news.search', symbol=ticker_input)}" 
-               class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors">
-                News
-            </a>
-        </div>
-        """
+        nav_buttons = [
+            {'url': url_for('main.index'), 'text': 'Home', 'class': 'btn-primary'},
+            {'url': url_for('news.search', symbol=ticker_input), 'text': 'News', 'class': 'btn-info'}
+        ]
         
         # Add Tailwind CSS CDN
         tailwind_css = '<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">'
@@ -471,7 +463,7 @@ def quick_analyze():
         # Insert Tailwind CSS and navigation buttons before closing body tag
         html_content = plot_html.replace(
             '</body>',
-            f'{nav_buttons}</body>'
+            f'<div class="fixed bottom-4 right-4 flex space-x-4">{nav_buttons_html}</div></body>'
         ).replace(
             '</head>',
             f'{tailwind_css}</head>'
@@ -520,18 +512,10 @@ def analyze():
         )
         
         # Create HTML content with navigation buttons
-        nav_buttons = f"""
-        <div class="fixed bottom-4 right-4 flex space-x-4">
-            <a href="{url_for('main.index')}" 
-               class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors">
-                Home
-            </a>
-            <a href="{url_for('news.search', symbol=ticker_input)}" 
-               class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors">
-                News
-            </a>
-        </div>
-        """
+        nav_buttons = [
+            {'url': url_for('main.index'), 'text': 'Home', 'class': 'btn-primary'},
+            {'url': url_for('news.search', symbol=ticker_input), 'text': 'News', 'class': 'btn-info'}
+        ]
         
         # Add Tailwind CSS CDN
         tailwind_css = '<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">'
@@ -546,7 +530,7 @@ def analyze():
         # Insert Tailwind CSS and navigation buttons before closing body tag
         html_content = plot_html.replace(
             '</body>',
-            f'{nav_buttons}</body>'
+            f'<div class="fixed bottom-4 right-4 flex space-x-4">{nav_buttons_html}</div></body>'
         ).replace(
             '</head>',
             f'{tailwind_css}</head>'
