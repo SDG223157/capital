@@ -281,11 +281,31 @@ def fetch_news():
 @bp.route('/api/batch-fetch', methods=['POST'])
 @login_required
 def batch_fetch():
+    """Batch fetch news articles"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), HTTPStatus.BAD_REQUEST
+        
         chunk_size = 5  # Process 5 symbols at a time
         symbols = data.get('symbols', DEFAULT_SYMBOLS[:10]) 
         articles_per_symbol = min(int(data.get('limit', 2)), 5)
+        
+        # Delete articles with no content and no insights
+        try:
+            articles_to_delete = NewsArticle.query.filter(
+                NewsArticle.content.is_(None),
+                NewsArticle.ai_insights.is_(None)
+            ).all()
+            
+            for article in articles_to_delete:
+                db.session.delete(article)
+            
+            db.session.commit()
+            logger.info(f"Deleted {len(articles_to_delete)} articles with no content and insights")
+        except Exception as e:
+            logger.error(f"Error deleting empty articles: {str(e)}")
+            db.session.rollback()
         
         all_articles = []
         chunks = [symbols[i:i + chunk_size] for i in range(0, len(symbols), chunk_size)]
@@ -301,7 +321,7 @@ def batch_fetch():
                 except Exception as e:
                     logger.error(f"Error fetching {symbol}: {str(e)}")
                     continue
-                
+        
         return jsonify({
             'status': 'success',
             'articles': all_articles,
