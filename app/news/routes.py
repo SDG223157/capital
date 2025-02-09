@@ -975,3 +975,35 @@ def clear_article_content(article_id):
         db.session.rollback()
         logger.error(f"Error clearing article {article_id} content: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@bp.route('/articles/clear-all-content', methods=['POST'])
+@admin_required
+def clear_all_content():
+    """Clear content from all articles but preserve AI fields"""
+    try:
+        # Get search parameter to maintain filter if exists
+        search = request.args.get('search', '')
+        query = NewsArticle.query
+
+        if search:
+            search = f"%{search}%"
+            query = query.filter(NewsArticle.title.ilike(search))
+
+        # Update all matching articles
+        articles = query.all()
+        count = 0
+        for article in articles:
+            if article.content is not None:
+                article.content = None
+                count += 1
+
+        db.session.commit()
+        return jsonify({
+            'status': 'success',
+            'message': f'Cleared content from {count} articles'
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error clearing all content: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500

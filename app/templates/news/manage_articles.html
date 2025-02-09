@@ -11,6 +11,11 @@
         <div class="flex justify-between items-center mb-6">
             <h1 class="text-2xl font-bold">Manage Articles</h1>
             <div class="flex items-center space-x-4">
+                <!-- Clear All Content Button -->
+                <button onclick="clearAllContent()"
+                        class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors">
+                    Clear All Content
+                </button>
                 <!-- Search Form -->
                 <form method="get" class="flex items-center">
                     <input type="text" 
@@ -234,6 +239,34 @@
                 .catch(error => {
                     console.error('Error clearing content:', error);
                     alert('Failed to clear article content');
+                });
+            }
+        }
+
+        // Add the clearAllContent function to your script section
+        function clearAllContent() {
+            if (confirm('Are you sure you want to clear content from all articles? This cannot be undone. AI fields will be preserved.')) {
+                const searchParams = new URLSearchParams(window.location.search);
+                const search = searchParams.get('search') || '';
+                
+                fetch(`/news/articles/clear-all-content?search=${search}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert(data.message);
+                        location.reload();
+                    } else {
+                        alert('Failed to clear content: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error clearing all content:', error);
+                    alert('Failed to clear content');
                 });
             }
         }
