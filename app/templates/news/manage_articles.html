@@ -77,7 +77,9 @@
                             <button onclick="editArticle({{ article.id }})"
                                     class="text-indigo-600 hover:text-indigo-900 mr-2">Edit</button>
                             <a href="{{ url_for('news.view_article', article_id=article.id) }}"
-                               class="text-blue-600 hover:text-blue-900">View</a>
+                               class="text-blue-600 hover:text-blue-900 mr-2">View</a>
+                            <button onclick="clearContent({{ article.id }})"
+                                    class="text-red-600 hover:text-red-900">Clear</button>
                         </td>
                     </tr>
                     {% endfor %}
@@ -211,6 +213,30 @@
                 alert('Failed to update article');
             }
         });
+
+        // Function to clear article content
+        function clearContent(articleId) {
+            if (confirm('Are you sure you want to clear this article\'s content? The AI fields will be preserved.')) {
+                fetch(`/news/articles/clear-content/${articleId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        location.reload(); // Refresh to show changes
+                    } else {
+                        alert('Failed to clear article content');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error clearing content:', error);
+                    alert('Failed to clear article content');
+                });
+            }
+        }
     </script>
 </body>
 </html> 

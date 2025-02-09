@@ -961,3 +961,17 @@ def view_article(article_id):
     except Exception as e:
         logger.error(f"Error viewing article {article_id}: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@bp.route('/articles/clear-content/<int:article_id>', methods=['POST'])
+@admin_required
+def clear_article_content(article_id):
+    """Clear only article content, keep AI fields"""
+    try:
+        article = NewsArticle.query.get_or_404(article_id)
+        article.content = None
+        db.session.commit()
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error clearing article {article_id} content: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
