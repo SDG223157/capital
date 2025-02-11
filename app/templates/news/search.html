@@ -73,6 +73,13 @@
                           class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">
                            New Search
                        </a>
+                       {% if search_params.symbol %}
+                       <button type="button" 
+                               onclick="analyzeStock('{{ search_params.symbol }}')"
+                               class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors">
+                           Analyze
+                       </button>
+                       {% endif %}
                    </div>
                </div>
                
@@ -224,6 +231,172 @@
            if (rating > 50) return 'bg-green-100 text-green-800';
            if (rating < -50) return 'bg-red-100 text-red-800';
            return 'bg-yellow-100 text-yellow-800';
+       }
+
+       function analyzeStock(symbol) {
+           // Convert input symbol to Yahoo Finance format
+           let yahooSymbol = symbol;
+           
+           // Remove any exchange prefixes like NASDAQ:, NYSE:, etc.
+           if (symbol.includes(':')) {
+               const parts = symbol.split(':');
+               const exchange = parts[0].toUpperCase();
+               const ticker = parts[1];
+               
+               // Handle different exchanges
+               switch (exchange) {
+                   case 'HKEX':
+                       // Convert HKEX:700 to 0700.HK
+                       yahooSymbol = ticker.padStart(4, '0') + '.HK';
+                       break;
+                   case 'SSE':
+                       // Shanghai Stock Exchange
+                       yahooSymbol = ticker + '.SS';
+                       break;
+                   case 'SZSE':
+                       // Shenzhen Stock Exchange
+                       yahooSymbol = ticker + '.SZ';
+                       break;
+                   case 'TSE':
+                       // Tokyo Stock Exchange
+                       yahooSymbol = ticker + '.T';
+                       break;
+                   case 'LSE':
+                       // London Stock Exchange
+                       yahooSymbol = ticker + '.L';
+                       break;
+                   case 'FOREXCOM':
+                       // Handle Forex pairs
+                       if (ticker.startsWith('US')) {
+                           yahooSymbol = '^' + ticker.substring(2);
+                       } else {
+                           yahooSymbol = ticker + '=X';
+                       }
+                       break;
+                   case 'TVC':
+                       // Handle TradingView symbols
+                       switch (ticker) {
+                           case 'GOLD': yahooSymbol = 'GC=F'; break;
+                           case 'SILVER': yahooSymbol = 'SI=F'; break;
+                           case 'USOIL': yahooSymbol = 'CL=F'; break;
+                           case 'DXY': yahooSymbol = 'DX-Y.NYB'; break;
+                           default: yahooSymbol = ticker;
+                       }
+                       break;
+                   case 'SP':
+                       yahooSymbol = '^GSPC';
+                       break;
+                   case 'DJ':
+                       yahooSymbol = '^DJI';
+                       break;
+                   case 'NASDAQ':
+                       if (ticker === 'IXIC') {
+                           yahooSymbol = '^IXIC';
+                       } else {
+                           yahooSymbol = ticker;
+                       }
+                       break;
+                   case 'NYSE':
+                       if (ticker === 'NYA') {
+                           yahooSymbol = '^NYA';
+                       } else {
+                           yahooSymbol = ticker;
+                       }
+                       break;
+                   case 'AMEX':
+                       if (ticker === 'IWM') {
+                           yahooSymbol = 'IWM';
+                       } else {
+                           yahooSymbol = ticker;
+                       }
+                       break;
+                   case 'BITSTAMP':
+                       yahooSymbol = ticker;
+                       break;
+                   case 'COMEX':
+                   case 'NYMEX':
+                       // Convert futures
+                       if (ticker.endsWith('1!')) {
+                           yahooSymbol = ticker.replace('1!', '=F');
+                       } else {
+                           yahooSymbol = ticker + '=F';
+                       }
+                       break;
+                   default:
+                       yahooSymbol = ticker;
+               }
+           } else {
+               // Handle special cases for indices
+               const indexMappings = {
+                   'HSI': '^HSI',     // Hang Seng Index
+                   'GSPC': '^GSPC',   // S&P 500
+                   'DJI': '^DJI',     // Dow Jones Industrial Average
+                   'IXIC': '^IXIC',   // NASDAQ Composite
+                   'N225': '^N225',   // Nikkei 225
+                   'FTSE': '^FTSE',   // FTSE 100
+                   'VIX': '^VIX',     // Volatility Index
+                   'TNX': '^TNX'      // 10-Year Treasury Note
+               };
+
+               // Handle special cases for currencies
+               const currencyMappings = {
+                   'EURUSD': 'EUR=X',
+                   'GBPUSD': 'GBP=X',
+                   'USDJPY': 'JPY=X',
+                   'USDCNY': 'CNY=X',
+                   'USDHKD': 'HKD=X',
+                   'USDCNH': 'CNH=X'
+               };
+
+               // Check mappings
+               if (indexMappings[yahooSymbol]) {
+                   yahooSymbol = indexMappings[yahooSymbol];
+               } else if (currencyMappings[yahooSymbol]) {
+                   yahooSymbol = currencyMappings[yahooSymbol];
+               }
+               // Handle Hong Kong stocks (4 digits)
+               else if (/^\d{4}$/.test(yahooSymbol)) {
+                   yahooSymbol = yahooSymbol + '.HK';
+               }
+               // Handle Shanghai stocks
+               else if (/^(60|68|51|56|58)\d{4}$/.test(yahooSymbol)) {
+                   yahooSymbol = yahooSymbol + '.SS';
+               }
+               // Handle Shenzhen stocks
+               else if (/^(00|30)\d{4}$/.test(yahooSymbol)) {
+                   yahooSymbol = yahooSymbol + '.SZ';
+               }
+               // Handle Tokyo stocks
+               else if (/^\d{4}$/.test(yahooSymbol)) {
+                   yahooSymbol = yahooSymbol + '.T';
+               }
+           }
+
+           // Create form data with converted symbol
+           const formData = new FormData();
+           formData.append('ticker', yahooSymbol);
+
+           // Submit POST request to analyze endpoint
+           fetch('/analyze', {
+               method: 'POST',
+               body: formData
+           })
+           .then(response => {
+               if (response.ok) {
+                   return response.text();
+               }
+               throw new Error('Network response was not ok');
+           })
+           .then(html => {
+               // Open the analysis in a new window/tab
+               const analysisWindow = window.open('', '_blank');
+               analysisWindow.document.write(html);
+               analysisWindow.document.close();
+           })
+           .catch(error => {
+               console.error('Error:', error);
+               alert('Failed to analyze stock: ' + error.message);
+           });
        }
    </script>
 </body>
