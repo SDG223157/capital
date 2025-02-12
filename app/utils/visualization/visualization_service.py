@@ -590,7 +590,7 @@ class VisualizationService:
                             **CHART_STYLE['marker_styles']['crossover']
                         ),
                         hovertemplate='<b>%{text}</b><br>' +
-                                     '<b>Date</b>: %{x}<br>' +
+                                     '%{x}<br>' +
                                      '<b>Value</b>: %{y:.1f}%<br>' +
                                      '<b>Price</b>: $%{customdata:.2f}<extra></extra>',
                         text=[detailed_name],
