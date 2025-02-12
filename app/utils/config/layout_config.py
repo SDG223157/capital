@@ -85,53 +85,13 @@ LAYOUT_CONFIG = {
         bgcolor='rgba(255, 255, 255, 0.8)',
         bordercolor='rgba(0, 0, 0, 0.2)',
         borderwidth=1,
-        font=dict(size=8),
-        itemsizing='constant',
-        itemwidth=30,
-        yref='paper',
-        itemclick=False,
-        itemdoubleclick=False
-    ),
-    'responsive': {
-        'small': {  # For screens < 768px
-            'chart_area': {
-                'stock': {'domain': {'x': [0.05, 0.95], 'y': [0.75, 0.95]}},
-                'non_stock': {'domain': {'x': [0.05, 0.95], 'y': [0.75, 0.95]}}
-            },
-            'tables': {
-                'stock': {
-                    'company_info': {'x': [0.05, 0.95], 'y': [0.62, 0.72]},
-                    'analysis_summary': {'x': [0.05, 0.95], 'y': [0.49, 0.59]},
-                    'trading_signals': {'x': [0.05, 0.95], 'y': [0.36, 0.46]},
-                    'metrics': {'x': [0.05, 0.95], 'y': [0.23, 0.33]},
-                    'growth': {'x': [0.05, 0.95], 'y': [0.10, 0.20]}
-                },
-                'non_stock': {
-                    'analysis_summary': {'x': [0.05, 0.95], 'y': [0.40, 0.70]},
-                    'trading_signals': {'x': [0.05, 0.95], 'y': [0.10, 0.40]}
-                }
-            }
-        },
-        'medium': {  # For screens 768px - 1024px
-            'chart_area': {
-                'stock': {'domain': {'x': [0.05, 0.95], 'y': [0.65, 0.95]}},
-                'non_stock': {'domain': {'x': [0.05, 0.95], 'y': [0.65, 0.95]}}
-            },
-            'tables': {
-                'stock': {
-                    'company_info': {'x': [0.05, 0.48], 'y': [0.52, 0.62]},
-                    'analysis_summary': {'x': [0.52, 0.95], 'y': [0.52, 0.62]},
-                    'trading_signals': {'x': [0.05, 0.95], 'y': [0.39, 0.49]},
-                    'metrics': {'x': [0.05, 0.95], 'y': [0.26, 0.36]},
-                    'growth': {'x': [0.05, 0.95], 'y': [0.13, 0.23]}
-                },
-                'non_stock': {
-                    'analysis_summary': {'x': [0.05, 0.48], 'y': [0.30, 0.60]},
-                    'trading_signals': {'x': [0.52, 0.95], 'y': [0.30, 0.60]}
-                }
-            }
-        }
-    }
+        font=dict(size=8),  # Smaller font size
+        itemsizing='constant',  # Keep marker sizes constant
+        itemwidth=30,  # Reduce width of legend items
+        yref='paper',  # Use paper coordinates to prevent chart movement
+        itemclick=False,  # Disable clicking
+        itemdoubleclick=False  # Disable double clicking
+    )
 }
 
 # Table style configuration
