@@ -55,12 +55,12 @@ LAYOUT_CONFIG = {
         'stock': {
             'headers': {
                 'chart': {'x': 0.05, 'y': 0.97},
-                'company_info_title': {'x': 0.05, 'y': 0.58, 'text': 'Company Information'},
+                'company_info_title': {'x': 0.05, 'y': 0.44, 'text': 'Company Information'},
                 'company_info': {'x': 0.05, 'y': 0.54},
-                'analysis_summary': {'x': 0.52, 'y': 0.58},
-                'trading_signals': {'x': 0.05, 'y': 0.39},
-                'metrics': {'x': 0.05, 'y': 0.24},
-                'growth': {'x': 0.05, 'y': 0.09}
+                'analysis_summary': {'x': 0.52, 'y': 0.44},
+                'trading_signals': {'x': 0.05, 'y': 0.29},
+                'metrics': {'x': 0.05, 'y': 0.14},
+                'growth': {'x': 0.05, 'y': 0.01}
             }
         },
         'non_stock': {
