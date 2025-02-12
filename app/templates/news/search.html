@@ -245,6 +245,21 @@
                
                // Handle different exchanges
                switch (exchange) {
+                   case '^':
+                       // Convert index symbols
+                       switch (ticker) {
+                           case 'HSI': yahooSymbol = 'TVC:HSI'; break;
+                           case 'GSPC': yahooSymbol = 'TVC:SPX'; break;
+                           case 'DJI': yahooSymbol = 'TVC:DJI'; break;
+                           case 'IXIC': yahooSymbol = 'TVC:NDX'; break;
+                           case 'N225': yahooSymbol = 'TVC:NI225'; break;
+                           case 'FTSE': yahooSymbol = 'TVC:UKX'; break;
+                           case 'GOLD': yahooSymbol = 'GC=F'; break;
+                           case 'SILVER': yahooSymbol = 'SI=F'; break;
+                           case 'COPPER': yahooSymbol = 'HG=F'; break;
+                           default: yahooSymbol = 'TVC:' + ticker;
+                       }
+                       break;
                    case 'HKEX':
                        // Convert HKEX:700 to 0700.HK
                        yahooSymbol = ticker.padStart(4, '0') + '.HK';
@@ -278,6 +293,7 @@
                        switch (ticker) {
                            case 'GOLD': yahooSymbol = 'GC=F'; break;
                            case 'SILVER': yahooSymbol = 'SI=F'; break;
+                           case 'COPPER': yahooSymbol = 'HG=F'; break;
                            case 'USOIL': yahooSymbol = 'CL=F'; break;
                            case 'DXY': yahooSymbol = 'DX-Y.NYB'; break;
                            default: yahooSymbol = ticker;
@@ -314,6 +330,14 @@
                        yahooSymbol = ticker;
                        break;
                    case 'COMEX':
+                       // Handle COMEX futures
+                       switch (ticker) {
+                           case 'GC': yahooSymbol = 'GC=F'; break;
+                           case 'SI': yahooSymbol = 'SI=F'; break;
+                           case 'HG': yahooSymbol = 'HG=F'; break;
+                           default: yahooSymbol = ticker + '=F';
+                       }
+                       break;
                    case 'NYMEX':
                        // Convert futures
                        if (ticker.endsWith('1!')) {
@@ -326,18 +350,22 @@
                        yahooSymbol = ticker;
                }
            } else {
-               // Handle special cases for indices
-               const indexMappings = {
-                   'HSI': '^HSI',     // Hang Seng Index
-                   'GSPC': '^GSPC',   // S&P 500
-                   'DJI': '^DJI',     // Dow Jones Industrial Average
-                   'IXIC': '^IXIC',   // NASDAQ Composite
-                   'N225': '^N225',   // Nikkei 225
-                   'FTSE': '^FTSE',   // FTSE 100
-                   'VIX': '^VIX',     // Volatility Index
-                   'TNX': '^TNX'      // 10-Year Treasury Note
-               };
-
+               // Handle index symbols without exchange prefix
+               if (symbol.startsWith('^')) {
+                   const ticker = symbol.substring(1);
+                   switch (ticker) {
+                       case 'HSI': yahooSymbol = 'TVC:HSI'; break;
+                       case 'GSPC': yahooSymbol = 'TVC:SPX'; break;
+                       case 'DJI': yahooSymbol = 'TVC:DJI'; break;
+                       case 'IXIC': yahooSymbol = 'TVC:NDX'; break;
+                       case 'N225': yahooSymbol = 'TVC:NI225'; break;
+                       case 'FTSE': yahooSymbol = 'TVC:UKX'; break;
+                       case 'GOLD': yahooSymbol = 'GC=F'; break;
+                       case 'SILVER': yahooSymbol = 'SI=F'; break;
+                       case 'COPPER': yahooSymbol = 'HG=F'; break;
+                       default: yahooSymbol = 'TVC:' + ticker;
+                   }
+               }
                // Handle special cases for currencies
                const currencyMappings = {
                    'EURUSD': 'EUR=X',
@@ -349,9 +377,7 @@
                };
 
                // Check mappings
-               if (indexMappings[yahooSymbol]) {
-                   yahooSymbol = indexMappings[yahooSymbol];
-               } else if (currencyMappings[yahooSymbol]) {
+               if (currencyMappings[yahooSymbol]) {
                    yahooSymbol = currencyMappings[yahooSymbol];
                }
                // Handle Hong Kong stocks (4 digits)
