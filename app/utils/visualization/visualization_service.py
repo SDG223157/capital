@@ -396,6 +396,7 @@ class VisualizationService:
             
             # Select relevant information
             company_data = {
+                'Company Name': info.get('longName', info.get('shortName', 'N/A')),
                 'Market Cap': f"${info.get('marketCap', 'N/A'):,.0f}" if info.get('marketCap') else 'N/A',
                 'Industry': info.get('industry', 'N/A'),
                 'Sector': info.get('sector', 'N/A'),
