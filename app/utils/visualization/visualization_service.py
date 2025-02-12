@@ -49,8 +49,22 @@ class VisualizationService:
             return "N/A"
         try:
             if abs(x) >= 1_000_000:
-                return f"-{abs(x/1_000_000):,.0f}M" if x < 0 else f"{x/1_000_000:,.0f}M"
+                # Convert to billions
+                value_in_billions = x / 1_000_000_000
+                # Format with currency symbol based on listing market
+                if isinstance(x, str) and any(x.endswith(suffix) for suffix in ['.HK', '.SS', '.SZ']):
+                    prefix = "¥" if x.endswith(('.SS', '.SZ')) else "HK$"
+                else:
+                    prefix = "$"  # Default to USD for US-listed stocks
+                
+                # Format with 2 decimal places if under 10B, otherwise no decimals
+                if abs(value_in_billions) < 10:
+                    formatted = f"{prefix}{abs(value_in_billions):.2f}B"
+                else:
+                    formatted = f"{prefix}{abs(value_in_billions):.0f}B"
+                return f"-{formatted}" if x < 0 else formatted
             else:
+                # Format regular numbers without currency symbol
                 return f"{x:,.2f}"
         except (TypeError, ValueError):
             return "N/A"
