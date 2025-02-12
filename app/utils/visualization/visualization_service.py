@@ -394,16 +394,42 @@ class VisualizationService:
             yf_ticker = yf.Ticker(ticker)
             info = yf_ticker.info
             
+            # Currency symbol mapping based on country
+            currency_symbols = {
+                'United States': '$',
+                'China': '¥',
+                'Japan': '¥',
+                'Hong Kong': 'HK$',
+                'United Kingdom': '£',
+                'European Union': '€',
+                'Australia': 'A$',
+                'Canada': 'C$',
+                'Switzerland': 'CHF',
+                'India': '₹',
+                'South Korea': '₩',
+                'Singapore': 'S$',
+                'Taiwan': 'NT$',
+                'Brazil': 'R$'
+            }
+            
+            # Get country and determine currency symbol
+            country = info.get('country', 'United States')  # Default to US if country not found
+            currency_symbol = currency_symbols.get(country, '$')  # Default to $ if country not in mapping
+            
+            # Format market cap with appropriate currency symbol
+            market_cap = info.get('marketCap')
+            market_cap_str = f"{currency_symbol}{market_cap:,.0f}" if market_cap else 'N/A'
+            
             # Select relevant information
             company_data = {
                 'Company Name': info.get('longName', info.get('shortName', 'N/A')),
-                'Market Cap': f"${info.get('marketCap', 'N/A'):,.0f}" if info.get('marketCap') else 'N/A',
+                'Market Cap': market_cap_str,
                 'Industry': info.get('industry', 'N/A'),
                 'Sector': info.get('sector', 'N/A'),
                 'Beta': f"{info.get('beta', 'N/A'):.2f}" if info.get('beta') else 'N/A',
                 'Forward P/E': f"{info.get('forwardPE', 'N/A'):.2f}" if info.get('forwardPE') else 'N/A',
                 'Dividend Yield': f"{info.get('dividendYield', 0) * 100:.2f}%" if info.get('dividendYield') else 'N/A',
-                'Country': info.get('country', 'N/A'),
+                'Country': country,
                 'Employees': f"{info.get('fullTimeEmployees', 'N/A'):,}" if info.get('fullTimeEmployees') else 'N/A'
             }
             
