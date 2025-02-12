@@ -29,11 +29,11 @@ LAYOUT_CONFIG = {
             },
             'metrics': {
                 'x': [0.05, 0.95],
-                'y': [0.12, 0.22]  # Metrics table
+                'y': [0.12, 0.22]  # Same length as growth table (0.10)
             },
             'growth': {
                 'x': [0.05, 0.95],
-                'y': [0.02, 0.07]  # Growth table
+                'y': [0.02, 0.12]  # Same length as metrics table (0.10)
             }
         },
         'non_stock': {
@@ -59,7 +59,7 @@ LAYOUT_CONFIG = {
                 'analysis_summary': {'x': 0.55, 'y': 0.53},  # Just above analysis_summary table
                 'trading_signals': {'x': 0.05, 'y': 0.38},  # Just above trading_signals table
                 'metrics': {'x': 0.05, 'y': 0.23},  # Just above metrics table
-                'growth': {'x': 0.05, 'y': 0.08}  # Just above growth table
+                'growth': {'x': 0.05, 'y': 0.13}  # Just above growth table
             }
         },
         'non_stock': {
