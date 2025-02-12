@@ -79,7 +79,7 @@ LAYOUT_CONFIG = {
     },
     'legend': dict(
         yanchor="top",
-        y=0.95,  # Move legend higher to align with top of chart
+        y=0.92,  # Move legend higher to align with top of chart
         xanchor="left",
         x=1.02,
         bgcolor='rgba(255, 255, 255, 0.8)',
