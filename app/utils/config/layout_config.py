@@ -76,7 +76,22 @@ LAYOUT_CONFIG = {
             'left': 0.05,
             'right': 0.05
         }
-    }
+    },
+    'legend': dict(
+        yanchor="top",
+        y=0.85,
+        xanchor="left",
+        x=1.02,
+        bgcolor='rgba(255, 255, 255, 0.8)',
+        bordercolor='rgba(0, 0, 0, 0.2)',
+        borderwidth=1,
+        font=dict(size=8),  # Smaller font size
+        itemsizing='constant',  # Keep marker sizes constant
+        itemwidth=30,  # Reduce width of legend items
+        yref='container',
+        itemclick=False,  # Disable clicking
+        itemdoubleclick=False  # Disable double clicking
+    )
 }
 
 # Table style configuration
