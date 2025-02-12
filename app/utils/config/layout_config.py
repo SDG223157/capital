@@ -10,7 +10,7 @@ LAYOUT_CONFIG = {
             'domain': {'x': [0.05, 0.95], 'y': [0.62, 0.95]}  # Main chart top 33%
         },
         'non_stock': {
-            'domain': {'x': [0.05, 0.95], 'y': [0.55, 0.95]}  # Main chart top 50%
+            'domain': {'x': [0.05, 0.95], 'y': [0.60, 0.95]}  # Main chart top 35%
         }
     },
     'tables': {
@@ -38,16 +38,12 @@ LAYOUT_CONFIG = {
         },
         'non_stock': {
             'analysis_summary': {
-                'x': [0.05, 0.48],
-                'y': [0.12, 0.44]
+                'x': [0.05, 0.48],  # Left half
+                'y': [0.20, 0.50]  # Length of 0.3
             },
             'trading_signals': {
-                'x': [0.52, 0.95],
-                'y': [0.12, 0.44]
-            },
-            'analysis_summary': {
-                'x': [0.52, 0.98],
-                'y': [0.27, 0.45]
+                'x': [0.52, 0.95],  # Right half, 0.04 gap from analysis_summary
+                'y': [0.20, 0.50]  # Same length of 0.3
             }
         }
     },
@@ -65,8 +61,8 @@ LAYOUT_CONFIG = {
         'non_stock': {
             'headers': {
                 'chart': {'x': 0.05, 'y': 0.97},
-                'analysis_summary': {'x': 0.05, 'y': 0.46},
-                'trading_signals': {'x': 0.56, 'y': 0.46}
+                'analysis_summary': {'x': 0.05, 'y': 0.51},  # Just above analysis summary
+                'trading_signals': {'x': 0.52, 'y': 0.51}  # Aligned with analysis_summary header
             }
         }
     },
