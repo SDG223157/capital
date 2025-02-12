@@ -55,6 +55,7 @@ LAYOUT_CONFIG = {
         'stock': {
             'headers': {
                 'chart': {'x': 0.05, 'y': 0.97},
+                'company_info_title': {'x': 0.05, 'y': 0.58, 'text': 'Company Information'},
                 'company_info': {'x': 0.05, 'y': 0.54},
                 'analysis_summary': {'x': 0.52, 'y': 0.54},
                 'trading_signals': {'x': 0.05, 'y': 0.39},

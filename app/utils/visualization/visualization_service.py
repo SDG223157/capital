@@ -354,7 +354,8 @@ class VisualizationService:
         # Add table headers based on layout type
         table_headers = {
             'analysis_summary': ('Analysis Summary', True),
-            'trading_signals': ('Trading Signal Analysis', True)
+            'trading_signals': ('Trading Signal Analysis', True),
+            'company_info_title': ('Company Information', True)
         }
         
         if config['layout'] == 'stock' and metrics_df is not None:
@@ -371,12 +372,13 @@ class VisualizationService:
         for section, (title, should_show) in table_headers.items():
             if should_show and section in headers_config:
                 header_pos = headers_config[section]
+                text = header_pos.get('text', title)  # Use custom text if provided
                 annotations.append(dict(
                     x=header_pos['x'],
                     y=header_pos['y'],
                     xref='paper',
                     yref='paper',
-                    text=f'<b>{title}</b>',
+                    text=f'<b>{text}</b>',
                     showarrow=False,
                     font=dict(size=12),
                     align='left'
