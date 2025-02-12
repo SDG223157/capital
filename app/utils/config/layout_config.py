@@ -29,11 +29,11 @@ LAYOUT_CONFIG = {
             },
             'metrics': {
                 'x': [0.05, 0.95],
-                'y': [0.12, 0.22]  # Same length as growth table (0.10)
+                'y': [0.15, 0.25]  # Moved up to create more space
             },
             'growth': {
                 'x': [0.05, 0.95],
-                'y': [0.02, 0.12]  # Same length as metrics table (0.10)
+                'y': [0.02, 0.12]  # Keep at bottom
             }
         },
         'non_stock': {
@@ -58,8 +58,8 @@ LAYOUT_CONFIG = {
                 'company_info_title': {'x': 0.05, 'y': 0.53, 'text': 'Company Information'},  # Just above company_info table
                 'analysis_summary': {'x': 0.55, 'y': 0.53},  # Just above analysis_summary table
                 'trading_signals': {'x': 0.05, 'y': 0.38},  # Just above trading_signals table
-                'metrics': {'x': 0.05, 'y': 0.23},  # Just above metrics table
-                'growth': {'x': 0.05, 'y': 0.13}  # Just above growth table
+                'metrics': {'x': 0.05, 'y': 0.26},  # Just above metrics table
+                'growth': {'x': 0.05, 'y': 0.13}  # Just above growth table, with enough space from metrics
             }
         },
         'non_stock': {
