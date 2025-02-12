@@ -7,7 +7,7 @@ LAYOUT_CONFIG = {
     'lookback_days_ratio': 0.6,
     'chart_area': {
         'stock': {
-            'domain': {'x': [0.05, 0.95], 'y': [0.62, 0.95]}  # Main chart top 35%
+            'domain': {'x': [0.05, 0.95], 'y': [0.62, 0.95]}  # Main chart top 33%
         },
         'non_stock': {
             'domain': {'x': [0.05, 0.95], 'y': [0.55, 0.95]}  # Main chart top 50%
@@ -17,23 +17,23 @@ LAYOUT_CONFIG = {
         'stock': {
             'company_info': {
                 'x': [0.05, 0.48],
-                'y': [0.47, 0.57]  # Length: 0.10
+                'y': [0.48, 0.58]  # Length: 0.10
             },
             'analysis_summary': {
                 'x': [0.52, 0.95],  # Horizontal space: 0.04 from company_info
-                'y': [0.47, 0.57]  # Same length: 0.10
+                'y': [0.48, 0.58]  # Same length: 0.10
             },
             'trading_signals': {
                 'x': [0.05, 0.95],
-                'y': [0.34, 0.44]  # Vertical space: 0.03 from above tables, length: 0.10
+                'y': [0.34, 0.44]  # Vertical space: 0.04 from above tables
             },
             'metrics': {
                 'x': [0.05, 0.95],
-                'y': [0.21, 0.31]  # Vertical space: 0.03 from trading_signals, length: 0.10
+                'y': [0.20, 0.30]  # Vertical space: 0.04 from trading_signals
             },
             'growth': {
                 'x': [0.05, 0.95],
-                'y': [0.08, 0.18]  # Vertical space: 0.03 from metrics, length: 0.10
+                'y': [0.06, 0.16]  # Vertical space: 0.04 from metrics
             }
         },
         'non_stock': {
@@ -55,11 +55,11 @@ LAYOUT_CONFIG = {
         'stock': {
             'headers': {
                 'chart': {'x': 0.05, 'y': 0.97},
-                'company_info_title': {'x': 0.05, 'y': 0.58, 'text': 'Company Information'},  # 0.01 above table
-                'analysis_summary': {'x': 0.52, 'y': 0.58},  # 0.01 above table
+                'company_info_title': {'x': 0.05, 'y': 0.59, 'text': 'Company Information'},  # 0.01 above table
+                'analysis_summary': {'x': 0.52, 'y': 0.59},  # 0.01 above table
                 'trading_signals': {'x': 0.05, 'y': 0.45},  # 0.01 above table
-                'metrics': {'x': 0.05, 'y': 0.32},  # 0.01 above table
-                'growth': {'x': 0.05, 'y': 0.19}  # 0.01 above table
+                'metrics': {'x': 0.05, 'y': 0.31},  # 0.01 above table
+                'growth': {'x': 0.05, 'y': 0.17}  # 0.01 above table
             }
         },
         'non_stock': {
