@@ -7,7 +7,7 @@ LAYOUT_CONFIG = {
     'lookback_days_ratio': 0.6,
     'chart_area': {
         'stock': {
-            'domain': {'x': [0.05, 0.95], 'y': [0.65, 0.95]}  # Main chart top 40%
+            'domain': {'x': [0.05, 0.95], 'y': [0.60, 0.95]}  # Main chart top 35%
         },
         'non_stock': {
             'domain': {'x': [0.05, 0.95], 'y': [0.55, 0.95]}  # Main chart top 50%
@@ -15,21 +15,25 @@ LAYOUT_CONFIG = {
     },
     'tables': {
         'stock': {
-            'analysis_summary': {
+            'company_info': {
                 'x': [0.05, 0.48],
-                'y': [0.42, 0.55]
+                'y': [0.45, 0.55]  # Just below main chart
+            },
+            'analysis_summary': {
+                'x': [0.52, 0.95],
+                'y': [0.45, 0.55]  # Beside company info
             },
             'trading_signals': {
-                'x': [0.52, 0.95],
-                'y': [0.42, 0.55]
+                'x': [0.05, 0.95],
+                'y': [0.30, 0.40]  # Below company info and analysis
             },
             'metrics': {
                 'x': [0.05, 0.95],
-                'y': [0.22, 0.35]
+                'y': [0.15, 0.25]  # Below trading signals
             },
             'growth': {
                 'x': [0.05, 0.95],
-                'y': [0.02, 0.15]
+                'y': [0.02, 0.10]  # Bottom table
             }
         },
         'non_stock': {
@@ -40,6 +44,10 @@ LAYOUT_CONFIG = {
             'trading_signals': {
                 'x': [0.52, 0.95],
                 'y': [0.12, 0.44]
+            },
+            'analysis_summary': {
+                'x': [0.52, 0.98],
+                'y': [0.27, 0.45]
             }
         }
     },
@@ -47,10 +55,11 @@ LAYOUT_CONFIG = {
         'stock': {
             'headers': {
                 'chart': {'x': 0.05, 'y': 0.97},
-                'analysis_summary': {'x': 0.05, 'y': 0.56},
-                'trading_signals': {'x': 0.56, 'y': 0.56},
-                'metrics': {'x': 0.05, 'y': 0.36},
-                'growth': {'x': 0.05, 'y': 0.15}
+                'company_info': {'x': 0.05, 'y': 0.56},
+                'analysis_summary': {'x': 0.52, 'y': 0.56},
+                'trading_signals': {'x': 0.05, 'y': 0.41},
+                'metrics': {'x': 0.05, 'y': 0.26},
+                'growth': {'x': 0.05, 'y': 0.11}
             }
         },
         'non_stock': {

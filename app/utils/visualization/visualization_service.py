@@ -4,6 +4,7 @@ import numpy as np
 from datetime import datetime, timedelta
 from app.utils.config.layout_config import LAYOUT_CONFIG, CHART_STYLE, TABLE_STYLE
 import logging
+import yfinance as yf
 
 logger = logging.getLogger(__name__)
 
@@ -384,6 +385,50 @@ class VisualizationService:
         return annotations
 
     @staticmethod
+    def create_company_info_table(ticker, config):
+        """Create company information table using yfinance data"""
+        try:
+            # Get company info from yfinance
+            yf_ticker = yf.Ticker(ticker)
+            info = yf_ticker.info
+            
+            # Select relevant information
+            company_data = {
+                'Market Cap': f"${info.get('marketCap', 'N/A'):,.0f}" if info.get('marketCap') else 'N/A',
+                'Industry': info.get('industry', 'N/A'),
+                'Sector': info.get('sector', 'N/A'),
+                'Beta': f"{info.get('beta', 'N/A'):.2f}" if info.get('beta') else 'N/A',
+                'Forward P/E': f"{info.get('forwardPE', 'N/A'):.2f}" if info.get('forwardPE') else 'N/A',
+                'Dividend Yield': f"{info.get('dividendYield', 0) * 100:.2f}%" if info.get('dividendYield') else 'N/A',
+                'Country': info.get('country', 'N/A'),
+                'Employees': f"{info.get('fullTimeEmployees', 'N/A'):,}" if info.get('fullTimeEmployees') else 'N/A'
+            }
+            
+            # Create table
+            company_table = go.Table(
+                domain=dict(
+                    x=config['tables']['company_info']['x'],
+                    y=config['tables']['company_info']['y']
+                ),
+                header=dict(
+                    values=['<b>Metric</b>', '<b>Value</b>'],
+                    **config['table_style']['header']
+                ),
+                cells=dict(
+                    values=[
+                        list(company_data.keys()),
+                        list(company_data.values())
+                    ],
+                    **config['table_style']['cells']
+                )
+            )
+            
+            return company_table
+        except Exception as e:
+            logger.error(f"Error creating company info table: {str(e)}")
+            return None
+
+    @staticmethod
     def create_stock_analysis_chart(symbol, data, analysis_dates, ratios, prices, 
                                   appreciation_pcts, regression_results, 
                                   crossover_data, signal_returns, 
@@ -558,13 +603,17 @@ class VisualizationService:
         # Add metrics tables
         metrics_table = None
         growth_table = None
+        company_table = None
         
         if config['layout'] == 'stock':
             metrics_table, growth_table = VisualizationService.create_financial_metrics_table(metrics_df, config)
+            company_table = VisualizationService.create_company_info_table(symbol, config)
             if metrics_table:
                 fig.add_trace(metrics_table)
             if growth_table:
                 fig.add_trace(growth_table)
+            if company_table:
+                fig.add_trace(company_table)
 
         # Add analysis summary and trading signals tables
         analysis_table = VisualizationService._create_analysis_summary_table(
