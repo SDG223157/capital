@@ -79,7 +79,7 @@ LAYOUT_CONFIG = {
     },
     'legend': dict(
         yanchor="top",
-        y=0.85,
+        y=0.95,  # Move legend higher to align with top of chart
         xanchor="left",
         x=1.02,
         bgcolor='rgba(255, 255, 255, 0.8)',
@@ -88,7 +88,7 @@ LAYOUT_CONFIG = {
         font=dict(size=8),  # Smaller font size
         itemsizing='constant',  # Keep marker sizes constant
         itemwidth=30,  # Reduce width of legend items
-        yref='container',
+        yref='paper',  # Use paper coordinates to prevent chart movement
         itemclick=False,  # Disable clicking
         itemdoubleclick=False  # Disable double clicking
     )
