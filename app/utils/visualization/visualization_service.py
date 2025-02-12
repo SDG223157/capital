@@ -456,7 +456,7 @@ class VisualizationService:
                     **CHART_STYLE['line_styles']['price']
                 ),
                 yaxis='y2',
-                hovertemplate='<b>Date</b>: %{x}<br>' +
+                hovertemplate='%{x}<br>' +
                              '<b>Price</b>: $%{y:.2f}<extra></extra>'
             )
         )
@@ -478,7 +478,7 @@ class VisualizationService:
                     **CHART_STYLE['line_styles']['regression']
                 ),
                 yaxis='y2',
-                hovertemplate='<b>Date</b>: %{x}<br>' +
+                hovertemplate='%{x}<br>' +
                              '<b>Predicted</b>: $%{y:.2f}<extra></extra>'
             )
         )
@@ -494,7 +494,7 @@ class VisualizationService:
                 ),
                 yaxis='y2',
                 showlegend=False,
-                hovertemplate='<b>Date</b>: %{x}<br>' +
+                hovertemplate='%{x}<br>' +
                              '<b>Upper Band</b>: $%{y:.2f}<extra></extra>'
             )
         )
@@ -512,7 +512,7 @@ class VisualizationService:
                 ),
                 yaxis='y2',
                 showlegend=False,
-                hovertemplate='<b>Date</b>: %{x}<br>' +
+                hovertemplate='%{x}<br>' +
                              '<b>Lower Band</b>: $%{y:.2f}<extra></extra>'
             )
         )
@@ -527,7 +527,7 @@ class VisualizationService:
                     color=CHART_STYLE['colors']['retracement_line'],
                     **CHART_STYLE['line_styles']['retracement']
                 ),
-                hovertemplate='<b>Date</b>: %{x}<br>' +
+                hovertemplate='%{x}<br>' +
                              '<b>Ratio</b>: %{y:.1f}%<extra></extra>'
             )
         )
@@ -541,7 +541,7 @@ class VisualizationService:
                     color=CHART_STYLE['colors']['position_line'],
                     **CHART_STYLE['line_styles']['position']
                 ),
-                hovertemplate='<b>Date</b>: %{x}<br>' +
+                hovertemplate='%{x}<br>' +
                              '<b>Position</b>: %{y:.1f}%<extra></extra>'
             )
         )
@@ -562,7 +562,7 @@ class VisualizationService:
                         dash='dot',
                         width=2
                     ),
-                    hovertemplate='<b>Date</b>: %{x}<br>' +
+                    hovertemplate='%{x}<br>' +
                                 '<b>R²</b>: %{y:.1f}%<extra></extra>'
                 )
             )
