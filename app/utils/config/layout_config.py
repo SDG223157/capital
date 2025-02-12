@@ -56,7 +56,7 @@ LAYOUT_CONFIG = {
             'headers': {
                 'chart': {'x': 0.05, 'y': 0.97},
                 'company_info_title': {'x': 0.05, 'y': 0.59, 'text': 'Company Information'},  # 0.01 above table
-                'analysis_summary': {'x': 0.52, 'y': 0.59},  # 0.01 above table
+                'analysis_summary': {'x': 0.55, 'y': 0.59},  # 0.01 above table
                 'trading_signals': {'x': 0.05, 'y': 0.45},  # 0.01 above table
                 'metrics': {'x': 0.05, 'y': 0.31},  # 0.01 above table
                 'growth': {'x': 0.05, 'y': 0.17}  # 0.01 above table
