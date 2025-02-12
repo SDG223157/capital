@@ -659,15 +659,16 @@ class VisualizationService:
             hovermode='x unified',
             annotations=annotations,
             xaxis=dict(
-                title="Date",
+                title=None,
                 showgrid=True,
                 gridwidth=1,
-                gridcolor='rgba(128, 128, 128, 0.2)',
-                showspikes=True,
-                spikesnap='cursor',
-                spikemode='across',
-                spikethickness=1,
-                domain=config['chart_area']['domain']['x']
+                gridcolor='LightGrey'
+            ),
+            xaxis2=dict(
+                title=None,
+                showgrid=True,
+                gridwidth=1,
+                gridcolor='LightGrey'
             ),
             yaxis=dict(
                 title="Ratio and Position (%)",
