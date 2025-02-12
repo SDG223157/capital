@@ -7,7 +7,7 @@ LAYOUT_CONFIG = {
     'lookback_days_ratio': 0.6,
     'chart_area': {
         'stock': {
-            'domain': {'x': [0.05, 0.95], 'y': [0.60, 0.95]}  # Main chart top 35%
+            'domain': {'x': [0.05, 0.95], 'y': [0.62, 0.95]}  # Main chart top 35%
         },
         'non_stock': {
             'domain': {'x': [0.05, 0.95], 'y': [0.55, 0.95]}  # Main chart top 50%
