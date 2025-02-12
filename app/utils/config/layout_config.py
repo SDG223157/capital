@@ -17,23 +17,23 @@ LAYOUT_CONFIG = {
         'stock': {
             'company_info': {
                 'x': [0.05, 0.48],
-                'y': [0.43, 0.53]  # Moved down by 0.02
+                'y': [0.42, 0.52]  # Company info table
             },
             'analysis_summary': {
                 'x': [0.52, 0.95],
-                'y': [0.43, 0.53]  # Moved down by 0.02
+                'y': [0.42, 0.52]  # Analysis summary table
             },
             'trading_signals': {
                 'x': [0.05, 0.95],
-                'y': [0.28, 0.38]  # Moved down by 0.02
+                'y': [0.27, 0.37]  # Trading signals table
             },
             'metrics': {
                 'x': [0.05, 0.95],
-                'y': [0.13, 0.23]  # Moved down by 0.02
+                'y': [0.12, 0.22]  # Metrics table
             },
             'growth': {
                 'x': [0.05, 0.95],
-                'y': [0.00, 0.08]  # Moved down by 0.02
+                'y': [0.02, 0.07]  # Growth table
             }
         },
         'non_stock': {
@@ -55,12 +55,11 @@ LAYOUT_CONFIG = {
         'stock': {
             'headers': {
                 'chart': {'x': 0.05, 'y': 0.97},
-                'company_info_title': {'x': 0.05, 'y': 0.44, 'text': 'Company Information'},
-                'company_info': {'x': 0.05, 'y': 0.54},
-                'analysis_summary': {'x': 0.52, 'y': 0.44},
-                'trading_signals': {'x': 0.05, 'y': 0.29},
-                'metrics': {'x': 0.05, 'y': 0.14},
-                'growth': {'x': 0.05, 'y': 0.01}
+                'company_info_title': {'x': 0.05, 'y': 0.53, 'text': 'Company Information'},  # Just above company_info table
+                'analysis_summary': {'x': 0.52, 'y': 0.53},  # Just above analysis_summary table
+                'trading_signals': {'x': 0.05, 'y': 0.38},  # Just above trading_signals table
+                'metrics': {'x': 0.05, 'y': 0.23},  # Just above metrics table
+                'growth': {'x': 0.05, 'y': 0.08}  # Just above growth table
             }
         },
         'non_stock': {
