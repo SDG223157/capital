@@ -62,7 +62,7 @@ LAYOUT_CONFIG = {
             'headers': {
                 'chart': {'x': 0.05, 'y': 0.97},
                 'analysis_summary': {'x': 0.05, 'y': 0.51},  # Just above analysis summary
-                'trading_signals': {'x': 0.55, 'y': 0.51}  # Aligned with analysis_summary header
+                'trading_signals': {'x': 0.56, 'y': 0.51}  # Aligned with analysis_summary header
             }
         }
     },
