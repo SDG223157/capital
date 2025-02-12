@@ -17,23 +17,23 @@ LAYOUT_CONFIG = {
         'stock': {
             'company_info': {
                 'x': [0.05, 0.48],
-                'y': [0.45, 0.55]  # Just below main chart
+                'y': [0.43, 0.53]  # Moved down by 0.02
             },
             'analysis_summary': {
                 'x': [0.52, 0.95],
-                'y': [0.45, 0.55]  # Beside company info
+                'y': [0.43, 0.53]  # Moved down by 0.02
             },
             'trading_signals': {
                 'x': [0.05, 0.95],
-                'y': [0.30, 0.40]  # Below company info and analysis
+                'y': [0.28, 0.38]  # Moved down by 0.02
             },
             'metrics': {
                 'x': [0.05, 0.95],
-                'y': [0.15, 0.25]  # Below trading signals
+                'y': [0.13, 0.23]  # Moved down by 0.02
             },
             'growth': {
                 'x': [0.05, 0.95],
-                'y': [0.02, 0.10]  # Bottom table
+                'y': [0.00, 0.08]  # Moved down by 0.02
             }
         },
         'non_stock': {
@@ -55,11 +55,11 @@ LAYOUT_CONFIG = {
         'stock': {
             'headers': {
                 'chart': {'x': 0.05, 'y': 0.97},
-                'company_info': {'x': 0.05, 'y': 0.56},
-                'analysis_summary': {'x': 0.52, 'y': 0.56},
-                'trading_signals': {'x': 0.05, 'y': 0.41},
-                'metrics': {'x': 0.05, 'y': 0.26},
-                'growth': {'x': 0.05, 'y': 0.11}
+                'company_info': {'x': 0.05, 'y': 0.54},
+                'analysis_summary': {'x': 0.52, 'y': 0.54},
+                'trading_signals': {'x': 0.05, 'y': 0.39},
+                'metrics': {'x': 0.05, 'y': 0.24},
+                'growth': {'x': 0.05, 'y': 0.09}
             }
         },
         'non_stock': {
