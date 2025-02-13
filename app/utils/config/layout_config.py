@@ -73,8 +73,8 @@ LAYOUT_CONFIG = {
         'margin': {
             'top': 0.05,
             'bottom': 0.05,
-            'left': 0.05,
-            'right': 0.05
+            'left': 0.01,
+            'right': 0.01
         }
     },
     'legend': dict(
