@@ -53,7 +53,7 @@ class VisualizationService:
                 value_in_billions = x / 1_000_000_000
                 # Format with currency symbol based on listing market
                 if symbol and any(symbol.endswith(suffix) for suffix in ['.HK', '.SS', '.SZ']):
-                    prefix = "¥" if x.endswith(('.SS', '.SZ')) else "HK$"
+                    prefix = "¥" if symbol.endswith(('.SS', '.SZ')) else "HK$"
                 else:
                     prefix = "$"  # Default to USD for US-listed stocks
                 
@@ -650,7 +650,7 @@ class VisualizationService:
         
         if config['layout'] == 'stock':
             metrics_table, growth_table = VisualizationService.create_financial_metrics_table(metrics_df, config)
-            company_table = VisualizationService.create_company_info_table(ticker, config)
+            company_table = VisualizationService.create_company_info_table(symbol, config)
             if metrics_table:
                 fig.add_trace(metrics_table)
             if growth_table:
