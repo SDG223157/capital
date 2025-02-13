@@ -665,7 +665,10 @@ class VisualizationService:
         
         if config['layout'] == 'stock':
             metrics_table, growth_table = VisualizationService.create_financial_metrics_table(metrics_df, config)
-            company_table = VisualizationService.create_company_info_table(symbol, config)
+            # Only get company info for stocks
+            if is_stock(symbol):
+                company_table = VisualizationService.create_company_info_table(symbol, config)
+            
             if metrics_table:
                 fig.add_trace(metrics_table)
             if growth_table:
