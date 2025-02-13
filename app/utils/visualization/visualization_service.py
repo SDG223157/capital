@@ -56,8 +56,15 @@ class VisualizationService:
                 # Convert to billions
                 value_in_billions = x / 1_000_000_000
                 # Format with currency symbol based on listing market
-                if symbol and any(symbol.endswith(suffix) for suffix in ['.HK', '.SS', '.SZ']):
-                    prefix = "¥" if symbol.endswith(('.SS', '.SZ')) else "HK$"
+                if symbol:
+                    if symbol.endswith('.HK'):
+                        prefix = "HK$"
+                    elif symbol.endswith(('.SS', '.SZ')):
+                        prefix = "¥"
+                    elif symbol.endswith('.T'):
+                        prefix = "¥"
+                    else:
+                        prefix = "$"  # Default to USD
                 else:
                     prefix = "$"  # Default to USD for US-listed stocks
                 
