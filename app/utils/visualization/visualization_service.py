@@ -232,10 +232,10 @@ class VisualizationService:
             if len(formula_parts) > 1:
                 right_side = formula_parts[1].strip()
                 # First, handle the division numbers (364) separately
-                right_side = re.sub(r'(\d+\.\d+)(?=\))', '364', right_side)  # Replace decimal 364.00 with 364
+                right_side = re.sub(r'/\d+\.\d+', '/364', right_side)  # Replace decimal after division with 364
                 
                 # Then format the coefficients
-                numbers = re.findall(r'[-+]?\d*\.?\d+(?!\))', right_side)  # Don't match numbers inside parentheses
+                numbers = re.findall(r'[-]?\d*\.?\d+(?![)/])', right_side)  # Match coefficients only
                 formatted_numbers = [f"{float(num):.2f}" for num in numbers]
                 
                 # Replace original numbers with formatted ones while keeping the formula structure
@@ -244,8 +244,9 @@ class VisualizationService:
                     formatted_right_side = formatted_right_side.replace(orig, formatted)
                 
                 # Clean up the formula
-                formatted_right_side = formatted_right_side.replace(' ', '')  # Remove extra spaces
-                formatted_right_side = re.sub(r'([+-])', r' \1', formatted_right_side)  # Add space before +/-
+                formatted_right_side = re.sub(r'\s+', '', formatted_right_side)  # Remove all spaces
+                formatted_right_side = re.sub(r'(?<=[0-9)])(?=[+-])', ' ', formatted_right_side)  # Add space after )
+                formatted_right_side = re.sub(r'([+-])(?=\d)', r'\1', formatted_right_side)  # Keep signs next to numbers
                 
                 regression_formula = f"<i>Ln (y) = {formatted_right_side}</i>"
                 formula_color = 'red' if '-' in right_side else 'green'
