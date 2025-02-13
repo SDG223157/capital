@@ -702,13 +702,15 @@ class VisualizationService:
                 title=None,
                 showgrid=True,
                 gridwidth=1,
-                gridcolor='LightGrey'
+                gridcolor='LightGrey',
+                domain=[0.05, 0.95]  # Match table width
             ),
             xaxis2=dict(
                 title=None,
                 showgrid=True,
                 gridwidth=1,
-                gridcolor='LightGrey'
+                gridcolor='LightGrey',
+                domain=[0.05, 0.95]  # Match table width
             ),
             yaxis=dict(
                 title="Ratio and Position (%)",
@@ -721,7 +723,8 @@ class VisualizationService:
                 spikesnap='cursor',
                 spikemode='across',
                 spikethickness=1,
-                domain=config['chart_area']['domain']['y']
+                domain=config['chart_area']['domain']['y'],
+                anchor='x'  # Anchor to x-axis
             ),
             yaxis2=dict(
                 title="Price (Log Scale)",
@@ -733,13 +736,14 @@ class VisualizationService:
                 spikesnap='cursor',
                 spikemode='across',
                 spikethickness=1,
-                domain=config['chart_area']['domain']['y']
+                domain=config['chart_area']['domain']['y'],
+                anchor='x'  # Anchor to x-axis
             ),
             plot_bgcolor='white',
             paper_bgcolor='white',
             margin=dict(
-                l=50,
-                r=100,
+                l=40,  # Reduce left margin
+                r=60,  # Reduce right margin
                 t=0.05 * total_height,
                 b=0.05 * total_height,
                 autoexpand=True
