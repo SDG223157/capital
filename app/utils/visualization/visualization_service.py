@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from app.utils.config.layout_config import LAYOUT_CONFIG, CHART_STYLE, TABLE_STYLE
 import logging
 import yfinance as yf
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -230,15 +231,17 @@ class VisualizationService:
             formula_parts = regression_formula.split('=')
             if len(formula_parts) > 1:
                 right_side = formula_parts[1].strip()
-                import re
+                # Extract numbers and format them to 2 decimal places
                 numbers = re.findall(r'[-+]?\d*\.?\d+', right_side)
-                if len(numbers) >= 2:
-                    slope = float(numbers[0])
-                    intercept = float(numbers[1])
-                    formula_color = 'red' if slope < 0 else 'green'
-                    regression_formula = f"<span style='font-size:10px;color:{formula_color}'>{slope:.2f}x + {intercept:.2f}</span>"
-                else:
-                    formula_color = 'green'
+                formatted_numbers = [f"{float(num):.2f}" for num in numbers]
+                
+                # Replace original numbers with formatted ones while keeping the formula structure
+                formatted_right_side = right_side
+                for orig, formatted in zip(numbers, formatted_numbers):
+                    formatted_right_side = formatted_right_side.replace(orig, formatted)
+                
+                regression_formula = f"<i>Ln (y) = {formatted_right_side}</i>"
+                formula_color = 'red' if '-' in right_side else 'green'
         except:
             formula_color = 'green'
         
