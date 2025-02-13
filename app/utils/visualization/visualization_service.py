@@ -216,56 +216,71 @@ class VisualizationService:
             return "★"
 
     @staticmethod
-    def _create_analysis_summary_table(days, end_price, annual_return, daily_volatility, 
-                                     annualized_volatility, r2, regression_formula, 
-                                     final_score, table_style, table_domain, signal_returns):
-        """Create analysis summary table with key metrics"""
-        # Format regression formula to 2 decimal places
+    def _create_analysis_summary_table(days, end_price, annual_return, 
+                                     daily_volatility, annualized_volatility,
+                                     r2, regression_formula, final_score,
+                                     table_style, table_domain, signal_returns=None):
+        """Create the analysis summary table with colored formula and R²"""
+        signal_metrics = VisualizationService._analyze_signals(signal_returns)
+        stars = VisualizationService._get_score_stars(final_score)
+        score_display = f"{final_score:.1f} ({stars})"
+        
+        # Format regression formula to 2 decimal places with smaller font
         try:
-            formula_parts = regression_formula.split(' + ')
-            if len(formula_parts) == 2:
-                slope = float(formula_parts[0].split('x')[0])
-                intercept = float(formula_parts[1])
-                regression_formula = f"<span style='font-size:10px'>{slope:.2f}x + {intercept:.2f}</span>"
+            formula_parts = regression_formula.split('=')
+            if len(formula_parts) > 1:
+                right_side = formula_parts[1].strip()
+                import re
+                numbers = re.findall(r'[-+]?\d*\.?\d+', right_side)
+                if len(numbers) >= 2:
+                    slope = float(numbers[0])
+                    intercept = float(numbers[1])
+                    formula_color = 'red' if slope < 0 else 'green'
+                    regression_formula = f"<span style='font-size:10px;color:{formula_color}'>{slope:.2f}x + {intercept:.2f}</span>"
+                else:
+                    formula_color = 'green'
         except:
-            regression_formula = "<span style='font-size:10px'>N/A</span>"
-
-        # Create analysis summary table
-        analysis_table = go.Table(
-            domain=dict(x=table_domain['x'], y=table_domain['y']),
+            formula_color = 'green'
+        
+        r2_color = 'green' if r2 > 0.7 else 'black'
+        
+        return go.Table(
+            domain=dict(
+                x=table_domain['x'],
+                y=table_domain['y']
+            ),
             header=dict(
                 values=['<b>Metric</b>', '<b>Value</b>'],
                 **table_style['header']
             ),
             cells=dict(
                 values=[
-                    ['Analysis Period (Days)', 'Current Price', 'Annual Return', 
-                     'Daily Volatility', 'Annual Volatility', 'R²', 
-                     'Regression Formula', 'Analysis Score'],
+                    ["Score", 'Regression Formula', 'Regression R²', 'Current Price', 
+                     'Annualized Return', 'Annual Volatility', 'Total Trades',
+                     'Win Rate', 'Average Trade Return'],
                     [
-                        f"{days:,}",
-                        f"${end_price:.2f}",
-                        f"{annual_return:+.2f}%",
-                        f"{daily_volatility:.2%}",
-                        f"{annualized_volatility:.2%}",
-                        f"{r2:.2%}",
+                        score_display,
                         regression_formula,
-                        f"{final_score:.1f}"
+                        f"{r2:.4f}",
+                        f"${end_price:.2f}",
+                        f"{annual_return:.2f}%",
+                        f"{annualized_volatility:.3f}",
+                        f"{signal_metrics['total_trades']}",
+                        f"{signal_metrics['win_rate']:.1f}%",
+                        f"{signal_metrics['average_return']:.2f}%"
                     ]
                 ],
-                **table_style['cells']
+                font=dict(
+                    color=[
+                        ['black'] * 9,
+                        ['black', formula_color, r2_color, 'black', 'black', 'black',
+                         'black', 'black', 'black']
+                    ]
+                ),
+                **{k: v for k, v in table_style['cells'].items() if k != 'font'}
             )
         )
 
-        signal_metrics = VisualizationService._analyze_signals(signal_returns)
-        stars = VisualizationService._get_score_stars(final_score)
-        score_display = f"{final_score:.1f} ({stars})"
-        
-        r2_color = 'green' if r2 > 0.7 else 'black'
-        
-        return analysis_table
-
-    
     @staticmethod
     def _create_trading_signal_table(signal_returns, table_style, table_domain):
         """Create the trading signal analysis table"""
