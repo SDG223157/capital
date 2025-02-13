@@ -231,14 +231,21 @@ class VisualizationService:
             formula_parts = regression_formula.split('=')
             if len(formula_parts) > 1:
                 right_side = formula_parts[1].strip()
-                # Extract numbers and format them to 2 decimal places
-                numbers = re.findall(r'[-+]?\d*\.?\d+', right_side)
+                # First, handle the division numbers (364) separately
+                right_side = re.sub(r'(\d+\.\d+)(?=\))', '364', right_side)  # Replace decimal 364.00 with 364
+                
+                # Then format the coefficients
+                numbers = re.findall(r'[-+]?\d*\.?\d+(?!\))', right_side)  # Don't match numbers inside parentheses
                 formatted_numbers = [f"{float(num):.2f}" for num in numbers]
                 
                 # Replace original numbers with formatted ones while keeping the formula structure
                 formatted_right_side = right_side
                 for orig, formatted in zip(numbers, formatted_numbers):
                     formatted_right_side = formatted_right_side.replace(orig, formatted)
+                
+                # Clean up the formula
+                formatted_right_side = formatted_right_side.replace(' ', '')  # Remove extra spaces
+                formatted_right_side = re.sub(r'([+-])', r' \1', formatted_right_side)  # Add space before +/-
                 
                 regression_formula = f"<i>Ln (y) = {formatted_right_side}</i>"
                 formula_color = 'red' if '-' in right_side else 'green'
