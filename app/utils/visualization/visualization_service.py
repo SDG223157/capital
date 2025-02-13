@@ -6,15 +6,33 @@ from app.utils.config.layout_config import LAYOUT_CONFIG, CHART_STYLE, TABLE_STY
 import logging
 import yfinance as yf
 import re
+from app.routes import normalize_ticker  # Import the normalize function
 
 logger = logging.getLogger(__name__)
 
+
+def convert_to_yahoo_symbol(symbol: str) -> str:
+    """Convert TradingView symbol to Yahoo Finance symbol"""
+    if symbol.startswith('TVC:'):
+        # Handle indices
+        index_map = {
+            'TVC:HSI': '^HSI',    # Hang Seng Index
+            'TVC:SSEC': '^SSEC',  # Shanghai Composite
+            'TVC:SZSC': '^SZSC',  # Shenzhen Component
+            'TVC:NDX': '^NDX',    # Nasdaq 100
+            'TVC:SPX': '^GSPC',   # S&P 500
+            'TVC:DJI': '^DJI'     # Dow Jones Industrial Average
+        }
+        return index_map.get(symbol, normalize_ticker(symbol))
+    return normalize_ticker(symbol)
 
 def is_stock(symbol: str) -> bool:
     """
     Determine if a ticker represents a stock or not.
     """
-    symbol = symbol.upper()
+    # Convert TradingView symbol to Yahoo symbol first
+    yahoo_symbol = convert_to_yahoo_symbol(symbol)
+    symbol = yahoo_symbol.upper()
     
     # Non-stock patterns
     if (symbol.startswith('^') or 
@@ -404,8 +422,10 @@ class VisualizationService:
     def create_company_info_table(ticker, config):
         """Create company information table using yfinance data"""
         try:
+            # Convert TradingView symbol to Yahoo Finance symbol
+            yahoo_ticker = convert_to_yahoo_symbol(ticker)
             # Get company info from yfinance
-            yf_ticker = yf.Ticker(ticker)
+            yf_ticker = yf.Ticker(yahoo_ticker)
             info = yf_ticker.info
             
             # Currency symbol mapping based on country
@@ -478,6 +498,9 @@ class VisualizationService:
                                   metrics_df, total_height=LAYOUT_CONFIG['total_height']):
         """Create the complete stock analysis chart with all components"""
         config = VisualizationService._get_config(symbol)
+        
+        # Convert TradingView symbol to Yahoo Finance symbol for display
+        yahoo_symbol = convert_to_yahoo_symbol(symbol)
         
         # Adjust total height for non-stocks
         if config['layout'] == 'non_stock':
@@ -687,7 +710,7 @@ class VisualizationService:
         # Update layout
         fig.update_layout(
             title=dict(
-                text=f'{symbol} Analysis Snapshot',
+                text=f'{yahoo_symbol} Analysis Snapshot',
                 x=0.5,
                 xanchor='center',
                 y=0.95,
