@@ -226,25 +226,22 @@ class VisualizationService:
         stars = VisualizationService._get_score_stars(final_score)
         score_display = f"{final_score:.1f} ({stars})"
         
-        # Format regression formula to 2 decimal places with smaller font
         try:
-            formula_parts = regression_formula.split('=')
-            if len(formula_parts) > 1:
-                right_side = formula_parts[1].strip()
-                # Extract numbers and format them to 2 decimal places
-                numbers = re.findall(r'[-+]?\d*\.?\d+', right_side)
-                formatted_numbers = [f"{float(num):.2f}" for num in numbers]
-                
-                # Replace original numbers with formatted ones while keeping the formula structure
-                formatted_right_side = right_side
-                for orig, formatted in zip(numbers, formatted_numbers):
-                    formatted_right_side = formatted_right_side.replace(orig, formatted)
-                
-                regression_formula = f"<i>Ln (y) = {formatted_right_side}</i>"
-                formula_color = 'red' if '-' in right_side else 'green'
+            equation_parts = regression_formula.split('=')
+            if len(equation_parts) > 1:
+                right_side = equation_parts[1].strip()
+                import re
+                match = re.search(r'[-+]?\d*\.?\d+', right_side)
+                if match:
+                    first_number = match.group()
+                    formula_color = 'red' if first_number.startswith('-') else 'green'
+                else:
+                    formula_color = 'green'
+            else:
+                formula_color = 'green'
         except:
             formula_color = 'green'
-        
+            
         r2_color = 'green' if r2 > 0.7 else 'black'
         
         return go.Table(

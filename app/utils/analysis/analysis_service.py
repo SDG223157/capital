@@ -57,13 +57,13 @@ class AnalysisService:
         """Format regression equation string"""
         terms = []
         if coefficients[2] != 0:
-            terms.append(f"{coefficients[2]:.4f}(x/{max_x})²")
+            terms.append(f"{coefficients[2]:.2f}(x/{max_x})²")
         if coefficients[1] != 0:
             sign = "+" if coefficients[1] > 0 else ""
-            terms.append(f"{sign}{coefficients[1]:.4f}(x/{max_x})")
+            terms.append(f"{sign}{coefficients[1]:.2f}(x/{max_x})")
         if intercept != 0:
             sign = "+" if intercept > 0 else ""
-            terms.append(f"{sign}{intercept:.4f}")
+            terms.append(f"{sign}{intercept:.2f}")
         equation = "Ln(y) = " + " ".join(terms)
         return equation
 
