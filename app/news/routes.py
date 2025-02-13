@@ -126,19 +126,27 @@ def analysis():
 @bp.route('/search')
 @login_required
 def search():
+    """Search news articles by symbol"""
     symbol = request.args.get('symbol', '').strip()
     
     # Redirect if empty symbol parameter exists
     if 'symbol' in request.args and not symbol:
         return redirect(url_for('news.search'))
 
+    # Convert Yahoo Finance symbols to TradingView format for news search
+    if symbol.endswith('.L'):
+        # Convert RIO.L to LSE:RIO
+        search_symbol = f"LSE:{symbol[:-2]}"
+    else:
+        search_symbol = symbol
+
     try:
         page = request.args.get('page', 1, type=int)
         
         # Always initialize search_params
-        search_params = {'symbol': symbol}
+        search_params = {'symbol': search_symbol}
         
-        if not symbol:
+        if not search_symbol:
             return render_template(
                 'news/search.html',
                 articles=None,
@@ -150,7 +158,7 @@ def search():
         query = NewsArticle.query
 
         # Handle special keywords (case insensitive)
-        symbol_upper = symbol.upper()
+        symbol_upper = search_symbol.upper()
         if symbol_upper in ['LATEST', 'HIGHEST', 'LOWEST']:
             if symbol_upper == 'LATEST':
                 query = query.order_by(NewsArticle.published_at.desc())
