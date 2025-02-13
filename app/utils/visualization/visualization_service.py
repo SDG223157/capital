@@ -444,7 +444,7 @@ class VisualizationService:
             
             # Format market cap with appropriate currency symbol
             market_cap = info.get('marketCap')
-            market_cap_str = VisualizationService.format_number(market_cap, currency_symbol)
+            market_cap_str = VisualizationService.format_number(market_cap, ticker)
             
             # Select relevant information
             company_data = {
