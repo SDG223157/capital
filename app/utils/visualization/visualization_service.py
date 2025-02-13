@@ -43,7 +43,7 @@ class VisualizationService:
         }
 
     @staticmethod
-    def format_number(x):
+    def format_number(x, symbol=None):
         """Format numbers with comprehensive handling"""
         if pd.isna(x) or x is None:
             return "N/A"
@@ -52,7 +52,7 @@ class VisualizationService:
                 # Convert to billions
                 value_in_billions = x / 1_000_000_000
                 # Format with currency symbol based on listing market
-                if isinstance(x, str) and any(x.endswith(suffix) for suffix in ['.HK', '.SS', '.SZ']):
+                if symbol and any(symbol.endswith(suffix) for suffix in ['.HK', '.SS', '.SZ']):
                     prefix = "¥" if x.endswith(('.SS', '.SZ')) else "HK$"
                 else:
                     prefix = "$"  # Default to USD for US-listed stocks
@@ -432,7 +432,7 @@ class VisualizationService:
             
             # Format market cap with appropriate currency symbol
             market_cap = info.get('marketCap')
-            market_cap_str = f"{currency_symbol}{market_cap:,.0f}" if market_cap else 'N/A'
+            market_cap_str = VisualizationService.format_number(market_cap, currency_symbol)
             
             # Select relevant information
             company_data = {
@@ -650,7 +650,7 @@ class VisualizationService:
         
         if config['layout'] == 'stock':
             metrics_table, growth_table = VisualizationService.create_financial_metrics_table(metrics_df, config)
-            company_table = VisualizationService.create_company_info_table(symbol, config)
+            company_table = VisualizationService.create_company_info_table(ticker, config)
             if metrics_table:
                 fig.add_trace(metrics_table)
             if growth_table:
