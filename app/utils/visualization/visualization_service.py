@@ -61,7 +61,7 @@ class VisualizationService:
                 if abs(value_in_billions) < 10:
                     formatted = f"{prefix}{abs(value_in_billions):.2f}B"
                 else:
-                    formatted = f"{prefix}{abs(value_in_billions):.0f}B"
+                    formatted = f"{prefix}{abs(value_in_billions):.1f}B"
                 return f"-{formatted}" if x < 0 else formatted
             else:
                 # Format regular numbers without currency symbol
