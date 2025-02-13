@@ -6,32 +6,17 @@ from app.utils.config.layout_config import LAYOUT_CONFIG, CHART_STYLE, TABLE_STY
 import logging
 import yfinance as yf
 import re
-from app.routes import normalize_ticker  # Import the normalize function
+from app.utils.symbol_utils import normalize_ticker  # Import from new module
 
 logger = logging.getLogger(__name__)
 
-
-def convert_to_yahoo_symbol(symbol: str) -> str:
-    """Convert TradingView symbol to Yahoo Finance symbol"""
-    if symbol.startswith('TVC:'):
-        # Handle indices
-        index_map = {
-            'TVC:HSI': '^HSI',    # Hang Seng Index
-            'TVC:SSEC': '^SSEC',  # Shanghai Composite
-            'TVC:SZSC': '^SZSC',  # Shenzhen Component
-            'TVC:NDX': '^NDX',    # Nasdaq 100
-            'TVC:SPX': '^GSPC',   # S&P 500
-            'TVC:DJI': '^DJI'     # Dow Jones Industrial Average
-        }
-        return index_map.get(symbol, normalize_ticker(symbol))
-    return normalize_ticker(symbol)
 
 def is_stock(symbol: str) -> bool:
     """
     Determine if a ticker represents a stock or not.
     """
     # Convert TradingView symbol to Yahoo symbol first
-    yahoo_symbol = convert_to_yahoo_symbol(symbol)
+    yahoo_symbol = normalize_ticker(symbol)
     symbol = yahoo_symbol.upper()
     
     # Non-stock patterns
@@ -423,7 +408,7 @@ class VisualizationService:
         """Create company information table using yfinance data"""
         try:
             # Convert TradingView symbol to Yahoo Finance symbol
-            yahoo_ticker = convert_to_yahoo_symbol(ticker)
+            yahoo_ticker = normalize_ticker(ticker)
             # Get company info from yfinance
             yf_ticker = yf.Ticker(yahoo_ticker)
             info = yf_ticker.info
@@ -500,7 +485,7 @@ class VisualizationService:
         config = VisualizationService._get_config(symbol)
         
         # Convert TradingView symbol to Yahoo Finance symbol for display
-        yahoo_symbol = convert_to_yahoo_symbol(symbol)
+        yahoo_symbol = normalize_ticker(symbol)
         
         # Adjust total height for non-stocks
         if config['layout'] == 'non_stock':
