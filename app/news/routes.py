@@ -19,7 +19,7 @@ from app import db
 # import httpx
 # from app.utils.config.news_config import DEFAULT_SYMBOLS
 import time
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 import markdown  # Add at top
 logger = logging.getLogger(__name__)
 bp = Blueprint('news', __name__)
@@ -159,7 +159,7 @@ def search():
 
         # Handle special keywords (case insensitive)
         symbol_upper = search_symbol.upper()
-        if symbol_upper in ['LATEST', 'HIGHEST', 'LOWEST']:
+        if symbol_upper in ['LATEST', 'HIGHEST', 'LOWEST', 'CHINA', 'US', 'HK', 'OTHER']:
             if symbol_upper == 'LATEST':
                 query = query.order_by(NewsArticle.published_at.desc())
             elif symbol_upper == 'HIGHEST':
@@ -168,32 +168,51 @@ def search():
             elif symbol_upper == 'LOWEST':
                 query = query.filter(NewsArticle.ai_sentiment_rating.isnot(None))
                 query = query.order_by(NewsArticle.ai_sentiment_rating.asc())
+            # Market categories
+            elif symbol_upper == 'CHINA':
+                query = query.filter(
+                    or_(
+                        NewsArticle.symbols.any(ArticleSymbol.symbol.like('SSE:%')),
+                        NewsArticle.symbols.any(ArticleSymbol.symbol.like('SZSE:%'))
+                    )
+                ).order_by(NewsArticle.published_at.desc())
+            elif symbol_upper == 'US':
+                query = query.filter(
+                    or_(
+                        NewsArticle.symbols.any(ArticleSymbol.symbol.like('NASDAQ:%')),
+                        NewsArticle.symbols.any(ArticleSymbol.symbol.like('NYSE:%')),
+                        NewsArticle.symbols.any(ArticleSymbol.symbol.like('AMEX:%'))
+                    )
+                ).order_by(NewsArticle.published_at.desc())
+            elif symbol_upper == 'HK':
+                query = query.filter(
+                    NewsArticle.symbols.any(ArticleSymbol.symbol.like('HKEX:%'))
+                ).order_by(NewsArticle.published_at.desc())
+            elif symbol_upper == 'OTHER':
+                query = query.filter(
+                    and_(
+                        ~NewsArticle.symbols.any(ArticleSymbol.symbol.like('NASDAQ:%')),
+                        ~NewsArticle.symbols.any(ArticleSymbol.symbol.like('NYSE:%')),
+                        ~NewsArticle.symbols.any(ArticleSymbol.symbol.like('AMEX:%')),
+                        ~NewsArticle.symbols.any(ArticleSymbol.symbol.like('SSE:%')),
+                        ~NewsArticle.symbols.any(ArticleSymbol.symbol.like('SZSE:%')),
+                        ~NewsArticle.symbols.any(ArticleSymbol.symbol.like('HKEX:%'))
+                    )
+                ).order_by(NewsArticle.published_at.desc())
         else:
-             # Convert Yahoo Finance symbols to TradingView format
-
+            # Convert Yahoo Finance symbols to TradingView format
             if re.match(r'^\d{4}\.HK$', symbol_upper):
-
                 # Convert HK stocks (e.g., 0700.HK -> HKEX:700)
-
                 symbol_upper = f"HKEX:{int(symbol_upper.replace('.HK', '').replace('.hk', '')):d}"
-
             elif re.search(r'\.SS$', symbol_upper):
-
                 # Convert Shanghai stocks (e.g., 600519.SS -> SSE:600519)
-
                 symbol_upper = f"SSE:{symbol_upper.replace('.SS', '')}"
-
             elif re.search(r'\.SZ$', symbol_upper):
-
                 # Convert Shenzhen stocks (e.g., 000001.SZ -> SZSE:000001)
-
                 symbol_upper = f"SZSE:{symbol_upper.replace('.SZ', '')}"
-            # Check if it's a futures commodity
-            if symbol_upper in FUTURES_MAPPING:
-                futures_symbols = FUTURES_MAPPING[symbol_upper]
-                symbol_conditions = [ArticleSymbol.symbol == sym for sym in futures_symbols]
-                query = query.filter(NewsArticle.symbols.any(or_(*symbol_conditions)))
-            elif ':' not in symbol_upper:
+            
+            # If no exchange prefix, try to match with common exchanges
+            if ':' not in symbol_upper:
                 # Try to match with any exchange prefix or without prefix
                 symbol_conditions = [
                     ArticleSymbol.symbol == f"NASDAQ:{symbol_upper}",
@@ -203,26 +222,16 @@ def search():
                     ArticleSymbol.symbol == f"SZSE:{symbol_upper}",
                     ArticleSymbol.symbol == f"LSE:{symbol_upper}",
                     ArticleSymbol.symbol == f"TSE:{symbol_upper}",
-                    ArticleSymbol.symbol == f"TSX:{symbol_upper}",
-                    ArticleSymbol.symbol == f"ASX:{symbol_upper}",
                     ArticleSymbol.symbol == f"AMEX:{symbol_upper}",
-                    ArticleSymbol.symbol == f"EURONEXT:{symbol_upper}",
-                    ArticleSymbol.symbol == f"XETR:{symbol_upper}",
-                    ArticleSymbol.symbol == f"SP:{symbol_upper}",
-                    ArticleSymbol.symbol == f"DJ:{symbol_upper}",
-                    ArticleSymbol.symbol == f"FOREXCOM:{symbol_upper}",
-                    ArticleSymbol.symbol == f"BITSTAMP:{symbol_upper}",
-                    ArticleSymbol.symbol == f"COMEX:{symbol_upper}",
-                    ArticleSymbol.symbol == f"NYMEX:{symbol_upper}",
-                    ArticleSymbol.symbol == f"TVC:{symbol_upper}",
                     ArticleSymbol.symbol == symbol_upper
                 ]
                 query = query.filter(NewsArticle.symbols.any(or_(*symbol_conditions)))
             else:
+                # Search for exact symbol match
                 query = query.filter(NewsArticle.symbols.any(ArticleSymbol.symbol == symbol_upper))
-            
-            # Add default ordering by published_at desc for non-special keywords
-            query = query.order_by(NewsArticle.published_at.desc())
+
+        # Add default ordering by published_at desc for non-special keywords
+        query = query.order_by(NewsArticle.published_at.desc())
 
         # Paginate the results - 1 item per page
         pagination = query.paginate(page=page, per_page=1, error_out=False)
