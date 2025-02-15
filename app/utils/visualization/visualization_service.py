@@ -195,8 +195,10 @@ class VisualizationService:
                     ),
                     cells=dict(
                         values=[
+                            # Only capitalize the metric names
                             [' '.join(word.capitalize() for word in idx.split()) for idx in growth_df.index],
-                            *[growth_df[col].tolist() for col in growth_df.columns]
+                            # Keep original formatted values for growth rates
+                            *[formatted_values[i+1] for i in range(len(growth_years))]
                         ],
                         **config['table_style']['cells']
                     )
