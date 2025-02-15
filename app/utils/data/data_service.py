@@ -128,6 +128,10 @@ class DataService:
     def get_historical_data(self, ticker: str, start_date: str, end_date: str = None) -> pd.DataFrame:
         """Get historical price data for a ticker"""
         try:
+            # Convert BRK.A to BRK-A for Yahoo Finance
+            if ticker == 'BRK.A':
+                ticker = 'BRK-A'
+                
             # Get data from yfinance
             yf_ticker = yf.Ticker(ticker)
             new_data = yf_ticker.history(start=start_date, end=end_date)
@@ -135,7 +139,7 @@ class DataService:
             if new_data.empty:
                 raise ValueError(f"No data found for {ticker}")
                 
-            # Handle timezone info safely
+            # Remove timezone info
             if hasattr(new_data.index, 'tz_localize'):
                 new_data.index = new_data.index.tz_localize(None)
             elif hasattr(new_data.index, 'tz'):
