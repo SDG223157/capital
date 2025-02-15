@@ -56,8 +56,8 @@ class VisualizationService:
                 # Convert to billions
                 value_in_billions = x / 1_000_000_000
                 
-                # Skip currency prefix for non-currency values
-                if symbol is None:
+                # Skip currency prefix for non-currency values and Diluted Shares
+                if symbol is None or symbol == 'shares':  # Add special case for shares
                     # Format without currency prefix
                     if abs(value_in_billions) < 10:
                         formatted = f"{abs(value_in_billions):.2f}B"
@@ -107,8 +107,8 @@ class VisualizationService:
                 for idx in formatted_df.index:
                     value = formatted_df.loc[idx, col]
                     # Skip currency prefix for Diluted Shares row
-                    if idx == 'Diluted Shares':
-                        formatted_df.loc[idx, col] = VisualizationService.format_number(value, None)
+                    if idx.lower() == 'diluted shares':
+                        formatted_df.loc[idx, col] = VisualizationService.format_number(value, 'shares')
                     else:
                         formatted_df.loc[idx, col] = VisualizationService.format_number(value, symbol)
             else:
