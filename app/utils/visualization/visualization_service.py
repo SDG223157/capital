@@ -279,7 +279,8 @@ class VisualizationService:
                 currency_prefix = "€"
 
         # Format score display
-        score_display = f"{final_score:.1f}"
+        stars = VisualizationService._get_score_stars(final_score)
+        score_display = f"{final_score:.1f} ({stars})"
         
         # Extract coefficients from regression formula
         coef_pattern = r'([+-]?\d+\.\d+)\(x/\d+\)².*?([+-]?\d+\.\d+)\(x/\d+\)'
