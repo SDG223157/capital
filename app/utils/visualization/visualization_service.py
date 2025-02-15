@@ -57,16 +57,20 @@ class VisualizationService:
                 value_in_billions = x / 1_000_000_000
                 # Format with currency symbol based on listing market
                 if symbol:
-                    if symbol.endswith('.HK'):
+                    if symbol.endswith('.HK') or symbol.startswith('HKEX:'):
                         prefix = "HK$"
-                    elif symbol.endswith(('.SS', '.SZ')):
+                    elif symbol.endswith(('.SS', '.SZ')) or any(symbol.startswith(x) for x in ['SSE:', 'SZSE:']):
                         prefix = "¥"
-                    elif symbol.endswith('.T'):
+                    elif symbol.endswith('.T') or symbol.startswith('TSE:'):
                         prefix = "¥"
+                    elif symbol.endswith('.L') or symbol.startswith('LSE:'):
+                        prefix = "£"
+                    elif symbol.endswith('.F') or symbol.startswith('XETR:'):
+                        prefix = "€"
                     else:
-                        prefix = "$"  # Default to USD
+                        prefix = "$"  # Default to USD for US-listed stocks
                 else:
-                    prefix = "$"  # Default to USD for US-listed stocks
+                    prefix = "$"  # Default to USD when no symbol provided
                 
                 # Format with 2 decimal places if under 10B, otherwise no decimals
                 if abs(value_in_billions) < 10:
