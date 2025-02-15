@@ -55,6 +55,16 @@ class VisualizationService:
             if abs(x) >= 1_000_000:
                 # Convert to billions
                 value_in_billions = x / 1_000_000_000
+                
+                # Skip currency prefix for non-currency values
+                if symbol is None:
+                    # Format without currency prefix
+                    if abs(value_in_billions) < 10:
+                        formatted = f"{abs(value_in_billions):.2f}B"
+                    else:
+                        formatted = f"{abs(value_in_billions):.1f}B"
+                    return f"-{formatted}" if x < 0 else formatted
+                
                 # Format with currency symbol based on listing market
                 if symbol:
                     if symbol.endswith('.HK') or symbol.startswith('HKEX:'):
