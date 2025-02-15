@@ -355,7 +355,13 @@ class VisualizationService:
                 
                 # Handle case where Exit Price might not exist
                 exit_price = signal.get('Exit Price', signal.get('Current Price', 'N/A'))
-                exit_price = f"{currency_prefix}{exit_price:.2f}" if isinstance(exit_price, (int, float)) else 'N/A'
+                # Only format as N/A if both Exit Price and Current Price are missing
+                if isinstance(exit_price, (int, float)):
+                    exit_price = f"{currency_prefix}{exit_price:.2f}"
+                elif exit_price == 'N/A' and signal.get('Status') == 'Open' and 'Current Price' in signal:
+                    exit_price = f"{currency_prefix}{signal['Current Price']:.2f}"
+                else:
+                    exit_price = 'N/A'
 
                 trades.append({
                     'Entry Date': signal['Entry Date'].strftime('%Y-%m-%d'),
