@@ -101,6 +101,9 @@ class VisualizationService:
             return None, None
 
         formatted_df = df.copy()
+        # Capitalize first letter of each word in index
+        formatted_df.index = formatted_df.index.map(lambda x: ' '.join(word.capitalize() for word in x.split()))
+        
         for col in df.columns:
             if col != 'CAGR %':
                 # Format each row with appropriate currency handling
