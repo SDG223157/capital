@@ -323,12 +323,12 @@ class VisualizationService:
     @staticmethod
     def _create_trading_signal_table(signal_returns, table_style, table_domain, symbol=None):
         """Create the trading signal analysis table"""
-        # Check if there are any signals
-        if not signal_returns:
+        # Check if there are any signals with either entry or exit information
+        if not signal_returns and not any('Exit Date' in signal for signal in signal_returns):
             return go.Table(
                 domain=dict(x=table_domain['x'], y=table_domain['y']),
                 header=dict(values=['<b>Notice</b>'], **table_style['header']),
-                cells=dict(values=[['No trading signals found']], **table_style['cells'])
+                cells=dict(values=[['No trading signals found in the analysis period']], **table_style['cells'])
             )
 
         # Get currency prefix based on symbol
@@ -345,49 +345,43 @@ class VisualizationService:
             elif symbol.endswith('.F') or symbol.startswith('XETR:'):
                 currency_prefix = "€"
 
-        # Format trades with correct currency
         trades = []
+        buy_signal = None
         for signal in signal_returns:
             if signal['Signal'] == 'Buy':
-                # Handle case where Exit Date might not exist
-                exit_date = signal.get('Exit Date', 'Open')
-                exit_date = exit_date.strftime('%Y-%m-%d') if isinstance(exit_date, datetime) else 'Open'
-                
-                # Handle case where Exit Price might not exist
-                exit_price = signal.get('Exit Price', signal.get('Current Price', 'N/A'))
-                # Only format as N/A if both Exit Price and Current Price are missing
-                if isinstance(exit_price, (int, float)):
-                    exit_price = f"{currency_prefix}{exit_price:.2f}"
-                elif exit_price == 'N/A' and signal.get('Status') == 'Open' and 'Current Price' in signal:
-                    exit_price = f"{currency_prefix}{signal['Current Price']:.2f}"
-                else:
-                    exit_price = 'N/A'
-
-                trades.append({
-                    'Entry Date': signal['Entry Date'].strftime('%Y-%m-%d'),
-                    'Entry Price': f"{currency_prefix}{signal['Entry Price']:.2f}",
-                    'Exit Date': exit_date,
-                    'Exit Price': exit_price,
-                    'Return': f"{signal['Trade Return']:.2f}%" if 'Trade Return' in signal else 'N/A',
-                    'Status': signal.get('Status', 'Open')
-                })
+                buy_signal = signal
+                if signal['Status'] == 'Open' and 'Trade Return' in signal:
+                    trades.append({
+                        'Entry Date': signal['Entry Date'].strftime('%Y-%m-%d'),
+                        'Entry Price': f"{currency_prefix}{signal['Entry Price']:.2f}",
+                        'Exit Date': 'Open',
+                        'Exit Price': f"{currency_prefix}{signal['Current Price']:.2f}",
+                        'Return': f"{signal['Trade Return']:.2f}%",
+                        'Status': 'Open'
+                    })
             elif signal['Signal'] == 'Sell':
-                if 'Entry Date' not in signal and 'Exit Date' in signal:
-                    # Handle case where we only have exit information
+                if buy_signal is not None:
+                    trades.append({
+                        'Entry Date': buy_signal['Entry Date'].strftime('%Y-%m-%d'),
+                        'Entry Price': f"{currency_prefix}{buy_signal['Entry Price']:.2f}",
+                        'Exit Date': signal['Entry Date'].strftime('%Y-%m-%d'),
+                        'Exit Price': f"{currency_prefix}{signal['Entry Price']:.2f}",
+                        'Return': f"{signal['Trade Return']:.2f}%",
+                        'Status': 'Closed'
+                    })
+                    buy_signal = None
+                elif 'Entry Date' not in signal and 'Exit Date' in signal:
                     trades.append({
                         'Entry Date': 'Unknown',
                         'Entry Price': 'Unknown',
                         'Exit Date': signal['Exit Date'].strftime('%Y-%m-%d'),
-                        'Exit Price': signal['Exit Price'],
+                        'Exit Price': f"{currency_prefix}{signal['Exit Price']:.2f}",
                         'Return': signal.get('Trade Return', 'N/A'),
                         'Status': 'Exit Only'
                     })
 
         return go.Table(
-            domain=dict(
-                x=table_domain['x'],
-                y=table_domain['y']
-            ),
+            domain=dict(x=table_domain['x'], y=table_domain['y']),
             header=dict(
                 values=['<b>Entry Date</b>', '<b>Entry Price</b>', '<b>Exit Date</b>', 
                     '<b>Exit Price</b>', '<b>Return</b>', '<b>Status</b>'],
@@ -395,12 +389,12 @@ class VisualizationService:
             ),
             cells=dict(
                 values=[
-                    [t['Entry Date'] for t in trades],
-                    [f"{t['Entry Price']}" if t['Entry Price'] != 'Unknown' else t['Entry Price'] for t in trades],
-                    [t['Exit Date'] for t in trades],
-                    [f"{t['Exit Price']}" if isinstance(t['Exit Price'], (int, float)) else t['Exit Price'] for t in trades],
-                    [f"{t['Return']}" if isinstance(t['Return'], (int, float)) else t['Return'] for t in trades],
-                    [t['Status'] for t in trades]
+                    [t.get('Entry Date', '') for t in trades],
+                    [t.get('Entry Price', '') for t in trades],
+                    [t.get('Exit Date', '') for t in trades],
+                    [t.get('Exit Price', '') for t in trades],
+                    [t.get('Return', '') for t in trades],
+                    [t.get('Status', '') for t in trades]
                 ],
                 **table_style['cells']
             )
