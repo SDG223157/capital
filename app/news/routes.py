@@ -128,6 +128,7 @@ def analysis():
 @login_required
 def search():
     """Search news articles by symbol"""
+    symbol = request.args.get('symbol', '').strip().upper()
     if request.method == 'POST':
         symbol = request.form.get('symbol', '').strip().upper()
         symbol = normalize_ticker(symbol, purpose='search')
