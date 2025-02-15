@@ -85,7 +85,7 @@ class VisualizationService:
             return "N/A"
 
     @staticmethod
-    def create_financial_metrics_table(df, config):
+    def create_financial_metrics_table(df, config, symbol=None):
         """Create financial metrics tables using provided configuration"""
         if df is None or df.empty or config['layout'] == 'non_stock':
             return None, None
@@ -93,7 +93,7 @@ class VisualizationService:
         formatted_df = df.copy()
         for col in df.columns:
             if col != 'CAGR %':
-                formatted_df[col] = formatted_df[col].apply(VisualizationService.format_number)
+                formatted_df[col] = formatted_df[col].apply(lambda x: VisualizationService.format_number(x, symbol))
             else:
                 formatted_df[col] = formatted_df[col].apply(
                     lambda x: f"{x:+.2f}%" if pd.notna(x) and x is not None else "N/A"
@@ -653,22 +653,17 @@ class VisualizationService:
         fig.add_hline(y=80, line_dash="dash", line_color='green', opacity=0.1)
 
         # Add metrics tables
-        metrics_table = None
-        growth_table = None
-        company_table = None
+        metrics_table, growth_table = VisualizationService.create_financial_metrics_table(metrics_df, config, symbol)
+        # Only get company info for stocks
+        if is_stock(symbol):
+            company_table = VisualizationService.create_company_info_table(symbol, config)
         
-        if config['layout'] == 'stock':
-            metrics_table, growth_table = VisualizationService.create_financial_metrics_table(metrics_df, config)
-            # Only get company info for stocks
-            if is_stock(symbol):
-                company_table = VisualizationService.create_company_info_table(symbol, config)
-            
-            if metrics_table:
-                fig.add_trace(metrics_table)
-            if growth_table:
-                fig.add_trace(growth_table)
-            if company_table:
-                fig.add_trace(company_table)
+        if metrics_table:
+            fig.add_trace(metrics_table)
+        if growth_table:
+            fig.add_trace(growth_table)
+        if company_table:
+            fig.add_trace(company_table)
 
         # Add analysis summary and trading signals tables
         analysis_table = VisualizationService._create_analysis_summary_table(
