@@ -287,6 +287,14 @@ class VisualizationService:
     @staticmethod
     def _create_trading_signal_table(signal_returns, table_style, table_domain, symbol=None):
         """Create the trading signal analysis table"""
+        # Check if there are any signals
+        if not signal_returns:
+            return go.Table(
+                domain=dict(x=table_domain['x'], y=table_domain['y']),
+                header=dict(values=['<b>Notice</b>'], **table_style['header']),
+                cells=dict(values=[['No trading signals found']], **table_style['cells'])
+            )
+
         # Get currency prefix based on symbol
         currency_prefix = "$"  # Default to USD
         if symbol:
@@ -305,13 +313,21 @@ class VisualizationService:
         trades = []
         for signal in signal_returns:
             if signal['Signal'] == 'Buy':
+                # Handle case where Exit Date might not exist
+                exit_date = signal.get('Exit Date', 'Open')
+                exit_date = exit_date.strftime('%Y-%m-%d') if isinstance(exit_date, datetime) else 'Open'
+                
+                # Handle case where Exit Price might not exist
+                exit_price = signal.get('Exit Price', signal.get('Current Price', 'N/A'))
+                exit_price = f"{currency_prefix}{exit_price:.2f}" if isinstance(exit_price, (int, float)) else 'N/A'
+
                 trades.append({
                     'Entry Date': signal['Entry Date'].strftime('%Y-%m-%d'),
                     'Entry Price': f"{currency_prefix}{signal['Entry Price']:.2f}",
-                    'Exit Date': 'Open' if signal['Status'] == 'Open' else signal['Exit Date'].strftime('%Y-%m-%d'),
-                    'Exit Price': f"{currency_prefix}{signal['Exit Price']:.2f}",
-                    'Return': f"{signal['Trade Return']:.2f}%",
-                    'Status': signal['Status']
+                    'Exit Date': exit_date,
+                    'Exit Price': exit_price,
+                    'Return': f"{signal['Trade Return']:.2f}%" if 'Trade Return' in signal else 'N/A',
+                    'Status': signal.get('Status', 'Open')
                 })
             elif signal['Signal'] == 'Sell':
                 if 'Entry Date' not in signal and 'Exit Date' in signal:
