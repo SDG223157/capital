@@ -11,6 +11,7 @@ from app.utils.analysis.analysis_service import AnalysisService
 from app.utils.visualization.visualization_service import VisualizationService
 from app.utils.config.metrics_config import METRICS_TO_FETCH, ANALYSIS_DEFAULTS
 from app.utils.config.layout_config import LAYOUT_CONFIG
+from app.utils.symbol_utils import normalize_ticker
 
 class StockAnalyzer:
     """Class to handle stock analysis operations"""
@@ -232,6 +233,7 @@ def create_stock_visualization_old(
         print(f"Fetching extended historical data for {ticker} from {extended_start_date} to {end_date}")
         
         # Get extended historical data for calculations
+        ticker = normalize_ticker(ticker, purpose='analyze')
         historical_data_extended = data_service.get_historical_data(ticker, extended_start_date, end_date)
         
         if historical_data_extended.empty:

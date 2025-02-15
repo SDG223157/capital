@@ -21,6 +21,7 @@ from app import db
 import time
 from sqlalchemy import or_, and_
 import markdown  # Add at top
+from app.utils.symbol_utils import normalize_ticker
 logger = logging.getLogger(__name__)
 bp = Blueprint('news', __name__)
 
@@ -123,12 +124,14 @@ def fetch():
 @bp.route('/sentiment')
 def analysis():
     return render_template('news/sentiment.html')
-@bp.route('/search')
+@bp.route('/search', methods=['GET', 'POST'])
 @login_required
 def search():
     """Search news articles by symbol"""
-    symbol = request.args.get('symbol', '').strip()
-    
+    if request.method == 'POST':
+        symbol = request.form.get('symbol', '').strip().upper()
+        symbol = normalize_ticker(symbol, purpose='search')
+
     # Redirect if empty symbol parameter exists
     if 'symbol' in request.args and not symbol:
         return redirect(url_for('news.search'))
