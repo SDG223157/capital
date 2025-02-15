@@ -181,6 +181,9 @@ class VisualizationService:
                     formatted_values.append(period_values)
                 
                 # Create the growth table
+                growth_df = pd.DataFrame(growth_rates).T
+                growth_df.columns = growth_years
+                
                 growth_table = go.Table(
                     domain=dict(
                         x=config['tables']['growth']['x'],
@@ -191,7 +194,10 @@ class VisualizationService:
                         **config['table_style']['header']
                     ),
                     cells=dict(
-                        values=formatted_values,
+                        values=[
+                            [' '.join(word.capitalize() for word in idx.split()) for idx in growth_df.index],
+                            *[growth_df[col].tolist() for col in growth_df.columns]
+                        ],
                         **config['table_style']['cells']
                     )
                 )
