@@ -93,7 +93,16 @@ class VisualizationService:
         formatted_df = df.copy()
         for col in df.columns:
             if col != 'CAGR %':
-                formatted_df[col] = formatted_df[col].apply(lambda x: VisualizationService.format_number(x, symbol))
+                # Skip currency prefix for diluted shares
+                if 'Diluted Shares' in formatted_df.index:
+                    shares_row = formatted_df.loc['Diluted Shares', col]
+                    formatted_df.loc['Diluted Shares', col] = VisualizationService.format_number(shares_row, None)  # Pass None as symbol to skip currency
+                    # Format other rows with currency
+                    other_rows = [idx for idx in formatted_df.index if idx != 'Diluted Shares']
+                    for idx in other_rows:
+                        formatted_df.loc[idx, col] = VisualizationService.format_number(formatted_df.loc[idx, col], symbol)
+                else:
+                    formatted_df[col] = formatted_df[col].apply(lambda x: VisualizationService.format_number(x, symbol))
             else:
                 formatted_df[col] = formatted_df[col].apply(
                     lambda x: f"{x:+.2f}%" if pd.notna(x) and x is not None else "N/A"
