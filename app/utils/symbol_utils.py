@@ -34,7 +34,7 @@ def normalize_ticker(symbol: str, purpose: str = 'analyze') -> str:
     # Handle stock symbols based on purpose
     if purpose == 'search':
         # Convert Yahoo to TradingView format
-        if symbol == 'BRK-A':
+        if symbol == 'BRK-A':  # Only handle hyphen format for Yahoo
             return 'NYSE:BRK.A'
         if re.match(r'^\d{4}\.HK$', symbol):
             return f"HKEX:{int(symbol.replace('.HK', ''))}"
@@ -47,7 +47,7 @@ def normalize_ticker(symbol: str, purpose: str = 'analyze') -> str:
         if ':' in symbol:
             exchange, ticker = symbol.split(':')
             if exchange == 'NYSE' and ticker == 'BRK.A':
-                return 'BRK-A'
+                return 'BRK-A'  # Use hyphen notation for Yahoo Finance
             if exchange == 'HKEX':
                 return f"{int(ticker):04d}.HK"
             elif exchange == 'SSE':
