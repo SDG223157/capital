@@ -233,8 +233,9 @@ def create_stock_visualization_old(
         print(f"Fetching extended historical data for {ticker} from {extended_start_date} to {end_date}")
         
         # Get extended historical data for calculations
-        ticker = normalize_ticker(ticker, purpose='analyze')
-        historical_data_extended = data_service.get_historical_data(ticker, extended_start_date, end_date)
+        yahoo_ticker = normalize_ticker(ticker, purpose='analyze')
+        historical_data_extended = data_service.get_historical_data(
+            yahoo_ticker, extended_start_date, end_date)
         
         if historical_data_extended.empty:
             raise ValueError(f"No historical data found for {ticker}")
