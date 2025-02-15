@@ -691,6 +691,7 @@ class VisualizationService:
 
         # Add metrics tables
         metrics_table, growth_table = VisualizationService.create_financial_metrics_table(metrics_df, config, symbol)
+        company_table = None  # Initialize company_table
         # Only get company info for stocks
         if is_stock(symbol):
             company_table = VisualizationService.create_company_info_table(symbol, config)
