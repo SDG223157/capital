@@ -5,13 +5,13 @@ def normalize_ticker(symbol: str) -> str:
     # Handle Yahoo Finance indices to TradingView format
     if symbol.startswith('^'):
         yahoo_to_tv = {
-            '^GSPC': 'SP:SPX',     # S&P 500
-            '^DJI': 'DJ:DJI',      # Dow Jones
-            '^IXIC': 'NASDAQ:IXIC', # NASDAQ
-            '^HSI': 'HSI:HSI',     # Hang Seng
-            '^N225': 'TSE:NI225',   # Nikkei 225
-            '^FTSE': 'LSE:FTSE',   # FTSE 100
-            '^GDAXI': 'XETR:DAX'   # DAX
+            '^GSPC': 'TVC:SPX',    # S&P 500
+            '^DJI': 'TVC:DJI',     # Dow Jones
+            '^IXIC': 'TVC:NDX',    # NASDAQ 100
+            '^HSI': 'TVC:HSI',     # Hang Seng
+            '^N225': 'TVC:NI225',  # Nikkei 225
+            '^FTSE': 'TVC:UKX',    # FTSE 100
+            '^GDAXI': 'TVC:DEU40'  # DAX 40
         }
         return yahoo_to_tv.get(symbol, symbol)
 
