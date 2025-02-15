@@ -234,39 +234,35 @@ class VisualizationService:
     def _create_analysis_summary_table(days, end_price, annual_return, 
                                      daily_volatility, annualized_volatility,
                                      r2, regression_formula, final_score,
-                                     table_style, table_domain, signal_returns=None):
-        """Create the analysis summary table with colored formula and R²"""
-        signal_metrics = VisualizationService._analyze_signals(signal_returns)
-        stars = VisualizationService._get_score_stars(final_score)
-        score_display = f"{final_score:.1f} ({stars})"
+                                     table_style, table_domain, signal_returns=None, symbol=None):
+        """Create the analysis summary table"""
+        # Get currency prefix based on symbol
+        currency_prefix = "$"  # Default to USD
+        if symbol:
+            if symbol.endswith('.HK') or symbol.startswith('HKEX:'):
+                currency_prefix = "HK$"
+            elif symbol.endswith(('.SS', '.SZ')) or any(symbol.startswith(x) for x in ['SSE:', 'SZSE:']):
+                currency_prefix = "¥"
+            elif symbol.endswith('.T') or symbol.startswith('TSE:'):
+                currency_prefix = "¥"
+            elif symbol.endswith('.L') or symbol.startswith('LSE:'):
+                currency_prefix = "£"
+            elif symbol.endswith('.F') or symbol.startswith('XETR:'):
+                currency_prefix = "€"
+
+        # Format score display
+        score_display = f"{final_score:.1f}"
         
-        try:
-            equation_parts = regression_formula.split('=')
-            if len(equation_parts) > 1:
-                right_side = equation_parts[1].strip()
-                import re
-                match = re.search(r'[-+]?\d*\.?\d+', right_side)
-                if match:
-                    first_number = match.group()
-                    formula_color = 'red' if first_number.startswith('-') else 'green'
-                else:
-                    formula_color = 'green'
-            else:
-                formula_color = 'green'
-        except:
-            formula_color = 'green'
-            
-        r2_color = 'green' if r2 > 0.7 else 'black'
+        # Format colors
+        formula_color = 'black'
+        r2_color = 'black'
+        
+        # Calculate signal metrics
+        signal_metrics = VisualizationService._analyze_signals(signal_returns)
         
         return go.Table(
-            domain=dict(
-                x=table_domain['x'],
-                y=table_domain['y']
-            ),
-            header=dict(
-                values=['<b>Metric</b>', '<b>Value</b>'],
-                **table_style['header']
-            ),
+            domain=dict(x=table_domain['x'], y=table_domain['y']),
+            header=dict(values=['<b>Metric</b>', '<b>Value</b>'], **table_style['header']),
             cells=dict(
                 values=[
                     ["Score", 'Regression Formula', 'Regression R²', 'Current Price', 
@@ -276,7 +272,7 @@ class VisualizationService:
                         score_display,
                         regression_formula,
                         f"{r2:.4f}",
-                        f"${end_price:.2f}",
+                        f"{currency_prefix}{end_price:.2f}",
                         f"{annual_return:.2f}%",
                         f"{annualized_volatility:.3f}",
                         f"{signal_metrics['total_trades']}",
@@ -284,63 +280,41 @@ class VisualizationService:
                         f"{signal_metrics['average_return']:.2f}%"
                     ]
                 ],
-                font=dict(
-                    color=[
-                        ['black'] * 9,
-                        ['black', formula_color, r2_color, 'black', 'black', 'black',
-                         'black', 'black', 'black']
-                    ]
-                ),
-                **{k: v for k, v in table_style['cells'].items() if k != 'font'}
+                **table_style['cells']
             )
         )
 
     @staticmethod
-    def _create_trading_signal_table(signal_returns, table_style, table_domain):
+    def _create_trading_signal_table(signal_returns, table_style, table_domain, symbol=None):
         """Create the trading signal analysis table"""
-        # Check if there are any signals with either entry or exit information
-        if not signal_returns and not any('Exit Date' in signal for signal in signal_returns):
-            return go.Table(
-                domain=dict(
-                    x=table_domain['x'],
-                    y=table_domain['y']
-                ),
-                header=dict(
-                    values=['<b>Notice</b>'],
-                    **table_style['header']
-                ),
-                cells=dict(
-                    values=[['No trading signals found in the analysis period']],
-                    **table_style['cells']
-                )
-            )
+        # Get currency prefix based on symbol
+        currency_prefix = "$"  # Default to USD
+        if symbol:
+            if symbol.endswith('.HK') or symbol.startswith('HKEX:'):
+                currency_prefix = "HK$"
+            elif symbol.endswith(('.SS', '.SZ')) or any(symbol.startswith(x) for x in ['SSE:', 'SZSE:']):
+                currency_prefix = "¥"
+            elif symbol.endswith('.T') or symbol.startswith('TSE:'):
+                currency_prefix = "¥"
+            elif symbol.endswith('.L') or symbol.startswith('LSE:'):
+                currency_prefix = "£"
+            elif symbol.endswith('.F') or symbol.startswith('XETR:'):
+                currency_prefix = "€"
 
+        # Format trades with correct currency
         trades = []
-        buy_signal = None
         for signal in signal_returns:
             if signal['Signal'] == 'Buy':
-                buy_signal = signal
-                if signal['Status'] == 'Open' and 'Trade Return' in signal:
-                    trades.append({
-                        'Entry Date': signal['Entry Date'].strftime('%Y-%m-%d'),
-                        'Entry Price': signal['Entry Price'],
-                        'Exit Date': 'Open',
-                        'Exit Price': signal['Current Price'],
-                        'Return': signal['Trade Return'],
-                        'Status': 'Open'
-                    })
+                trades.append({
+                    'Entry Date': signal['Entry Date'].strftime('%Y-%m-%d'),
+                    'Entry Price': f"{currency_prefix}{signal['Entry Price']:.2f}",
+                    'Exit Date': 'Open' if signal['Status'] == 'Open' else signal['Exit Date'].strftime('%Y-%m-%d'),
+                    'Exit Price': f"{currency_prefix}{signal['Exit Price']:.2f}",
+                    'Return': f"{signal['Trade Return']:.2f}%",
+                    'Status': signal['Status']
+                })
             elif signal['Signal'] == 'Sell':
-                if buy_signal is not None:
-                    trades.append({
-                        'Entry Date': buy_signal['Entry Date'].strftime('%Y-%m-%d'),
-                        'Entry Price': buy_signal['Entry Price'],
-                        'Exit Date': signal['Entry Date'].strftime('%Y-%m-%d'),
-                        'Exit Price': signal['Entry Price'],
-                        'Return': signal['Trade Return'],
-                        'Status': 'Closed'
-                    })
-                    buy_signal = None
-                elif 'Entry Date' not in signal and 'Exit Date' in signal:
+                if 'Entry Date' not in signal and 'Exit Date' in signal:
                     # Handle case where we only have exit information
                     trades.append({
                         'Entry Date': 'Unknown',
@@ -364,10 +338,10 @@ class VisualizationService:
             cells=dict(
                 values=[
                     [t['Entry Date'] for t in trades],
-                    [f"${t['Entry Price']:.2f}" if t['Entry Price'] != 'Unknown' else t['Entry Price'] for t in trades],
+                    [f"{t['Entry Price']}" if t['Entry Price'] != 'Unknown' else t['Entry Price'] for t in trades],
                     [t['Exit Date'] for t in trades],
-                    [f"${t['Exit Price']:.2f}" if isinstance(t['Exit Price'], (int, float)) else t['Exit Price'] for t in trades],
-                    [f"{t['Return']:.2f}%" if isinstance(t['Return'], (int, float)) else t['Return'] for t in trades],
+                    [f"{t['Exit Price']}" if isinstance(t['Exit Price'], (int, float)) else t['Exit Price'] for t in trades],
+                    [f"{t['Return']}" if isinstance(t['Return'], (int, float)) else t['Return'] for t in trades],
                     [t['Status'] for t in trades]
                 ],
                 **table_style['cells']
@@ -692,14 +666,16 @@ class VisualizationService:
             final_score=regression_results['total_score']['score'],
             table_style=config['table_style'],
             table_domain=config['tables']['analysis_summary'],
-            signal_returns=signal_returns
+            signal_returns=signal_returns,
+            symbol=symbol
         )
         fig.add_trace(analysis_table)
 
         trading_table = VisualizationService._create_trading_signal_table(
             signal_returns,
             table_style=config['table_style'],
-            table_domain=config['tables']['trading_signals']
+            table_domain=config['tables']['trading_signals'],
+            symbol=symbol
         )
         fig.add_trace(trading_table)
 
