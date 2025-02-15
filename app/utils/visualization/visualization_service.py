@@ -93,16 +93,14 @@ class VisualizationService:
         formatted_df = df.copy()
         for col in df.columns:
             if col != 'CAGR %':
-                # Skip currency prefix for diluted shares
-                if 'Diluted Shares' in formatted_df.index:
-                    shares_row = formatted_df.loc['Diluted Shares', col]
-                    formatted_df.loc['Diluted Shares', col] = VisualizationService.format_number(shares_row, None)  # Pass None as symbol to skip currency
-                    # Format other rows with currency
-                    other_rows = [idx for idx in formatted_df.index if idx != 'Diluted Shares']
-                    for idx in other_rows:
-                        formatted_df.loc[idx, col] = VisualizationService.format_number(formatted_df.loc[idx, col], symbol)
-                else:
-                    formatted_df[col] = formatted_df[col].apply(lambda x: VisualizationService.format_number(x, symbol))
+                # Format each row with appropriate currency handling
+                for idx in formatted_df.index:
+                    value = formatted_df.loc[idx, col]
+                    # Skip currency prefix for Diluted Shares row
+                    if idx == 'Diluted Shares':
+                        formatted_df.loc[idx, col] = VisualizationService.format_number(value, None)
+                    else:
+                        formatted_df.loc[idx, col] = VisualizationService.format_number(value, symbol)
             else:
                 formatted_df[col] = formatted_df[col].apply(
                     lambda x: f"{x:+.2f}%" if pd.notna(x) and x is not None else "N/A"
@@ -262,9 +260,17 @@ class VisualizationService:
         # Format score display
         score_display = f"{final_score:.1f}"
         
-        # Format colors
-        formula_color = 'black'
-        r2_color = 'black'
+        # Extract coefficients from regression formula
+        coef_pattern = r'([+-]?\d+\.\d+)\(x/\d+\)².*?([+-]?\d+\.\d+)\(x/\d+\)'
+        match = re.search(coef_pattern, regression_formula)
+        if match:
+            quad_coef = float(match.group(1))
+            linear_coef = float(match.group(2))
+            # Color formula based on coefficients
+            if quad_coef > 0 and linear_coef > 0:
+                regression_formula = f'<span style="color: green">{regression_formula}</span>'
+            elif quad_coef < 0 and linear_coef < 0:
+                regression_formula = f'<span style="color: red">{regression_formula}</span>'
         
         # Calculate signal metrics
         signal_metrics = VisualizationService._analyze_signals(signal_returns)
