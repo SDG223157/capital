@@ -205,10 +205,16 @@ def search():
         # Apply sorting
         if sort_order == 'HIGHEST':
             query = query.filter(NewsArticle.ai_sentiment_rating.isnot(None))
-            query = query.order_by(NewsArticle.ai_sentiment_rating.desc())
+            query = query.order_by(
+                NewsArticle.ai_sentiment_rating.desc(),
+                NewsArticle.published_at.desc()
+            )
         elif sort_order == 'LOWEST':
             query = query.filter(NewsArticle.ai_sentiment_rating.isnot(None))
-            query = query.order_by(NewsArticle.ai_sentiment_rating.asc())
+            query = query.order_by(
+                NewsArticle.ai_sentiment_rating.asc(),
+                NewsArticle.published_at.desc()
+            )
         else:  # LATEST
             query = query.order_by(NewsArticle.published_at.desc())
 
