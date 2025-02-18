@@ -213,7 +213,7 @@ def search():
             query = query.order_by(NewsArticle.published_at.desc())
 
         # If no region/sort filters applied, handle as symbol search
-        if not region_filter and sort_order == 'LATEST':
+        if not region_filter and sort_order == 'LATEST' and search_symbol.upper() not in (regions + sorts):
             # Convert symbol formats
             if re.match(r'^\d{4}\.HK$', search_symbol):
                 search_symbol = f"HKEX:{int(search_symbol.replace('.HK', ''))}"
