@@ -162,80 +162,82 @@ def search():
         query = NewsArticle.query
 
         # Handle special keywords (case insensitive)
-        symbol_upper = search_symbol.upper()
-        if symbol_upper in ['LATEST', 'HIGHEST', 'LOWEST', 'CHINA', 'US', 'HK', 'OTHER']:
-            if symbol_upper == 'LATEST':
-                query = query.order_by(NewsArticle.published_at.desc())
-            elif symbol_upper == 'HIGHEST':
-                query = query.filter(NewsArticle.ai_sentiment_rating.isnot(None))
-                query = query.order_by(NewsArticle.ai_sentiment_rating.desc())
-            elif symbol_upper == 'LOWEST':
-                query = query.filter(NewsArticle.ai_sentiment_rating.isnot(None))
-                query = query.order_by(NewsArticle.ai_sentiment_rating.asc())
-            # Market categories
-            elif symbol_upper == 'CHINA':
-                query = query.filter(
-                    or_(
-                        NewsArticle.symbols.any(ArticleSymbol.symbol.like('SSE:%')),
-                        NewsArticle.symbols.any(ArticleSymbol.symbol.like('SZSE:%'))
-                    )
-                ).order_by(NewsArticle.published_at.desc())
-            elif symbol_upper == 'US':
-                query = query.filter(
-                    or_(
-                        NewsArticle.symbols.any(ArticleSymbol.symbol.like('NASDAQ:%')),
-                        NewsArticle.symbols.any(ArticleSymbol.symbol.like('NYSE:%')),
-                        NewsArticle.symbols.any(ArticleSymbol.symbol.like('AMEX:%'))
-                    )
-                ).order_by(NewsArticle.published_at.desc())
-            elif symbol_upper == 'HK':
-                query = query.filter(
-                    NewsArticle.symbols.any(ArticleSymbol.symbol.like('HKEX:%'))
-                ).order_by(NewsArticle.published_at.desc())
-            elif symbol_upper == 'OTHER':
-                query = query.filter(
-                    and_(
-                        ~NewsArticle.symbols.any(ArticleSymbol.symbol.like('NASDAQ:%')),
-                        ~NewsArticle.symbols.any(ArticleSymbol.symbol.like('NYSE:%')),
-                        ~NewsArticle.symbols.any(ArticleSymbol.symbol.like('AMEX:%')),
-                        ~NewsArticle.symbols.any(ArticleSymbol.symbol.like('SSE:%')),
-                        ~NewsArticle.symbols.any(ArticleSymbol.symbol.like('SZSE:%')),
-                        ~NewsArticle.symbols.any(ArticleSymbol.symbol.like('HKEX:%'))
-                    )
-                ).order_by(NewsArticle.published_at.desc())
-        else:
-            # Convert Yahoo Finance symbols to TradingView format
-            if re.match(r'^\d{4}\.HK$', symbol_upper):
-                # Convert HK stocks (e.g., 0700.HK -> HKEX:700)
-                symbol_upper = f"HKEX:{int(symbol_upper.replace('.HK', '').replace('.hk', '')):d}"
-            elif re.search(r'\.SS$', symbol_upper):
-                # Convert Shanghai stocks (e.g., 600519.SS -> SSE:600519)
-                symbol_upper = f"SSE:{symbol_upper.replace('.SS', '')}"
-            elif re.search(r'\.SZ$', symbol_upper):
-                # Convert Shenzhen stocks (e.g., 000001.SZ -> SZSE:000001)
-                symbol_upper = f"SZSE:{symbol_upper.replace('.SZ', '')}"
+        symbol_parts = symbol.split()
+        regions = ['CHINA', 'US', 'HK', 'OTHER']
+        sorts = ['HIGHEST', 'LOWEST', 'LATEST']
+        
+        # Extract region and sort from symbol parts
+        region_filter = next((p for p in symbol_parts if p in regions), None)
+        sort_order = next((p for p in symbol_parts if p in sorts), 'LATEST')
+
+        # Apply region filter
+        if region_filter == 'CHINA':
+            query = query.filter(
+                or_(
+                    NewsArticle.symbols.any(ArticleSymbol.symbol.like('SSE:%')),
+                    NewsArticle.symbols.any(ArticleSymbol.symbol.like('SZSE:%'))
+                )
+            )
+        elif region_filter == 'US':
+            query = query.filter(
+                or_(
+                    NewsArticle.symbols.any(ArticleSymbol.symbol.like('NASDAQ:%')),
+                    NewsArticle.symbols.any(ArticleSymbol.symbol.like('NYSE:%')),
+                    NewsArticle.symbols.any(ArticleSymbol.symbol.like('AMEX:%'))
+                )
+            )
+        elif region_filter == 'HK':
+            query = query.filter(
+                NewsArticle.symbols.any(ArticleSymbol.symbol.like('HKEX:%'))
+            )
+        elif region_filter == 'OTHER':
+            query = query.filter(
+                and_(
+                    ~NewsArticle.symbols.any(ArticleSymbol.symbol.like('NASDAQ:%')),
+                    ~NewsArticle.symbols.any(ArticleSymbol.symbol.like('NYSE:%')),
+                    ~NewsArticle.symbols.any(ArticleSymbol.symbol.like('AMEX:%')),
+                    ~NewsArticle.symbols.any(ArticleSymbol.symbol.like('SSE:%')),
+                    ~NewsArticle.symbols.any(ArticleSymbol.symbol.like('SZSE:%')),
+                    ~NewsArticle.symbols.any(ArticleSymbol.symbol.like('HKEX:%'))
+                )
+            )
+
+        # Apply sorting
+        if sort_order == 'HIGHEST':
+            query = query.filter(NewsArticle.ai_sentiment_rating.isnot(None))
+            query = query.order_by(NewsArticle.ai_sentiment_rating.desc())
+        elif sort_order == 'LOWEST':
+            query = query.filter(NewsArticle.ai_sentiment_rating.isnot(None))
+            query = query.order_by(NewsArticle.ai_sentiment_rating.asc())
+        else:  # LATEST
+            query = query.order_by(NewsArticle.published_at.desc())
+
+        # If no region/sort filters applied, handle as symbol search
+        if not region_filter and sort_order == 'LATEST':
+            # Convert symbol formats
+            if re.match(r'^\d{4}\.HK$', search_symbol):
+                search_symbol = f"HKEX:{int(search_symbol.replace('.HK', ''))}"
+            elif re.search(r'\.SS$', search_symbol):
+                search_symbol = f"SSE:{search_symbol.replace('.SS', '')}"
+            elif re.search(r'\.SZ$', search_symbol):
+                search_symbol = f"SZSE:{search_symbol.replace('.SZ', '')}"
             
-            # If no exchange prefix, try to match with common exchanges
-            if ':' not in symbol_upper:
-                # Try to match with any exchange prefix or without prefix
+            # Build symbol conditions
+            if ':' not in search_symbol:
                 symbol_conditions = [
-                    ArticleSymbol.symbol == f"NASDAQ:{symbol_upper}",
-                    ArticleSymbol.symbol == f"NYSE:{symbol_upper}",
-                    ArticleSymbol.symbol == f"HKEX:{symbol_upper}",
-                    ArticleSymbol.symbol == f"SSE:{symbol_upper}",
-                    ArticleSymbol.symbol == f"SZSE:{symbol_upper}",
-                    ArticleSymbol.symbol == f"LSE:{symbol_upper}",
-                    ArticleSymbol.symbol == f"TSE:{symbol_upper}",
-                    ArticleSymbol.symbol == f"AMEX:{symbol_upper}",
-                    ArticleSymbol.symbol == symbol_upper
+                    ArticleSymbol.symbol == f"NASDAQ:{search_symbol}",
+                    ArticleSymbol.symbol == f"NYSE:{search_symbol}",
+                    ArticleSymbol.symbol == f"HKEX:{search_symbol}",
+                    ArticleSymbol.symbol == f"SSE:{search_symbol}",
+                    ArticleSymbol.symbol == f"SZSE:{search_symbol}",
+                    ArticleSymbol.symbol == f"LSE:{search_symbol}",
+                    ArticleSymbol.symbol == f"TSE:{search_symbol}",
+                    ArticleSymbol.symbol == f"AMEX:{search_symbol}",
+                    ArticleSymbol.symbol == search_symbol
                 ]
                 query = query.filter(NewsArticle.symbols.any(or_(*symbol_conditions)))
             else:
-                # Search for exact symbol match
-                query = query.filter(NewsArticle.symbols.any(ArticleSymbol.symbol == symbol_upper))
-
-        # Add default ordering by published_at desc for non-special keywords
-        query = query.order_by(NewsArticle.published_at.desc())
+                query = query.filter(NewsArticle.symbols.any(ArticleSymbol.symbol == search_symbol))
 
         # Paginate the results - 1 item per page
         pagination = query.paginate(page=page, per_page=1, error_out=False)
