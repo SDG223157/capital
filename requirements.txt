@@ -2,7 +2,7 @@
 flask==2.3.3
 flask-login==0.6.2
 werkzeug==2.3.7  # Update this to match Flask version
-yfinance==0.2.36
+yfinance==0.2.54
 pandas==2.0.3
 numpy==1.24.3
 plotly==5.18.0
