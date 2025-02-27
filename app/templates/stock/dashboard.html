@@ -3,140 +3,257 @@
 {% block title %}Stock Analysis Dashboard{% endblock %}
 
 {% block head %}
-{{ super() }}
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
 <style>
+    .dashboard-container {
+        padding: 20px;
+    }
+    .dashboard-controls {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    .dashboard-form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        align-items: flex-end;
+    }
+    .form-group {
+        flex: 1;
+        min-width: 200px;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+    }
+    .form-control {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+    }
+    .btn-analyze {
+        padding: 8px 16px;
+        background: linear-gradient(45deg, #22d3ee, #818cf8);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    .btn-analyze:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
     .custom-period-container {
         display: none;
     }
-    .dashboard-controls {
-        margin-bottom: 20px;
-        padding: 15px;
-        background-color: #f8f9fa;
-        border-radius: 5px;
-    }
     .info-panel {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
         margin-top: 20px;
-        font-size: 0.9rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
-    .info-panel ul {
+    .info-panel h3 {
+        margin-top: 0;
+        color: #4b5563;
+        font-size: 1.2rem;
+    }
+    .info-list {
         list-style: none;
-        padding-left: 0;
+        padding: 0;
+        margin: 0;
     }
-    .info-panel li {
-        margin-bottom: 5px;
+    .info-list li {
+        padding: 6px 0;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .info-list li:last-child {
+        border-bottom: none;
+    }
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        flex-direction: column;
+    }
+    .spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #22d3ee;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    #plotly-dashboard {
+        width: 100%;
+        height: 800px;
+        min-height: 600px;
+        margin-top: 20px;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+    .about-section {
+        margin-top: 30px;
+        padding: 20px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    .about-section h3 {
+        color: #4b5563;
+        margin-top: 0;
+    }
+    .period-formats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-top: 10px;
+    }
+    .period-format {
+        background-color: white;
+        padding: 10px 15px;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <h1 class="my-4">Stock Analysis Dashboard</h1>
+<div class="dashboard-container">
+    <h1>Stock Analysis Dashboard</h1>
     
     {% if error %}
     <div class="alert alert-danger">{{ error }}</div>
     {% endif %}
     
-    <div class="row dashboard-controls">
-        <div class="col-md-3">
-            <label for="ticker-input">Enter Ticker Symbol:</label>
-            <input type="text" id="ticker-input" class="form-control" value="{{ ticker }}" placeholder="e.g., AAPL, MSFT">
-        </div>
-        <div class="col-md-3">
-            <label for="period-input">Select Time Period:</label>
-            <select id="period-input" class="form-control">
-                <option value="1mo" {% if period == '1mo' %}selected{% endif %}>1 Month</option>
-                <option value="3mo" {% if period == '3mo' %}selected{% endif %}>3 Months</option>
-                <option value="6mo" {% if period == '6mo' %}selected{% endif %}>6 Months</option>
-                <option value="1y" {% if period == '1y' %}selected{% endif %}>1 Year</option>
-                <option value="2y" {% if period == '2y' %}selected{% endif %}>2 Years</option>
-                <option value="5y" {% if period == '5y' %}selected{% endif %}>5 Years</option>
-                <option value="max" {% if period == 'max' %}selected{% endif %}>Max</option>
-                <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom Period</option>
-            </select>
-        </div>
-        <div class="col-md-3 custom-period-container" id="custom-period-container">
-            <label for="custom-period-input">Custom Period:</label>
-            <input type="text" id="custom-period-input" class="form-control" placeholder="e.g., 45d, 10wk, 15mo, 3y">
-            <small class="text-muted">Format examples: 60d (days), 8wk (weeks), 15mo (months), 3y (years)</small>
-        </div>
-        <div class="col-md-3 d-flex align-items-end">
-            <button id="analyze-button" class="btn btn-primary mb-2 w-100">Analyze</button>
+    <div class="dashboard-controls">
+        <div class="dashboard-form">
+            <div class="form-group">
+                <label for="ticker-input">Enter Ticker Symbol:</label>
+                <input type="text" id="ticker-input" class="form-control" value="{{ ticker }}" placeholder="e.g., AAPL, MSFT">
+            </div>
+            
+            <div class="form-group">
+                <label for="period-input">Select Time Period:</label>
+                <select id="period-input" class="form-control">
+                    <option value="1mo" {% if period == '1mo' %}selected{% endif %}>1 Month</option>
+                    <option value="3mo" {% if period == '3mo' %}selected{% endif %}>3 Months</option>
+                    <option value="6mo" {% if period == '6mo' %}selected{% endif %}>6 Months</option>
+                    <option value="1y" {% if period == '1y' %}selected{% endif %}>1 Year</option>
+                    <option value="2y" {% if period == '2y' %}selected{% endif %}>2 Years</option>
+                    <option value="5y" {% if period == '5y' %}selected{% endif %}>5 Years</option>
+                    <option value="max" {% if period == 'max' %}selected{% endif %}>Max</option>
+                    <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom Period</option>
+                </select>
+            </div>
+            
+            <div class="form-group custom-period-container" id="custom-period-container">
+                <label for="custom-period-input">Custom Period:</label>
+                <input type="text" id="custom-period-input" class="form-control" placeholder="e.g., 45d, 10wk, 15mo, 3y">
+                <small class="text-muted">Examples: 60d (days), 8wk (weeks), 15mo (months), 3y (years)</small>
+            </div>
+            
+            <div class="form-group" style="flex: 0 0 auto;">
+                <button id="analyze-button" class="btn-analyze">Analyze</button>
+            </div>
         </div>
     </div>
     
-    <div id="loading" class="text-center my-5" style="display: none;">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-        </div>
-        <p class="mt-2">Analyzing data, please wait...</p>
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="spinner"></div>
+        <p style="margin-top: 20px;">Analyzing data, please wait...</p>
     </div>
     
-    <div id="dashboard-container">
-        <div id="plotly-dashboard"></div>
-        
-        {% if info %}
-        <div class="info-panel">
-            <h5>Analysis Information</h5>
-            <ul>
-                <li><strong>Analysis for:</strong> {{ info.ticker }}</li>
-                <li><strong>Period:</strong> {{ info.period }}</li>
-                <li><strong>Daily data points:</strong> {{ info.daily_points }}</li>
-                <li><strong>Weekly data points:</strong> {{ info.weekly_points }}</li>
-                <li><strong>Monthly data points:</strong> {{ info.monthly_points }}</li>
-                <li><strong>Date range:</strong> {{ info.start_date }} to {{ info.end_date }}</li>
-            </ul>
-        </div>
-        {% endif %}
-    </div>
+    <div id="plotly-dashboard"></div>
     
-    <div class="mt-4 mb-5">
-        <h5>About Custom Periods</h5>
-        <p>The custom period feature allows you to specify timeframes in the following formats:</p>
-        <ul>
-            <li>Days: e.g., 45d, 90d, 180d</li>
-            <li>Weeks: e.g., 10w, 26w, 52w</li>
-            <li>Months: e.g., 18mo, 24mo, 36mo</li>
-            <li>Years: e.g., 1y, 3y, 7y</li>
+    {% if info %}
+    <div class="info-panel">
+        <h3>Analysis Information</h3>
+        <ul class="info-list">
+            <li><strong>Analysis for:</strong> {{ info.ticker }}</li>
+            <li><strong>Period:</strong> {{ info.period }}</li>
+            <li><strong>Daily data points:</strong> {{ info.daily_points }}</li>
+            <li><strong>Weekly data points:</strong> {{ info.weekly_points }}</li>
+            <li><strong>Monthly data points:</strong> {{ info.monthly_points }}</li>
+            <li><strong>Date range:</strong> {{ info.start_date }} to {{ info.end_date }}</li>
         </ul>
-        <p>This allows for precise control over the analysis timeframe beyond the preset options.</p>
+    </div>
+    {% endif %}
+    
+    <div class="about-section">
+        <h3>About Custom Periods</h3>
+        <p>The custom period feature allows you to specify timeframes in the following formats:</p>
+        <div class="period-formats">
+            <div class="period-format">
+                <strong>Days:</strong> e.g., 45d, 90d, 180d
+            </div>
+            <div class="period-format">
+                <strong>Weeks:</strong> e.g., 10w, 26w, 52w
+            </div>
+            <div class="period-format">
+                <strong>Months:</strong> e.g., 18mo, 24mo, 36mo
+            </div>
+            <div class="period-format">
+                <strong>Years:</strong> e.g., 1y, 3y, 7y
+            </div>
+        </div>
+        <p style="margin-top: 15px;">This allows for precise control over the analysis timeframe beyond the preset options.</p>
     </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Render initial graph
-        {% if graph_json %}
-        const graphData = {{ graph_json|safe }};
-        Plotly.newPlot('plotly-dashboard', graphData.data, graphData.layout);
-        {% endif %}
-        
         // Show/hide custom period input
         const periodInput = document.getElementById('period-input');
         const customPeriodContainer = document.getElementById('custom-period-container');
         
-        periodInput.addEventListener('change', function() {
-            if (this.value === 'custom') {
+        function updateCustomPeriodVisibility() {
+            if (periodInput.value === 'custom') {
                 customPeriodContainer.style.display = 'block';
             } else {
                 customPeriodContainer.style.display = 'none';
             }
-        });
+        }
+        
+        periodInput.addEventListener('change', updateCustomPeriodVisibility);
         
         // Initialize custom period visibility
-        if (periodInput.value === 'custom') {
-            customPeriodContainer.style.display = 'block';
-        }
+        updateCustomPeriodVisibility();
         
         // Handle analyze button click
         const analyzeButton = document.getElementById('analyze-button');
         const tickerInput = document.getElementById('ticker-input');
         const customPeriodInput = document.getElementById('custom-period-input');
-        const loadingEl = document.getElementById('loading');
-        const dashboardContainer = document.getElementById('dashboard-container');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const plotlyDashboard = document.getElementById('plotly-dashboard');
         
         analyzeButton.addEventListener('click', function() {
             const ticker = tickerInput.value.trim().toUpperCase();
+            if (!ticker) {
+                alert('Please enter a ticker symbol');
+                return;
+            }
+            
             let period = periodInput.value;
             
             if (period === 'custom') {
@@ -149,9 +266,8 @@
                 }
             }
             
-            // Show loading
-            loadingEl.style.display = 'block';
-            dashboardContainer.style.display = 'none';
+            // Show loading overlay
+            loadingOverlay.style.display = 'flex';
             
             // Call API to get updated data
             fetch('/stock/analyze', {
@@ -164,16 +280,26 @@
                     period: period
                 })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.error) {
                     alert(data.error);
                     return;
                 }
                 
-                // Update graph
+                // Parse the graph JSON
                 const graphData = JSON.parse(data.graph);
-                Plotly.newPlot('plotly-dashboard', graphData.data, graphData.layout);
+                
+                // Render the plot
+                console.log("Rendering plot with data:", graphData);
+                
+                Plotly.newPlot('plotly-dashboard', graphData.data, graphData.layout, {responsive: true});
+                console.log("Plot rendered successfully");
                 
                 // Update URL to make it bookmarkable
                 const newUrl = new URL(window.location);
@@ -181,27 +307,45 @@
                 newUrl.searchParams.set('period', period);
                 window.history.pushState({}, '', newUrl);
                 
-                // Update page without full reload
+                // Update the info panel
                 const info = data.info;
-                document.querySelector('.info-panel ul').innerHTML = `
-                    <li><strong>Analysis for:</strong> ${info.ticker}</li>
-                    <li><strong>Period:</strong> ${info.period}</li>
-                    <li><strong>Daily data points:</strong> ${info.daily_points}</li>
-                    <li><strong>Weekly data points:</strong> ${info.weekly_points}</li>
-                    <li><strong>Monthly data points:</strong> ${info.monthly_points}</li>
-                    <li><strong>Date range:</strong> ${info.start_date} to ${info.end_date}</li>
-                `;
+                const infoPanel = document.querySelector('.info-panel');
+                
+                if (infoPanel) {
+                    const infoList = infoPanel.querySelector('.info-list');
+                    infoList.innerHTML = `
+                        <li><strong>Analysis for:</strong> ${info.ticker}</li>
+                        <li><strong>Period:</strong> ${info.period}</li>
+                        <li><strong>Daily data points:</strong> ${info.daily_points}</li>
+                        <li><strong>Weekly data points:</strong> ${info.weekly_points}</li>
+                        <li><strong>Monthly data points:</strong> ${info.monthly_points}</li>
+                        <li><strong>Date range:</strong> ${info.start_date} to ${info.end_date}</li>
+                    `;
+                }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while analyzing the data');
+                alert('An error occurred while analyzing the data: ' + error.message);
             })
             .finally(() => {
-                // Hide loading
-                loadingEl.style.display = 'none';
-                dashboardContainer.style.display = 'block';
+                // Hide loading overlay
+                loadingOverlay.style.display = 'none';
             });
         });
+        
+        // Initialize the chart with the provided data
+        {% if graph_json %}
+        try {
+            console.log("Initializing plotly chart...");
+            const graphData = {{ graph_json|safe }};
+            console.log("Graph data retrieved:", typeof graphData);
+            
+            Plotly.newPlot('plotly-dashboard', graphData.data, graphData.layout, {responsive: true});
+            console.log("Initial plot rendered successfully");
+        } catch (error) {
+            console.error("Error rendering initial plot:", error);
+        }
+        {% endif %}
     });
 </script>
 {% endblock %}

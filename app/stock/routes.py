@@ -1,5 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify
 from app.stock.dashboard import get_stock_analysis
+import plotly.utils
+import json
 
 stock_bp = Blueprint('stock', __name__, url_prefix='/stock')
 
@@ -10,17 +12,20 @@ def dashboard():
     period = request.args.get('period', '2y')
     
     # Get initial data
-    fig_json, info = get_stock_analysis(ticker, period)
+    fig, info = get_stock_analysis(ticker, period)
     
-    if fig_json is None:
+    if fig is None:
         # Handle error case
         return render_template('stock/dashboard.html', 
                                error=info, 
                                ticker=ticker, 
                                period=period)
     
+    # Convert fig to JSON for the template
+    graph_json = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+    
     return render_template('stock/dashboard.html', 
-                           graph_json=fig_json,
+                           graph_json=graph_json,
                            info=info,
                            ticker=ticker,
                            period=period)
@@ -33,12 +38,15 @@ def analyze():
     period = data.get('period', '2y')
     
     # Get analysis data
-    fig_json, info = get_stock_analysis(ticker, period)
+    fig, info = get_stock_analysis(ticker, period)
     
-    if fig_json is None:
+    if fig is None:
         return jsonify({"error": info}), 400
     
+    # Convert fig to JSON
+    graph_json = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+    
     return jsonify({
-        "graph": fig_json,
+        "graph": graph_json,
         "info": info
     })
