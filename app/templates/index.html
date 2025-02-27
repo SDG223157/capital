@@ -213,7 +213,7 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Ticker autocomplete code (keep your existing code)
+        // Ticker autocomplete code
         const tickerInput = document.getElementById('ticker');
         const suggestionsDiv = document.querySelector('.suggestions');
         let debounceTimeout;
@@ -330,9 +330,9 @@
             
             // Build the endpoint URL
             {% if current_user.is_authenticated %}
-                const endpoint = '{{ url_for("main.analyze") }}';
+                const endpoint = '/analyze_json';
             {% else %}
-                const endpoint = '{{ url_for("main.quick_analyze") }}';
+                const endpoint = '/quick_analyze_json';
             {% endif %}
             
             // Make the AJAX request
@@ -344,68 +344,37 @@
                 if (!response.ok) {
                     throw new Error('Analysis request failed');
                 }
-                return response.text();
+                return response.json();
             })
-            .then(htmlContent => {
-                // Extract just the Plotly part from the HTML response
-                const plotlyMatch = htmlContent.match(/<script type="text\/javascript">.*?Plotly\.newPlot\((.*?)\);<\/script>/s);
-                
-                if (plotlyMatch && plotlyMatch[1]) {
-                    // Parse the Plotly parameters
-                    const plotlyContent = plotlyMatch[1];
-                    const params = plotlyContent.split(',').map(p => p.trim());
-                    
-                    // The first parameter is the div ID, usually in quotes
-                    let divId = params[0].replace(/['"]/g, '');
-                    
-                    // The second parameter is the data object
-                    let dataStart = htmlContent.indexOf('=', htmlContent.indexOf('var data'));
-                    let dataEnd = htmlContent.indexOf('];', dataStart) + 1;
-                    let dataJson = htmlContent.substring(dataStart + 1, dataEnd).trim();
-                    
-                    // The third parameter is the layout object
-                    let layoutStart = htmlContent.indexOf('=', htmlContent.indexOf('var layout'));
-                    let layoutEnd = htmlContent.indexOf('};', layoutStart) + 1;
-                    let layoutJson = htmlContent.substring(layoutStart + 1, layoutEnd).trim();
-                    
-                    try {
-                        // Show the result container and clear previous results
-                        resultContainer.style.display = 'block';
-                        analysisResult.style.display = 'block';
-                        analysisResult.innerHTML = '';
-                        
-                        // Add navigation buttons
-                        resultNavigation.innerHTML = '';
-                        const newsButton = document.createElement('a');
-                        newsButton.href = `/news/search?symbol=${ticker}`;
-                        newsButton.className = 'nav-button news-button';
-                        newsButton.textContent = 'View News';
-                        resultNavigation.appendChild(newsButton);
-                        
-                        // Create Plotly chart
-                        const data = eval(`(${dataJson})`);
-                        const layout = eval(`(${layoutJson})`);
-                        
-                        // Update layout for improved appearance
-                        layout.autosize = true;
-                        layout.height = 700;
-                        layout.margin = { l: 50, r: 50, t: 80, b: 50 };
-                        
-                        Plotly.newPlot('analysis-result', data, layout, {
-                            responsive: true,
-                            useResizeHandler: true
-                        });
-                        
-                        // Scroll to result
-                        resultContainer.scrollIntoView({behavior: 'smooth'});
-                    } catch (parseError) {
-                        console.error('Error parsing Plotly data:', parseError);
-                        analysisResult.innerHTML = '<div style="color: red;">Error rendering chart. Please try again.</div>';
-                    }
-                } else {
-                    // If we couldn't extract Plotly data, show the whole response
-                    analysisResult.innerHTML = htmlContent;
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.error || 'Analysis failed');
                 }
+                
+                // Parse the Plotly figure JSON
+                const plotData = JSON.parse(data.plot);
+                
+                // Show results container
+                resultContainer.style.display = 'block';
+                analysisResult.style.display = 'block';
+                
+                // Add navigation buttons
+                resultNavigation.innerHTML = '';
+                const newsButton = document.createElement('a');
+                newsButton.href = `/news/search?symbol=${ticker}`;
+                newsButton.className = 'nav-button news-button';
+                newsButton.textContent = 'View News';
+                resultNavigation.appendChild(newsButton);
+                
+                // Render the chart
+                Plotly.newPlot('analysis-result', plotData.data, plotData.layout, {
+                    responsive: true,
+                    useResizeHandler: true,
+                    autosize: true
+                });
+                
+                // Scroll to result
+                resultContainer.scrollIntoView({behavior: 'smooth'});
             })
             .catch(error => {
                 console.error('Analysis error:', error);

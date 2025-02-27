@@ -427,7 +427,101 @@ def determine_asset_type(symbol: str, name: str) -> str:
         return 'Trust'
     return None
 
+@bp.route('/analyze_json', methods=['POST'])
+@login_required
+def analyze_json():
+    try:
+        ticker_input = request.form.get('ticker', '').split()[0].upper()
+        logger.info(f"Analyzing ticker (JSON): {ticker_input}")
+        
+        if not ticker_input:
+            return jsonify({'success': False, 'error': "Ticker symbol is required"}), 400
+        
+        end_date = request.form.get('end_date')
+        if end_date:
+            try:
+                datetime.strptime(end_date, '%Y-%m-%d')
+                logger.info(f"Using end date: {end_date}")
+            except ValueError:
+                return jsonify({'success': False, 'error': "Invalid date format. Please use YYYY-MM-DD format"}), 400
+        
+        lookback_days = int(request.form.get('lookback_days', 365))
+        if lookback_days < 30 or lookback_days > 10000:
+            return jsonify({'success': False, 'error': "Lookback days must be between 30 and 10000"}), 400
+        
+        crossover_days = int(request.form.get('crossover_days', 365))
+        if crossover_days < 30 or crossover_days > 1000:
+            return jsonify({'success': False, 'error': "Crossover days must be between 30 and 1000"}), 400
+        
+        fig = create_stock_visualization_old(
+            ticker_input,
+            end_date=end_date,
+            lookback_days=lookback_days,
+            crossover_days=crossover_days
+        )
+        
+        # Convert Plotly figure to JSON
+        fig_json = fig.to_json()
+        
+        # Return success response with figure JSON
+        return jsonify({
+            'success': True,
+            'ticker': ticker_input,
+            'plot': fig_json,
+            'metadata': {
+                'end_date': end_date or datetime.now().strftime('%Y-%m-%d'),
+                'lookback_days': lookback_days,
+                'crossover_days': crossover_days
+            }
+        })
+        
+    except Exception as e:
+        error_msg = f"Error analyzing {ticker_input}: {str(e)}"
+        logger.error(f"{error_msg}\n{traceback.format_exc()}")
+        return jsonify({
+            'success': False,
+            'error': error_msg
+        }), 500
 
+@bp.route('/quick_analyze_json', methods=['POST'])
+def quick_analyze_json():
+    try:
+        ticker_input = request.form.get('ticker', '').split()[0].upper()
+        logger.info(f"Quick analyzing ticker (JSON): {ticker_input}")
+        
+        if not ticker_input:
+            return jsonify({'success': False, 'error': "Ticker symbol is required"}), 400
+            
+        # Use default values for quick analysis
+        fig = create_stock_visualization_old(
+            ticker_input,
+            end_date=None,  # Use current date
+            lookback_days=ANALYZE_CONFIG['lookback_days'],  # Default lookback
+            crossover_days=ANALYZE_CONFIG['crossover_days']  # Default crossover
+        )
+        
+        # Convert Plotly figure to JSON
+        fig_json = fig.to_json()
+        
+        # Return success response with figure JSON
+        return jsonify({
+            'success': True,
+            'ticker': ticker_input,
+            'plot': fig_json,
+            'metadata': {
+                'end_date': datetime.now().strftime('%Y-%m-%d'),
+                'lookback_days': ANALYZE_CONFIG['lookback_days'],
+                'crossover_days': ANALYZE_CONFIG['crossover_days']
+            }
+        })
+        
+    except Exception as e:
+        error_msg = f"Error analyzing {ticker_input}: {str(e)}"
+        logger.error(f"{error_msg}\n{traceback.format_exc()}")
+        return jsonify({
+            'success': False,
+            'error': error_msg
+        }), 500
 @bp.route('/quick_analyze', methods=['POST'])
 def quick_analyze():
     try:
