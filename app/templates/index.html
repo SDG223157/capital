@@ -1,8 +1,149 @@
 {% extends "base.html" %}
 
+{% block head %}
+{{ super() }}
+<script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+<style>
+    .form-container {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        max-width: 800px;
+        margin: 20px auto;
+    }
+    
+    #analysis-result {
+        width: 100%;
+        min-height: 600px;
+        margin-top: 20px;
+        display: none;
+    }
+    
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        flex-direction: column;
+        display: none;
+    }
+    
+    .spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #22d3ee;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    /* Keep existing styles */
+    .ticker-input-container {
+        position: relative;
+    }
+    
+    .suggestions {
+        position: absolute;
+        width: 100%;
+        max-height: 200px;
+        overflow-y: auto;
+        background-color: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        z-index: 1000;
+        display: none;
+    }
+    
+    .suggestion-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    .suggestion-item:hover {
+        background-color: #f0f7ff;
+    }
+    
+    .suggestion-item .symbol {
+        font-weight: bold;
+        color: #3b82f6;
+    }
+    
+    .suggestion-item .name {
+        color: #6b7280;
+        margin-left: 10px;
+        flex-grow: 1;
+        text-align: right;
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .analyze-button {
+        padding: 8px 16px;
+        background: linear-gradient(45deg, #22d3ee, #818cf8);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .analyze-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Navigation section for links */
+    .result-navigation {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .nav-button {
+        padding: 6px 12px;
+        border-radius: 4px;
+        color: white;
+        text-decoration: none;
+        font-size: 14px;
+    }
+    
+    .news-button {
+        background-color: #10b981;
+    }
+    
+    .news-button:hover {
+        background-color: #059669;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
+<div class="loading-overlay" id="loading-overlay">
+    <div class="spinner"></div>
+    <p style="margin-top: 20px;">Analyzing data, please wait...</p>
+</div>
+
 <div class="form-container">
-    <form id="analyze-form" method="post" action="{{ url_for('main.analyze') if current_user.is_authenticated else url_for('main.quick_analyze') }}">
+    <form id="analyze-form">
         <div class="form-group">
             <label for="ticker">Ticker Symbol:</label>
             <div class="ticker-input-container">
@@ -55,9 +196,228 @@
             </div>
         {% endif %}
 
-        <button type="submit" class="analyze-button">
+        <button type="button" id="analyze-button" class="analyze-button">
             Analyze 
         </button>
     </form>
 </div>
+
+<div id="result-container" style="display: none;">
+    <div class="result-navigation" id="result-navigation">
+        <!-- Navigation buttons will be added here dynamically -->
+    </div>
+    <div id="analysis-result"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Ticker autocomplete code (keep your existing code)
+        const tickerInput = document.getElementById('ticker');
+        const suggestionsDiv = document.querySelector('.suggestions');
+        let debounceTimeout;
+
+        function formatCompanyName(name) {
+            return name.replace(/\\'/g, "'");
+        }
+        
+        // Clear input on double click
+        tickerInput.addEventListener('dblclick', function() {
+            if (this.value) {
+                this.value = '';
+                suggestionsDiv.style.display = 'none';
+            }
+        });
+        
+        tickerInput.addEventListener('input', function() {
+            clearTimeout(debounceTimeout);
+            const query = this.value.trim();
+            
+            if (query.length < 1) {
+                suggestionsDiv.style.display = 'none';
+                return;
+            }
+            
+            debounceTimeout = setTimeout(() => {
+                fetch(`/search_ticker?query=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        suggestionsDiv.innerHTML = '';
+                        
+                        if (data.length > 0) {
+                            // Filter out results where symbol equals name
+                            const filteredData = data.filter(item => 
+                                item.symbol.toUpperCase() !== item.name.toUpperCase()
+                            );
+                            
+                            if (filteredData.length > 0) {
+                                filteredData.forEach(item => {
+                                    const div = document.createElement('div');
+                                    div.className = 'suggestion-item';
+                                    const formattedName = formatCompanyName(item.name);
+                                    
+                                    // Create separate spans for symbol and name
+                                    const symbolSpan = document.createElement('span');
+                                    symbolSpan.className = 'symbol';
+                                    symbolSpan.textContent = item.symbol;
+                                    
+                                    const nameSpan = document.createElement('span');
+                                    nameSpan.className = 'name';
+                                    nameSpan.textContent = formattedName;
+                                    
+                                    div.appendChild(symbolSpan);
+                                    div.appendChild(nameSpan);
+                                    
+                                    div.addEventListener('click', function() {
+                                        // Set input value to both symbol and name
+                                        tickerInput.value = `${item.symbol}    ${formattedName}`;
+                                        suggestionsDiv.style.display = 'none';
+                                    });
+                                    
+                                    suggestionsDiv.appendChild(div);
+                                });
+                                suggestionsDiv.style.display = 'block';
+                            } else {
+                                suggestionsDiv.style.display = 'none';
+                            }
+                        } else {
+                            suggestionsDiv.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Search error:', error);
+                        suggestionsDiv.style.display = 'none';
+                    });
+            }, 300);
+        });
+        
+        // Close suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!tickerInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                suggestionsDiv.style.display = 'none';
+            }
+        });
+
+        // Prevent suggestions from closing when clicking inside the input
+        tickerInput.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (this.value.trim().length > 0) {
+                suggestionsDiv.style.display = 'block';
+            }
+        });
+
+        // New code for handling the analysis with embedded Plotly
+        const analyzeButton = document.getElementById('analyze-button');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const analysisResult = document.getElementById('analysis-result');
+        const resultContainer = document.getElementById('result-container');
+        const resultNavigation = document.getElementById('result-navigation');
+        const analyzeForm = document.getElementById('analyze-form');
+        
+        analyzeButton.addEventListener('click', function() {
+            // Get form values
+            const formData = new FormData(analyzeForm);
+            const ticker = formData.get('ticker').trim().split(/\s+/)[0].toUpperCase(); // Get just the symbol
+            
+            if (!ticker) {
+                alert('Please enter a ticker symbol');
+                return;
+            }
+            
+            // Show loading overlay
+            loadingOverlay.style.display = 'flex';
+            
+            // Build the endpoint URL
+            {% if current_user.is_authenticated %}
+                const endpoint = '{{ url_for("main.analyze") }}';
+            {% else %}
+                const endpoint = '{{ url_for("main.quick_analyze") }}';
+            {% endif %}
+            
+            // Make the AJAX request
+            fetch(endpoint, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Analysis request failed');
+                }
+                return response.text();
+            })
+            .then(htmlContent => {
+                // Extract just the Plotly part from the HTML response
+                const plotlyMatch = htmlContent.match(/<script type="text\/javascript">.*?Plotly\.newPlot\((.*?)\);<\/script>/s);
+                
+                if (plotlyMatch && plotlyMatch[1]) {
+                    // Parse the Plotly parameters
+                    const plotlyContent = plotlyMatch[1];
+                    const params = plotlyContent.split(',').map(p => p.trim());
+                    
+                    // The first parameter is the div ID, usually in quotes
+                    let divId = params[0].replace(/['"]/g, '');
+                    
+                    // The second parameter is the data object
+                    let dataStart = htmlContent.indexOf('=', htmlContent.indexOf('var data'));
+                    let dataEnd = htmlContent.indexOf('];', dataStart) + 1;
+                    let dataJson = htmlContent.substring(dataStart + 1, dataEnd).trim();
+                    
+                    // The third parameter is the layout object
+                    let layoutStart = htmlContent.indexOf('=', htmlContent.indexOf('var layout'));
+                    let layoutEnd = htmlContent.indexOf('};', layoutStart) + 1;
+                    let layoutJson = htmlContent.substring(layoutStart + 1, layoutEnd).trim();
+                    
+                    try {
+                        // Show the result container and clear previous results
+                        resultContainer.style.display = 'block';
+                        analysisResult.style.display = 'block';
+                        analysisResult.innerHTML = '';
+                        
+                        // Add navigation buttons
+                        resultNavigation.innerHTML = '';
+                        const newsButton = document.createElement('a');
+                        newsButton.href = `/news/search?symbol=${ticker}`;
+                        newsButton.className = 'nav-button news-button';
+                        newsButton.textContent = 'View News';
+                        resultNavigation.appendChild(newsButton);
+                        
+                        // Create Plotly chart
+                        const data = eval(`(${dataJson})`);
+                        const layout = eval(`(${layoutJson})`);
+                        
+                        // Update layout for improved appearance
+                        layout.autosize = true;
+                        layout.height = 700;
+                        layout.margin = { l: 50, r: 50, t: 80, b: 50 };
+                        
+                        Plotly.newPlot('analysis-result', data, layout, {
+                            responsive: true,
+                            useResizeHandler: true
+                        });
+                        
+                        // Scroll to result
+                        resultContainer.scrollIntoView({behavior: 'smooth'});
+                    } catch (parseError) {
+                        console.error('Error parsing Plotly data:', parseError);
+                        analysisResult.innerHTML = '<div style="color: red;">Error rendering chart. Please try again.</div>';
+                    }
+                } else {
+                    // If we couldn't extract Plotly data, show the whole response
+                    analysisResult.innerHTML = htmlContent;
+                }
+            })
+            .catch(error => {
+                console.error('Analysis error:', error);
+                analysisResult.innerHTML = `<div style="color: red;">Error: ${error.message}</div>`;
+                resultContainer.style.display = 'block';
+                analysisResult.style.display = 'block';
+            })
+            .finally(() => {
+                // Hide loading overlay
+                loadingOverlay.style.display = 'none';
+            });
+        });
+    });
+</script>
 {% endblock %}
