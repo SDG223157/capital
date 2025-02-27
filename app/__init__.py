@@ -100,6 +100,10 @@ def create_app(config_class=Config):
         logger.debug(f"Registering user blueprint: {user_bp.name}")
         app.register_blueprint(user_bp, url_prefix='/user')
 
+        from app.stock import stock_bp
+        logger.debug(f"Registering stock blueprint: {stock_bp.name}")
+        app.register_blueprint(stock_bp, url_prefix='/stock')
+
         # Register news blueprint
         try:
             from app.news.routes import bp as news_bp

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}TrendWise Finance{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head %}{% endblock %}
     <style>
         h1 {
             font-size: 2.2rem;
@@ -44,6 +45,9 @@
                             {% endif %}
                             {% if not request.endpoint == 'main.index' %}
                                 <a href="{{ url_for('main.index') }}" class="dropdown-item text-sm">Trend</a>
+                            {% endif %}
+                            {% if not request.endpoint == 'stock.dashboard' %}
+                                <a href="{{ url_for('stock.dashboard') }}" class="dropdown-item text-sm">Stock Analysis</a>
                             {% endif %}
                             {% if current_user.is_admin %}
                                 <a href="{{ url_for('news.fetch') }}" class="dropdown-item text-sm">Fetch</a>
@@ -106,5 +110,6 @@
             });
         });
     </script>
+    {% block scripts %}{% endblock %}
 </body>
 </html>
