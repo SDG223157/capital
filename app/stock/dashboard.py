@@ -69,7 +69,7 @@ def create_plotly_dashboard(daily_data, weekly_data, monthly_data, ticker_symbol
     Returns:
     dict: Plotly figure as JSON-serializable dictionary
     """
-    # Create figure with subplots - removed returns charts
+    # Create figure with subplots
     fig = make_subplots(
         rows=3, 
         cols=2,
@@ -148,7 +148,7 @@ def create_plotly_dashboard(daily_data, weekly_data, monthly_data, ticker_symbol
             x=daily_data.index,
             y=daily_data['Volatility'],
             mode='lines',
-            name='Daily Volatility (Annualized)',
+            name='Daily Vol',  # Shortened name
             line=dict(color='blue')
         ),
         row=2, col=1
@@ -160,7 +160,7 @@ def create_plotly_dashboard(daily_data, weekly_data, monthly_data, ticker_symbol
             x=weekly_data.index,
             y=weekly_data['Volatility'],
             mode='lines',
-            name='Weekly Volatility (Annualized)',
+            name='Weekly Vol',  # Shortened name
             line=dict(color='blue')
         ),
         row=2, col=2
@@ -171,7 +171,7 @@ def create_plotly_dashboard(daily_data, weekly_data, monthly_data, ticker_symbol
             x=monthly_data.index,
             y=monthly_data['Volatility'],
             mode='lines',
-            name='Monthly Volatility (Annualized)',
+            name='Monthly Vol',  # Shortened name
             line=dict(color='red')
         ),
         row=2, col=2
@@ -294,7 +294,7 @@ def create_plotly_dashboard(daily_data, weekly_data, monthly_data, ticker_symbol
     
     fig.add_trace(vol_table, row=3, col=2)
     
-    # Update layout
+    # Update layout - Fix the legend overlap issue
     fig.update_layout(
         height=1000,
         title_text=f"{ticker_symbol} Multi-Timeframe Analysis Dashboard",
@@ -304,10 +304,18 @@ def create_plotly_dashboard(daily_data, weekly_data, monthly_data, ticker_symbol
             yanchor="bottom",
             y=1.02,
             xanchor="right",
-            x=1
+            x=1,
+            itemsizing="constant",  # Make legend items same size
+            itemwidth=30,  # Set a fixed width for items
+            font=dict(size=10),  # Smaller font
+            tracegroupgap=5  # Smaller gap between legend groups
         ),
         hovermode="closest"
     )
+    
+    # Add more space between the chart title and the plot area
+    fig.update_annotations(y=0.95, selector=dict(text=f"{ticker_symbol} - Daily Price & Moving Averages"))
+    fig.update_annotations(y=0.95, selector=dict(text=f"{ticker_symbol} - Weekly & Monthly Price"))
     
     # Update axes labels
     fig.update_yaxes(title_text="Price ($)", row=1, col=1)

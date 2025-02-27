@@ -8,6 +8,9 @@
     .dashboard-container {
         padding: 20px;
     }
+    .dashboard-header {
+        margin-bottom: 20px;
+    }
     .dashboard-controls {
         background-color: #f8f9fa;
         border-radius: 8px;
@@ -133,12 +136,18 @@
         border-radius: 4px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
+    /* Hide the title text that appears at the top of the Plotly chart */
+    .gtitle {
+        display: none !important;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="dashboard-container">
-    <h1>Stock Analysis Dashboard</h1>
+    <div class="dashboard-header">
+        <h1>Stock Analysis Dashboard</h1>
+    </div>
     
     {% if error %}
     <div class="alert alert-danger">{{ error }}</div>
@@ -223,6 +232,13 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Custom CSS to apply after Plotly is initialized
+        function applyCustomStyles() {
+            // Hide the main title from the Plotly chart as we already have a page title
+            const titleElements = document.querySelectorAll('.gtitle');
+            titleElements.forEach(el => el.style.display = 'none');
+        }
+        
         // Show/hide custom period input
         const periodInput = document.getElementById('period-input');
         const customPeriodContainer = document.getElementById('custom-period-container');
@@ -296,10 +312,12 @@
                 const graphData = JSON.parse(data.graph);
                 
                 // Render the plot
-                console.log("Rendering plot with data:", graphData);
+                console.log("Rendering plot with data");
                 
                 Plotly.newPlot('plotly-dashboard', graphData.data, graphData.layout, {responsive: true});
-                console.log("Plot rendered successfully");
+                
+                // Apply custom styling after plot is created
+                setTimeout(applyCustomStyles, 100);
                 
                 // Update URL to make it bookmarkable
                 const newUrl = new URL(window.location);
@@ -338,10 +356,11 @@
         try {
             console.log("Initializing plotly chart...");
             const graphData = {{ graph_json|safe }};
-            console.log("Graph data retrieved:", typeof graphData);
             
             Plotly.newPlot('plotly-dashboard', graphData.data, graphData.layout, {responsive: true});
-            console.log("Initial plot rendered successfully");
+            
+            // Apply custom styling after plot is created
+            setTimeout(applyCustomStyles, 100);
         } catch (error) {
             console.error("Error rendering initial plot:", error);
         }
