@@ -6,16 +6,19 @@
 <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
 <style>
     .dashboard-container {
-        padding: 20px;
+        width: 100%;
+        padding: 0;
+        margin: 0;
     }
     .dashboard-header {
+        padding: 0 20px;
         margin-bottom: 20px;
     }
     .dashboard-controls {
         background-color: #f8f9fa;
         border-radius: 8px;
         padding: 20px;
-        margin-bottom: 20px;
+        margin: 0 20px 20px 20px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
     .dashboard-form {
@@ -55,30 +58,6 @@
     .custom-period-container {
         display: none;
     }
-    .info-panel {
-        background-color: #f8f9fa;
-        border-radius: 8px;
-        padding: 15px;
-        margin-top: 20px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-    .info-panel h3 {
-        margin-top: 0;
-        color: #4b5563;
-        font-size: 1.2rem;
-    }
-    .info-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-    .info-list li {
-        padding: 6px 0;
-        border-bottom: 1px solid #e5e7eb;
-    }
-    .info-list li:last-child {
-        border-bottom: none;
-    }
     .loading-overlay {
         position: fixed;
         top: 0;
@@ -105,40 +84,35 @@
         100% { transform: rotate(360deg); }
     }
     #plotly-dashboard {
-        width: 100%;
-        height: 800px;
+        width: 100vw;
+        height: calc(100vh - 200px);
         min-height: 600px;
-        margin-top: 20px;
-        border-radius: 8px;
+        padding: 0;
+        margin: 0;
+        border-radius: 0;
         overflow: hidden;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-    }
-    .about-section {
-        margin-top: 30px;
-        padding: 20px;
-        background-color: #f8f9fa;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-    .about-section h3 {
-        color: #4b5563;
-        margin-top: 0;
-    }
-    .period-formats {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 15px;
-        margin-top: 10px;
-    }
-    .period-format {
-        background-color: white;
-        padding: 10px 15px;
-        border-radius: 4px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
     /* Hide the title text that appears at the top of the Plotly chart */
     .gtitle {
         display: none !important;
+    }
+    .custom-period-help {
+        margin-top: 8px;
+        font-size: 0.8rem;
+        color: #666;
+    }
+    
+    /* Override container styles from the base template */
+    main {
+        width: 100%;
+        max-width: 100%;
+        padding: 0;
+        margin: 0;
+    }
+    
+    /* Make sure the chart container takes full width */
+    .js-plotly-plot, .plot-container {
+        width: 100% !important;
     }
 </style>
 {% endblock %}
@@ -177,7 +151,9 @@
             <div class="form-group custom-period-container" id="custom-period-container">
                 <label for="custom-period-input">Custom Period:</label>
                 <input type="text" id="custom-period-input" class="form-control" placeholder="e.g., 45d, 10wk, 15mo, 3y">
-                <small class="text-muted">Examples: 60d (days), 8wk (weeks), 15mo (months), 3y (years)</small>
+                <div class="custom-period-help">
+                    Examples: 60d (days), 8wk (weeks), 15mo (months), 3y (years)
+                </div>
             </div>
             
             <div class="form-group" style="flex: 0 0 auto;">
@@ -192,40 +168,6 @@
     </div>
     
     <div id="plotly-dashboard"></div>
-    
-    {% if info %}
-    <div class="info-panel">
-        <h3>Analysis Information</h3>
-        <ul class="info-list">
-            <li><strong>Analysis for:</strong> {{ info.ticker }}</li>
-            <li><strong>Period:</strong> {{ info.period }}</li>
-            <li><strong>Daily data points:</strong> {{ info.daily_points }}</li>
-            <li><strong>Weekly data points:</strong> {{ info.weekly_points }}</li>
-            <li><strong>Monthly data points:</strong> {{ info.monthly_points }}</li>
-            <li><strong>Date range:</strong> {{ info.start_date }} to {{ info.end_date }}</li>
-        </ul>
-    </div>
-    {% endif %}
-    
-    <div class="about-section">
-        <h3>About Custom Periods</h3>
-        <p>The custom period feature allows you to specify timeframes in the following formats:</p>
-        <div class="period-formats">
-            <div class="period-format">
-                <strong>Days:</strong> e.g., 45d, 90d, 180d
-            </div>
-            <div class="period-format">
-                <strong>Weeks:</strong> e.g., 10w, 26w, 52w
-            </div>
-            <div class="period-format">
-                <strong>Months:</strong> e.g., 18mo, 24mo, 36mo
-            </div>
-            <div class="period-format">
-                <strong>Years:</strong> e.g., 1y, 3y, 7y
-            </div>
-        </div>
-        <p style="margin-top: 15px;">This allows for precise control over the analysis timeframe beyond the preset options.</p>
-    </div>
 </div>
 {% endblock %}
 
@@ -237,6 +179,11 @@
             // Hide the main title from the Plotly chart as we already have a page title
             const titleElements = document.querySelectorAll('.gtitle');
             titleElements.forEach(el => el.style.display = 'none');
+            
+            // Make sure the plot container is full width
+            document.querySelectorAll('.js-plotly-plot, .plot-container').forEach(el => {
+                el.style.width = '100%';
+            });
         }
         
         // Show/hide custom period input
@@ -311,10 +258,18 @@
                 // Parse the graph JSON
                 const graphData = JSON.parse(data.graph);
                 
-                // Render the plot
-                console.log("Rendering plot with data");
+                // Update layout to ensure full width
+                if (graphData.layout) {
+                    graphData.layout.autosize = true;
+                    graphData.layout.width = window.innerWidth;
+                }
                 
-                Plotly.newPlot('plotly-dashboard', graphData.data, graphData.layout, {responsive: true});
+                // Render the plot
+                Plotly.newPlot('plotly-dashboard', graphData.data, graphData.layout, {
+                    responsive: true,
+                    useResizeHandler: true,
+                    autosize: true
+                });
                 
                 // Apply custom styling after plot is created
                 setTimeout(applyCustomStyles, 100);
@@ -324,22 +279,6 @@
                 newUrl.searchParams.set('ticker', ticker);
                 newUrl.searchParams.set('period', period);
                 window.history.pushState({}, '', newUrl);
-                
-                // Update the info panel
-                const info = data.info;
-                const infoPanel = document.querySelector('.info-panel');
-                
-                if (infoPanel) {
-                    const infoList = infoPanel.querySelector('.info-list');
-                    infoList.innerHTML = `
-                        <li><strong>Analysis for:</strong> ${info.ticker}</li>
-                        <li><strong>Period:</strong> ${info.period}</li>
-                        <li><strong>Daily data points:</strong> ${info.daily_points}</li>
-                        <li><strong>Weekly data points:</strong> ${info.weekly_points}</li>
-                        <li><strong>Monthly data points:</strong> ${info.monthly_points}</li>
-                        <li><strong>Date range:</strong> ${info.start_date} to ${info.end_date}</li>
-                    `;
-                }
             })
             .catch(error => {
                 console.error('Error:', error);
@@ -351,13 +290,30 @@
             });
         });
         
+        // Make chart responsive to window resize
+        window.addEventListener('resize', function() {
+            Plotly.relayout('plotly-dashboard', {
+                width: window.innerWidth
+            });
+        });
+        
         // Initialize the chart with the provided data
         {% if graph_json %}
         try {
             console.log("Initializing plotly chart...");
             const graphData = {{ graph_json|safe }};
             
-            Plotly.newPlot('plotly-dashboard', graphData.data, graphData.layout, {responsive: true});
+            // Update layout to ensure full width
+            if (graphData.layout) {
+                graphData.layout.autosize = true;
+                graphData.layout.width = window.innerWidth;
+            }
+            
+            Plotly.newPlot('plotly-dashboard', graphData.data, graphData.layout, {
+                responsive: true,
+                useResizeHandler: true,
+                autosize: true
+            });
             
             // Apply custom styling after plot is created
             setTimeout(applyCustomStyles, 100);
