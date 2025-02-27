@@ -16,9 +16,12 @@
     
     #analysis-result {
         width: 100%;
-        min-height: 600px;
-        margin-top: 20px;
+        min-height: 700px;
+        margin: 20px 0;
         display: none;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        overflow: hidden;
     }
     
     .loading-overlay {
@@ -50,7 +53,7 @@
         100% { transform: rotate(360deg); }
     }
     
-    /* Keep existing styles */
+    /* Ticker input autocomplete styling */
     .ticker-input-container {
         position: relative;
     }
@@ -114,8 +117,7 @@
     .result-navigation {
         display: flex;
         gap: 10px;
-        margin-top: 10px;
-        margin-bottom: 20px;
+        margin: 10px 0;
     }
     
     .nav-button {
@@ -124,6 +126,7 @@
         color: white;
         text-decoration: none;
         font-size: 14px;
+        display: inline-block;
     }
     
     .news-button {
@@ -132,6 +135,21 @@
     
     .news-button:hover {
         background-color: #059669;
+    }
+    
+    #result-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+    }
+    
+    .error-message {
+        color: #ef4444;
+        background-color: #fee2e2;
+        border: 1px solid #fecaca;
+        border-radius: 4px;
+        padding: 12px;
+        margin: 10px 0;
     }
 </style>
 {% endblock %}
@@ -351,41 +369,74 @@
                     throw new Error(data.error || 'Analysis failed');
                 }
                 
-                // Parse the Plotly figure JSON
-                const plotData = JSON.parse(data.plot);
-                
                 // Show results container
                 resultContainer.style.display = 'block';
                 analysisResult.style.display = 'block';
+                analysisResult.innerHTML = ''; // Clear any previous content
                 
                 // Add navigation buttons
                 resultNavigation.innerHTML = '';
                 const newsButton = document.createElement('a');
-                newsButton.href = `/news/search?symbol=${ticker}`;
+                newsButton.href = `/news/search?symbol=${data.ticker}`;
                 newsButton.className = 'nav-button news-button';
                 newsButton.textContent = 'View News';
                 resultNavigation.appendChild(newsButton);
                 
-                // Render the chart
-                Plotly.newPlot('analysis-result', plotData.data, plotData.layout, {
+                // Set explicit size for the plot container
+                analysisResult.style.width = '100%';
+                analysisResult.style.height = '800px';
+                
+                // Add additional config options for better rendering
+                const config = {
                     responsive: true,
-                    useResizeHandler: true,
-                    autosize: true
-                });
+                    displayModeBar: true,
+                    scrollZoom: true
+                };
+                
+                // Modify layout to ensure proper sizing
+                const layout = data.layout;
+                layout.autosize = true;
+                layout.width = window.innerWidth * 0.95; // 95% of window width
+                layout.height = 800;
+                layout.margin = { l: 50, r: 50, t: 80, b: 50 };
+                
+                // Render the chart
+                Plotly.newPlot('analysis-result', data.data, layout, config);
+                console.log('Chart rendered successfully');
                 
                 // Scroll to result
                 resultContainer.scrollIntoView({behavior: 'smooth'});
             })
             .catch(error => {
                 console.error('Analysis error:', error);
-                analysisResult.innerHTML = `<div style="color: red;">Error: ${error.message}</div>`;
+                
+                // Show error with better styling
                 resultContainer.style.display = 'block';
                 analysisResult.style.display = 'block';
+                analysisResult.innerHTML = `
+                    <div class="error-message">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+                
+                resultContainer.scrollIntoView({behavior: 'smooth'});
             })
             .finally(() => {
                 // Hide loading overlay
                 loadingOverlay.style.display = 'none';
             });
+        });
+        
+        // Handle window resize for responsive chart
+        window.addEventListener('resize', function() {
+            const analysisResultDiv = document.getElementById('analysis-result');
+            if (analysisResultDiv && analysisResultDiv.children.length > 0) {
+                Plotly.relayout('analysis-result', {
+                    width: window.innerWidth * 0.95,
+                    'xaxis.autorange': true,
+                    'yaxis.autorange': true
+                });
+            }
         });
     });
 </script>

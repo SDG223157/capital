@@ -460,19 +460,19 @@ def analyze_json():
             crossover_days=crossover_days
         )
         
-        # Convert Plotly figure to JSON
-        fig_json = fig.to_json()
+        # Instead of converting to JSON, use the plotly figure directly
+        # This returns data and layout as separate objects
+        plot_data = {
+            'data': fig.data,
+            'layout': fig.layout
+        }
         
-        # Return success response with figure JSON
+        # Return success response with figure data
         return jsonify({
             'success': True,
             'ticker': ticker_input,
-            'plot': fig_json,
-            'metadata': {
-                'end_date': end_date or datetime.now().strftime('%Y-%m-%d'),
-                'lookback_days': lookback_days,
-                'crossover_days': crossover_days
-            }
+            'data': [data.to_plotly_json() for data in plot_data['data']],
+            'layout': plot_data['layout'].to_plotly_json()
         })
         
     except Exception as e:
