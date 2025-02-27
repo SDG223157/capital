@@ -28,6 +28,7 @@ from sqlalchemy import inspect
 import traceback
 import threading
 import queue
+import json
 from app.utils.config.analyze_config import ANALYZE_CONFIG
 # from flask_login import current_user
 
@@ -460,19 +461,16 @@ def analyze_json():
             crossover_days=crossover_days
         )
         
-        # Instead of converting to JSON, use the plotly figure directly
-        # This returns data and layout as separate objects
-        plot_data = {
-            'data': fig.data,
-            'layout': fig.layout
-        }
+        # Convert the figure to JSON string and then back to Python objects
+        # This handles the NumPy array serialization correctly
+        fig_json = json.loads(fig.to_json())
         
         # Return success response with figure data
         return jsonify({
             'success': True,
             'ticker': ticker_input,
-            'data': [data.to_plotly_json() for data in plot_data['data']],
-            'layout': plot_data['layout'].to_plotly_json()
+            'data': fig_json['data'],
+            'layout': fig_json['layout']
         })
         
     except Exception as e:
@@ -482,7 +480,6 @@ def analyze_json():
             'success': False,
             'error': error_msg
         }), 500
-
 @bp.route('/quick_analyze_json', methods=['POST'])
 def quick_analyze_json():
     try:
@@ -500,19 +497,15 @@ def quick_analyze_json():
             crossover_days=ANALYZE_CONFIG['crossover_days']  # Default crossover
         )
         
-        # Convert Plotly figure to JSON
-        fig_json = fig.to_json()
+        # Convert the figure to JSON string and then back to Python objects
+        fig_json = json.loads(fig.to_json())
         
-        # Return success response with figure JSON
+        # Return success response with figure data
         return jsonify({
             'success': True,
             'ticker': ticker_input,
-            'plot': fig_json,
-            'metadata': {
-                'end_date': datetime.now().strftime('%Y-%m-%d'),
-                'lookback_days': ANALYZE_CONFIG['lookback_days'],
-                'crossover_days': ANALYZE_CONFIG['crossover_days']
-            }
+            'data': fig_json['data'],
+            'layout': fig_json['layout']
         })
         
     except Exception as e:
