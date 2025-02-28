@@ -4,31 +4,39 @@
 {{ super() }}
 <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
 <style>
-    /* Compact form styles */
+    /* Mobile-first responsive design */
     .form-container {
         background-color: #f8f9fa;
         border-radius: 8px;
         padding: 10px 15px;
         margin: 10px auto;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        max-width: 75%; /* 3/4 of page width */
-        width: 75%;
-        max-height: 20vh; /* 1/5 of viewport height */
-        overflow-y: auto;
+        width: 95%;
+        max-width: 1100px;
     }
     
-    /* Horizontal layout for form fields */
+    /* Responsive form layout */
     .form-fields {
         display: flex;
-        flex-wrap: nowrap;
-        justify-content: space-between;
-        gap: 15px;
+        flex-direction: column;
         width: 100%;
+        gap: 10px;
+    }
+    
+    /* For tablets and larger */
+    @media (min-width: 768px) {
+        .form-fields {
+            flex-direction: row;
+            flex-wrap: nowrap;
+        }
+        
+        .form-container {
+            width: 75%;
+        }
     }
     
     .form-group {
-        flex: 1;
-        min-width: 0; /* Allow flex items to shrink below content size */
+        width: 100%;
     }
     
     .form-group label {
@@ -40,27 +48,22 @@
     
     .form-control {
         width: 100%;
-        padding: 6px 8px;
+        padding: 10px 12px; /* Larger touch targets for mobile */
         border: 1px solid #ced4da;
         border-radius: 4px;
-        font-size: 0.9rem;
-    }
-    
-    /* Ensure the ticker input has more space */
-    .form-group:first-child {
-        flex: 1.5; /* Give more space to ticker field */
+        font-size: 16px; /* Prevent auto-zoom on iOS */
     }
     
     .analyze-button {
         width: 100%;
-        padding: 6px 12px;
+        padding: 12px; /* Larger touch target */
         background: linear-gradient(45deg, #22d3ee, #818cf8);
         color: white;
         border: none;
         border-radius: 4px;
         cursor: pointer;
         transition: all 0.3s;
-        font-size: 0.9rem;
+        font-size: 16px;
         margin-top: 10px;
     }
     
@@ -73,8 +76,8 @@
     }
     
     #analysis-result {
-        width: 100vw;  /* Full viewport width */
-        min-height: 80vh; /* 4/5 of viewport height */
+        width: 100%;
+        min-height: 70vh;
         margin: 0;
         padding: 0;
         display: none;
@@ -134,7 +137,7 @@
     .suggestions {
         position: absolute;
         width: 100%;
-        max-height: 150px;
+        max-height: 200px;
         overflow-y: auto;
         background-color: white;
         border: 1px solid #ddd;
@@ -142,11 +145,11 @@
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         z-index: 1000;
         display: none;
-        font-size: 0.85rem;
+        font-size: 16px;
     }
     
     .suggestion-item {
-        padding: 5px 8px;
+        padding: 10px 12px; /* Larger touch targets */
         cursor: pointer;
         display: flex;
         justify-content: space-between;
@@ -167,7 +170,6 @@
         margin-left: 10px;
         flex-grow: 1;
         text-align: right;
-        font-size: 0.8rem;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -177,16 +179,16 @@
     .result-navigation {
         display: flex;
         gap: 10px;
-        margin: 5px 0;
-        padding: 0 20px;
+        margin: 10px;
+        justify-content: center;
     }
     
     .nav-button {
-        padding: 5px 10px;
+        padding: 12px 15px; /* Larger touch target */
         border-radius: 4px;
         color: white;
         text-decoration: none;
-        font-size: 0.85rem;
+        font-size: 16px;
         display: inline-block;
     }
     
@@ -203,8 +205,9 @@
         background-color: #fee2e2;
         border: 1px solid #fecaca;
         border-radius: 4px;
-        padding: 12px;
-        margin: 10px 0;
+        padding: 15px;
+        margin: 15px;
+        font-size: 16px;
     }
 </style>
 {% endblock %}
@@ -212,7 +215,7 @@
 {% block content %}
 <div class="loading-overlay" id="loading-overlay">
     <div class="spinner"></div>
-    <p style="margin-top: 15px; font-size: 0.9rem;">Analyzing data, please wait...</p>
+    <p style="margin-top: 15px; font-size: 16px;">Analyzing data, please wait...</p>
 </div>
 
 <div class="form-container">
@@ -438,25 +441,47 @@
                 newsButton.textContent = 'View News';
                 resultNavigation.appendChild(newsButton);
                 
-                // Configure Plotly layout for full width
+                // Configure Plotly layout for responsive display
                 const layout = data.layout;
                 layout.autosize = true;
-                layout.width = window.innerWidth; // Full window width
-                layout.height = window.innerHeight * 0.8; // 80% of viewport height
-                layout.margin = { l: 40, r: 20, t: 60, b: 40 }; // Reduced margins
+                
+                // Set height based on device
+                const isMobile = window.innerWidth < 768;
+                layout.height = isMobile ? window.innerHeight * 0.6 : window.innerHeight * 0.8;
+                
+                // Adjust margins for mobile
+                layout.margin = isMobile 
+                    ? { l: 35, r: 10, t: 50, b: 35 } 
+                    : { l: 40, r: 20, t: 60, b: 40 };
+                
+                // Make font sizes responsive
+                layout.font = {
+                    size: isMobile ? 10 : 12
+                };
+                
+                // If on mobile, simplify the legend
+                if (isMobile) {
+                    layout.legend = {
+                        orientation: "h",
+                        yanchor: "bottom",
+                        y: 1.05,
+                        xanchor: "center",
+                        x: 0.5,
+                        font: { size: 10 }
+                    };
+                }
                 
                 // Add additional config options for better rendering
                 const config = {
                     responsive: true,
-                    displayModeBar: true,
+                    displayModeBar: !isMobile, // Hide on mobile
                     scrollZoom: true,
                     displaylogo: false, // Hide Plotly logo
-                    modeBarButtonsToRemove: ['lasso2d', 'select2d'], // Remove less used buttons
+                    modeBarButtonsToRemove: ['lasso2d', 'select2d', 'autoScale2d'], // Remove less used buttons
                     toImageButtonOptions: {
                         format: 'png',
                         filename: `${data.ticker}_analysis`,
-                        width: window.innerWidth,
-                        height: window.innerHeight * 0.8
+                        scale: 2 // Higher resolution for mobile
                     }
                 };
                 
@@ -491,9 +516,12 @@
         window.addEventListener('resize', function() {
             const analysisResultDiv = document.getElementById('analysis-result');
             if (analysisResultDiv && analysisResultDiv.children.length > 0) {
+                const isMobile = window.innerWidth < 768;
                 Plotly.relayout('analysis-result', {
                     width: window.innerWidth,
-                    height: window.innerHeight * 0.8, // 80% of viewport height
+                    height: isMobile ? window.innerHeight * 0.6 : window.innerHeight * 0.8,
+                    'font.size': isMobile ? 10 : 12,
+                    'legend.font.size': isMobile ? 10 : 12,
                     'xaxis.autorange': true,
                     'yaxis.autorange': true
                 });
