@@ -11,19 +11,24 @@
         padding: 10px 15px;
         margin: 10px auto;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        max-width: 900px;
-        /* Reduced height styling */
+        max-width: 75%; /* 3/4 of page width */
+        width: 75%;
         max-height: 20vh; /* 1/5 of viewport height */
         overflow-y: auto;
     }
     
+    /* Horizontal layout for form fields */
+    .form-fields {
+        display: flex;
+        flex-wrap: nowrap;
+        justify-content: space-between;
+        gap: 15px;
+        width: 100%;
+    }
+    
     .form-group {
-        margin-bottom: 8px;
-        display: inline-block;
-        vertical-align: top;
-        width: 24%;
-        padding-right: 10px;
-        box-sizing: border-box;
+        flex: 1;
+        min-width: 0; /* Allow flex items to shrink below content size */
     }
     
     .form-group label {
@@ -41,7 +46,13 @@
         font-size: 0.9rem;
     }
     
+    /* Ensure the ticker input has more space */
+    .form-group:first-child {
+        flex: 1.5; /* Give more space to ticker field */
+    }
+    
     .analyze-button {
+        width: 100%;
         padding: 6px 12px;
         background: linear-gradient(45deg, #22d3ee, #818cf8);
         color: white;
@@ -50,7 +61,7 @@
         cursor: pointer;
         transition: all 0.3s;
         font-size: 0.9rem;
-        margin-top: 24px;
+        margin-top: 10px;
     }
     
     /* Full width chart styles */
@@ -117,6 +128,7 @@
     /* Ticker input autocomplete styling */
     .ticker-input-container {
         position: relative;
+        width: 100%;
     }
     
     .suggestions {
@@ -147,6 +159,7 @@
     .suggestion-item .symbol {
         font-weight: bold;
         color: #3b82f6;
+        white-space: nowrap;
     }
     
     .suggestion-item .name {
@@ -155,6 +168,9 @@
         flex-grow: 1;
         text-align: right;
         font-size: 0.8rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
     
     /* Navigation section for links */
@@ -201,58 +217,59 @@
 
 <div class="form-container">
     <form id="analyze-form">
-        <div class="form-group">
-            <label for="ticker">Ticker Symbol:</label>
-            <div class="ticker-input-container">
-                <input 
-                    type="text" 
-                    id="ticker" 
-                    name="ticker" 
-                    placeholder="E.g., AAPL..."
-                    autocomplete="off"
-                    required
-                >
-                <div class="suggestions"></div>
+        <div class="form-fields">
+            <div class="form-group">
+                <label for="ticker">Ticker Symbol:</label>
+                <div class="ticker-input-container">
+                    <input 
+                        type="text" 
+                        id="ticker" 
+                        name="ticker" 
+                        placeholder="E.g., AAPL..."
+                        autocomplete="off"
+                        required
+                    >
+                    <div class="suggestions"></div>
+                </div>
             </div>
+
+            {% if current_user.is_authenticated %}
+                <div class="form-group">
+                    <label for="end_date">End Date:</label>
+                    <input 
+                        type="date" 
+                        id="end_date" 
+                        name="end_date"
+                        max="{{ max_date }}"
+                        value="{{ max_date }}" 
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="lookback_days">Lookback (days):</label>
+                    <input 
+                        type="number" 
+                        id="lookback_days" 
+                        name="lookback_days"
+                        min="30"
+                        max="10000"
+                        value="365"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="crossover_days">Crossover (days):</label>
+                    <input 
+                        type="number" 
+                        id="crossover_days" 
+                        name="crossover_days"
+                        min="30"
+                        max="1000"
+                        value="365"
+                    >
+                </div>
+            {% endif %}
         </div>
-
-        {% if current_user.is_authenticated %}
-            <div class="form-group">
-                <label for="end_date">End Date:</label>
-                <input 
-                    type="date" 
-                    id="end_date" 
-                    name="end_date"
-                    max="{{ max_date }}"
-                    value="{{ max_date }}" 
-                >
-            </div>
-
-            <div class="form-group">
-                <label for="lookback_days">Lookback (days):</label>
-                <input 
-                    type="number" 
-                    id="lookback_days" 
-                    name="lookback_days"
-                    min="30"
-                    max="10000"
-                    value="365"
-                >
-            </div>
-
-            <div class="form-group">
-                <label for="crossover_days">Crossover (days):</label>
-                <input 
-                    type="number" 
-                    id="crossover_days" 
-                    name="crossover_days"
-                    min="30"
-                    max="1000"
-                    value="365"
-                >
-            </div>
-        {% endif %}
-
         <button type="button" id="analyze-button" class="analyze-button">
             Analyze 
         </button>
@@ -327,8 +344,8 @@
                                     div.appendChild(nameSpan);
                                     
                                     div.addEventListener('click', function() {
-                                        // Set input value to both symbol and name
-                                        tickerInput.value = `${item.symbol}    ${formattedName}`;
+                                        // Set input value to just the symbol
+                                        tickerInput.value = item.symbol;
                                         suggestionsDiv.style.display = 'none';
                                     });
                                     
@@ -364,7 +381,7 @@
             }
         });
 
-        // New code for handling the analysis with embedded Plotly
+        // Analysis with embedded Plotly
         const analyzeButton = document.getElementById('analyze-button');
         const loadingOverlay = document.getElementById('loading-overlay');
         const analysisResult = document.getElementById('analysis-result');
