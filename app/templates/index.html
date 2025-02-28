@@ -4,14 +4,53 @@
 {{ super() }}
 <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
 <style>
+    /* Compact form styles */
     .form-container {
         background-color: #f8f9fa;
         border-radius: 8px;
-        padding: 20px;
-        margin-bottom: 20px;
+        padding: 10px 15px;
+        margin: 10px auto;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        max-width: 800px;
-        margin: 20px auto;
+        max-width: 900px;
+        /* Reduced height styling */
+        max-height: 20vh; /* 1/5 of viewport height */
+        overflow-y: auto;
+    }
+    
+    .form-group {
+        margin-bottom: 8px;
+        display: inline-block;
+        vertical-align: top;
+        width: 24%;
+        padding-right: 10px;
+        box-sizing: border-box;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 4px;
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 6px 8px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 0.9rem;
+    }
+    
+    .analyze-button {
+        padding: 6px 12px;
+        background: linear-gradient(45deg, #22d3ee, #818cf8);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-size: 0.9rem;
+        margin-top: 24px;
     }
     
     /* Full width chart styles */
@@ -24,7 +63,7 @@
     
     #analysis-result {
         width: 100vw;  /* Full viewport width */
-        min-height: 800px;
+        min-height: 80vh; /* 4/5 of viewport height */
         margin: 0;
         padding: 0;
         display: none;
@@ -62,10 +101,10 @@
     }
     
     .spinner {
-        width: 50px;
-        height: 50px;
-        border: 5px solid #f3f3f3;
-        border-top: 5px solid #22d3ee;
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #22d3ee;
         border-radius: 50%;
         animation: spin 1s linear infinite;
     }
@@ -83,7 +122,7 @@
     .suggestions {
         position: absolute;
         width: 100%;
-        max-height: 200px;
+        max-height: 150px;
         overflow-y: auto;
         background-color: white;
         border: 1px solid #ddd;
@@ -91,10 +130,11 @@
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         z-index: 1000;
         display: none;
+        font-size: 0.85rem;
     }
     
     .suggestion-item {
-        padding: 8px 12px;
+        padding: 5px 8px;
         cursor: pointer;
         display: flex;
         justify-content: space-between;
@@ -114,41 +154,23 @@
         margin-left: 10px;
         flex-grow: 1;
         text-align: right;
-    }
-    
-    .form-group {
-        margin-bottom: 15px;
-    }
-    
-    .analyze-button {
-        padding: 8px 16px;
-        background: linear-gradient(45deg, #22d3ee, #818cf8);
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: all 0.3s;
-    }
-    
-    .analyze-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        font-size: 0.8rem;
     }
     
     /* Navigation section for links */
     .result-navigation {
         display: flex;
         gap: 10px;
-        margin: 10px 0;
+        margin: 5px 0;
         padding: 0 20px;
     }
     
     .nav-button {
-        padding: 6px 12px;
+        padding: 5px 10px;
         border-radius: 4px;
         color: white;
         text-decoration: none;
-        font-size: 14px;
+        font-size: 0.85rem;
         display: inline-block;
     }
     
@@ -174,7 +196,7 @@
 {% block content %}
 <div class="loading-overlay" id="loading-overlay">
     <div class="spinner"></div>
-    <p style="margin-top: 20px;">Analyzing data, please wait...</p>
+    <p style="margin-top: 15px; font-size: 0.9rem;">Analyzing data, please wait...</p>
 </div>
 
 <div class="form-container">
@@ -186,7 +208,7 @@
                     type="text" 
                     id="ticker" 
                     name="ticker" 
-                    placeholder="Enter symbol e.g. AAPL..."
+                    placeholder="E.g., AAPL..."
                     autocomplete="off"
                     required
                 >
@@ -207,7 +229,7 @@
             </div>
 
             <div class="form-group">
-                <label for="lookback_days">Lookback Period (days):</label>
+                <label for="lookback_days">Lookback (days):</label>
                 <input 
                     type="number" 
                     id="lookback_days" 
@@ -219,7 +241,7 @@
             </div>
 
             <div class="form-group">
-                <label for="crossover_days">Crossover Period (days):</label>
+                <label for="crossover_days">Crossover (days):</label>
                 <input 
                     type="number" 
                     id="crossover_days" 
@@ -403,7 +425,7 @@
                 const layout = data.layout;
                 layout.autosize = true;
                 layout.width = window.innerWidth; // Full window width
-                layout.height = 800;
+                layout.height = window.innerHeight * 0.8; // 80% of viewport height
                 layout.margin = { l: 40, r: 20, t: 60, b: 40 }; // Reduced margins
                 
                 // Add additional config options for better rendering
@@ -417,7 +439,7 @@
                         format: 'png',
                         filename: `${data.ticker}_analysis`,
                         width: window.innerWidth,
-                        height: 800
+                        height: window.innerHeight * 0.8
                     }
                 };
                 
@@ -454,7 +476,7 @@
             if (analysisResultDiv && analysisResultDiv.children.length > 0) {
                 Plotly.relayout('analysis-result', {
                     width: window.innerWidth,
-                    height: 800,
+                    height: window.innerHeight * 0.8, // 80% of viewport height
                     'xaxis.autorange': true,
                     'yaxis.autorange': true
                 });
