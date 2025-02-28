@@ -14,14 +14,36 @@
         margin: 20px auto;
     }
     
+    /* Full width chart styles */
+    #result-container {
+        width: 100%; 
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+    
     #analysis-result {
-        width: 100%;
-        min-height: 700px;
-        margin: 20px 0;
+        width: 100vw;  /* Full viewport width */
+        min-height: 800px;
+        margin: 0;
+        padding: 0;
         display: none;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
+        border: none;
         overflow: hidden;
+    }
+    
+    /* Override any container width constraints */
+    main {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        overflow-x: hidden !important;
+    }
+    
+    /* Make sure Plotly elements take full width */
+    .js-plotly-plot, .plot-container {
+        width: 100% !important;
     }
     
     .loading-overlay {
@@ -118,6 +140,7 @@
         display: flex;
         gap: 10px;
         margin: 10px 0;
+        padding: 0 20px;
     }
     
     .nav-button {
@@ -135,12 +158,6 @@
     
     .news-button:hover {
         background-color: #059669;
-    }
-    
-    #result-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 0 20px;
     }
     
     .error-message {
@@ -382,23 +399,27 @@
                 newsButton.textContent = 'View News';
                 resultNavigation.appendChild(newsButton);
                 
-                // Set explicit size for the plot container
-                analysisResult.style.width = '100%';
-                analysisResult.style.height = '800px';
+                // Configure Plotly layout for full width
+                const layout = data.layout;
+                layout.autosize = true;
+                layout.width = window.innerWidth; // Full window width
+                layout.height = 800;
+                layout.margin = { l: 40, r: 20, t: 60, b: 40 }; // Reduced margins
                 
                 // Add additional config options for better rendering
                 const config = {
                     responsive: true,
                     displayModeBar: true,
-                    scrollZoom: true
+                    scrollZoom: true,
+                    displaylogo: false, // Hide Plotly logo
+                    modeBarButtonsToRemove: ['lasso2d', 'select2d'], // Remove less used buttons
+                    toImageButtonOptions: {
+                        format: 'png',
+                        filename: `${data.ticker}_analysis`,
+                        width: window.innerWidth,
+                        height: 800
+                    }
                 };
-                
-                // Modify layout to ensure proper sizing
-                const layout = data.layout;
-                layout.autosize = true;
-                layout.width = window.innerWidth * 0.95; // 95% of window width
-                layout.height = 800;
-                layout.margin = { l: 50, r: 50, t: 80, b: 50 };
                 
                 // Render the chart
                 Plotly.newPlot('analysis-result', data.data, layout, config);
@@ -432,7 +453,8 @@
             const analysisResultDiv = document.getElementById('analysis-result');
             if (analysisResultDiv && analysisResultDiv.children.length > 0) {
                 Plotly.relayout('analysis-result', {
-                    width: window.innerWidth * 0.95,
+                    width: window.innerWidth,
+                    height: 800,
                     'xaxis.autorange': true,
                     'yaxis.autorange': true
                 });
