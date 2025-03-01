@@ -222,6 +222,96 @@
            const articlesContainer = document.getElementById('articlesContainer');
            const resultsCount = document.getElementById('resultsCount');
 
+           function convertYahooToTradingView(symbol) {
+               // Remove any whitespace and convert to uppercase
+               symbol = symbol.trim().toUpperCase();
+
+               // Handle crypto, commodities and special cases first
+               switch (symbol) {
+                   // Cryptocurrencies
+                   case 'BTC-USD':
+                   case 'BTCUSD':
+                       return 'BITSTAMP:BTCUSD';
+                   case 'ETH-USD':
+                   case 'ETHUSD':
+                       return 'BITSTAMP:ETHUSD';
+                       
+                   // Gold
+                   case 'GC=F':
+                   case 'XAUUSD':
+                   case 'GOLD':
+                       return 'TVC:GOLD';
+                       
+                   // Silver
+                   case 'SI=F':
+                   case 'XAGUSD':
+                   case 'SILVER':
+                       return 'TVC:SILVER';
+                       
+                   // Oil
+                   case 'CL=F':
+                   case 'USOIL':
+                   case 'OIL':
+                       return 'TVC:USOIL';
+                   case 'BZ=F':
+                   case 'UKOIL':
+                       return 'TVC:UKOIL';
+               }
+
+               // Handle existing Yahoo Finance formats
+               if (symbol.endsWith('.HK')) {
+                   // Convert 0700.HK to HKEX:700
+                   return `HKEX:${symbol.replace('.HK', '').replace(/^0+/, '')}`;
+               } else if (symbol.endsWith('.SS')) {
+                   // Convert 600000.SS to SSE:600000
+                   return `SSE:${symbol.replace('.SS', '')}`;
+               } else if (symbol.endsWith('.SZ')) {
+                   // Convert 000001.SZ to SZSE:000001
+                   return `SZSE:${symbol.replace('.SZ', '')}`;
+               } else if (symbol.endsWith('.T')) {
+                   // Convert 7203.T to TSE:7203
+                   return `TSE:${symbol.replace('.T', '')}`;
+               } else if (symbol.endsWith('.L')) {
+                   // Convert BP.L to LSE:BP
+                   return `LSE:${symbol.replace('.L', '')}`;
+               } else if (symbol.endsWith('=F')) {
+                   // Handle futures
+                   const base = symbol.replace('=F', '');
+                   switch (base) {
+                       case 'GC': return 'COMEX:GC';
+                       case 'SI': return 'COMEX:SI';
+                       case 'HG': return 'COMEX:HG';
+                       case 'CL': return 'NYMEX:CL';
+                       case 'NG': return 'NYMEX:NG';
+                       case 'BZ': return 'NYMEX:BZ';
+                       default: return `NYMEX:${base}`;
+                   }
+               } else if (symbol.endsWith('=X')) {
+                   // Handle forex pairs
+                   return `FOREXCOM:${symbol.replace('=X', '')}`;
+               } else if (symbol.startsWith('^')) {
+                   // Handle indices
+                   switch (symbol) {
+                       case '^GSPC': return 'SP:SPX';
+                       case '^DJI': return 'DJ:DJI';
+                       case '^IXIC': return 'NASDAQ:IXIC';
+                       case '^HSI': return 'HKEX:HSI';
+                       case '^N225': return 'TSE:NI225';
+                       case '^FTSE': return 'LSE:FTSE';
+                       default: return symbol.replace('^', 'INDEX:');
+                   }
+               } else if (/^[A-Z]+$/.test(symbol)) {
+                   // For plain US stock symbols, default to NASDAQ for common tech stocks
+                   const nasdaqStocks = new Set([
+                       'AAPL', 'MSFT', 'AMZN', 'GOOGL', 'GOOG', 'META', 'NVDA', 'TSLA',
+                       'ADBE', 'NFLX', 'CSCO', 'INTC', 'CMCSA', 'PEP', 'COST', 'AVGO'
+                   ]);
+                   return nasdaqStocks.has(symbol) ? `NASDAQ:${symbol}` : `NYSE:${symbol}`;
+               }
+               
+               return symbol; // Return as-is if no conversion needed
+           }
+
            searchForm.addEventListener('submit', async (e) => {
                e.preventDefault();
                
@@ -233,9 +323,12 @@
 
                // Convert hyphen to dot in stock symbols
                symbol = symbol.replace(/-/g, '.');
+               
+               // Convert Yahoo Finance symbol to TradingView format
+               const tradingViewSymbol = convertYahooToTradingView(symbol);
 
                try {
-                   const params = new URLSearchParams({ symbol });
+                   const params = new URLSearchParams({ symbol: tradingViewSymbol });
                    window.location.href = `/news/search?${params.toString()}`;
                } catch (error) {
                    console.error('Search error:', error);
