@@ -1096,3 +1096,17 @@ def clear_all_content():
         db.session.rollback()
         logger.error(f"Error clearing all content: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@bp.route('/articles/delete/<int:article_id>', methods=['POST'])
+@admin_required
+def delete_article(article_id):
+    """Delete an article"""
+    try:
+        article = NewsArticle.query.get_or_404(article_id)
+        db.session.delete(article)
+        db.session.commit()
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error deleting article {article_id}: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
