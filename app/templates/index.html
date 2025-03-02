@@ -88,9 +88,22 @@
         font-size: 16px; /* Prevent auto-zoom on iOS */
     }
     
+    .button-container {
+        width: 100%;
+        margin-top: 10px;
+        display: grid;
+        gap: 10px;
+        grid-template-columns: 1fr;  /* Single column by default */
+    }
+
+    /* When showing both buttons */
+    .button-container.has-news {
+        grid-template-columns: 1fr 1fr;  /* Two equal columns */
+    }
+
     .analyze-button {
         width: 100%;
-        padding: 12px; /* Larger touch target */
+        padding: 12px;
         background: linear-gradient(45deg, #22d3ee, #818cf8);
         color: white;
         border: none;
@@ -98,7 +111,25 @@
         cursor: pointer;
         transition: all 0.3s;
         font-size: 16px;
-        margin-top: 10px;
+    }
+
+    .news-button {
+        width: 100%;
+        padding: 12px;
+        background: linear-gradient(45deg, #10b981, #059669);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-size: 16px;
+        text-decoration: none;
+        text-align: center;
+        display: none; /* Hidden by default */
+    }
+
+    .news-button:hover {
+        background: linear-gradient(45deg, #059669, #047857);
     }
     
     /* Full width chart styles */
@@ -226,14 +257,6 @@
         display: inline-block;
     }
     
-    .news-button {
-        background-color: #10b981;
-    }
-    
-    .news-button:hover {
-        background-color: #059669;
-    }
-    
     .error-message {
         color: #ef4444;
         background-color: #fee2e2;
@@ -313,9 +336,14 @@
             </div>
             {% endif %}
         </div>
-        <button type="button" id="analyze-button" class="analyze-button">
-            Analyze 
-        </button>
+        <div class="button-container" id="button-container">
+            <button type="button" id="analyze-button" class="analyze-button">
+                Analyze
+            </button>
+            <a href="#" id="news-button" class="news-button" style="display: none;">
+                View News
+            </a>
+        </div>
     </form>
 </div>
 
@@ -473,13 +501,12 @@
                 analysisResult.style.display = 'block';
                 analysisResult.innerHTML = ''; // Clear any previous content
                 
-                // Add navigation buttons
-                resultNavigation.innerHTML = '';
-                const newsButton = document.createElement('a');
+                // Show and update news button
+                const buttonContainer = document.getElementById('button-container');
+                const newsButton = document.getElementById('news-button');
+                buttonContainer.classList.add('has-news');
+                newsButton.style.display = 'block';
                 newsButton.href = `/news/search?symbol=${data.ticker}`;
-                newsButton.className = 'nav-button news-button';
-                newsButton.textContent = 'View News';
-                resultNavigation.appendChild(newsButton);
                 
                 // Configure Plotly layout for responsive display
                 const layout = data.layout;
@@ -534,6 +561,11 @@
             })
             .catch(error => {
                 console.error('Analysis error:', error);
+                // In case of error, ensure news button is hidden
+                const buttonContainer = document.getElementById('button-container');
+                const newsButton = document.getElementById('news-button');
+                buttonContainer.classList.remove('has-news');
+                newsButton.style.display = 'none';
                 
                 // Show error with better styling
                 resultContainer.style.display = 'block';
