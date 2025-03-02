@@ -17,21 +17,25 @@
     
     /* Responsive form layout */
     .form-fields {
-        display: flex;
-        flex-direction: column;
-        width: 100%;
+        display: grid;
         gap: 10px;
+        width: 100%;
     }
     
-    /* For tablets and larger */
+    /* Mobile-first: stack vertically */
     @media (min-width: 768px) {
         .form-fields {
-            flex-direction: row;
-            flex-wrap: nowrap;
+            grid-template-columns: 1fr 1fr; /* Two columns on tablet */
         }
         
-        .form-container {
-            width: 75%;
+        .ticker-group {
+            grid-column: 1; /* Take first column */
+        }
+        
+        .other-inputs {
+            grid-column: 2; /* Take second column */
+            display: grid;
+            gap: 10px;
         }
     }
     
@@ -221,22 +225,27 @@
 <div class="form-container">
     <form id="analyze-form">
         <div class="form-fields">
-            <div class="form-group">
-                <label for="ticker">Ticker Symbol:</label>
-                <div class="ticker-input-container">
-                    <input 
-                        type="text" 
-                        id="ticker" 
-                        name="ticker" 
-                        placeholder="E.g., AAPL..."
-                        autocomplete="off"
-                        required
-                    >
-                    <div class="suggestions"></div>
+            <!-- Ticker input takes half width -->
+            <div class="ticker-group">
+                <div class="form-group">
+                    <label for="ticker">Ticker Symbol:</label>
+                    <div class="ticker-input-container">
+                        <input 
+                            type="text" 
+                            id="ticker" 
+                            name="ticker" 
+                            placeholder="E.g., AAPL..."
+                            autocomplete="off"
+                            required
+                        >
+                        <div class="suggestions"></div>
+                    </div>
                 </div>
             </div>
 
+            <!-- Other inputs share the other half -->
             {% if current_user.is_authenticated %}
+            <div class="other-inputs">
                 <div class="form-group">
                     <label for="end_date">End Date:</label>
                     <input 
@@ -271,6 +280,7 @@
                         value="365"
                     >
                 </div>
+            </div>
             {% endif %}
         </div>
         <button type="button" id="analyze-button" class="analyze-button">
