@@ -94,12 +94,12 @@
         margin-top: 10px;
         display: grid;
         gap: 10px;
-        grid-template-columns: 1fr;  /* Single column by default */
+        grid-template-columns: 1fr;
+        align-items: stretch;  /* Ensure buttons stretch to same height */
     }
 
-    /* When showing both buttons */
     .button-container.has-news {
-        grid-template-columns: 1fr 1fr;  /* Two equal columns */
+        grid-template-columns: 1fr 1fr;
     }
 
     /* Common button styles */
@@ -113,12 +113,15 @@
         cursor: pointer;
         transition: all 0.3s;
         font-size: 16px;
-        display: flex;  /* Use flexbox for vertical centering */
+        display: inline-flex;  /* Change to inline-flex */
         align-items: center;
         justify-content: center;
-        line-height: 1;  /* Prevent line height from affecting button size */
-        text-decoration: none;  /* Remove underline from anchor */
-        box-sizing: border-box;  /* Include padding in height calculation */
+        line-height: 1;
+        text-decoration: none;
+        box-sizing: border-box;
+        margin: 0;  /* Remove any default margins */
+        appearance: none;  /* Remove default button styling */
+        -webkit-appearance: none;  /* For Safari */
     }
 
     .analyze-button {
@@ -346,10 +349,10 @@
         </div>
         <div class="button-container" id="button-container">
             <button type="button" id="analyze-button" class="analyze-button">
-                Analyze
+                <span>Analyze</span>
             </button>
-            <a href="#" id="news-button" class="news-button" style="display: none;">
-                View News
+            <a href="#" id="news-button" class="news-button" role="button">
+                <span>View News</span>
             </a>
         </div>
     </form>
