@@ -88,6 +88,7 @@
         font-size: 16px; /* Prevent auto-zoom on iOS */
     }
     
+    /* Update button styles to ensure consistent sizing */
     .button-container {
         width: 100%;
         margin-top: 10px;
@@ -101,35 +102,42 @@
         grid-template-columns: 1fr 1fr;  /* Two equal columns */
     }
 
-    .analyze-button {
+    /* Common button styles */
+    .analyze-button,
+    .news-button {
         width: 100%;
-        padding: 12px;
-        background: linear-gradient(45deg, #22d3ee, #818cf8);
-        color: white;
+        height: 44px;  /* Fixed height for both buttons */
+        padding: 0 12px;  /* Horizontal padding only */
         border: none;
         border-radius: 4px;
         cursor: pointer;
         transition: all 0.3s;
         font-size: 16px;
+        display: flex;  /* Use flexbox for vertical centering */
+        align-items: center;
+        justify-content: center;
+        line-height: 1;  /* Prevent line height from affecting button size */
+        text-decoration: none;  /* Remove underline from anchor */
+        box-sizing: border-box;  /* Include padding in height calculation */
+    }
+
+    .analyze-button {
+        background: linear-gradient(45deg, #22d3ee, #818cf8);
+        color: white;
     }
 
     .news-button {
-        width: 100%;
-        padding: 12px;
         background: linear-gradient(45deg, #10b981, #059669);
         color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: all 0.3s;
-        font-size: 16px;
-        text-decoration: none;
-        text-align: center;
         display: none; /* Hidden by default */
     }
 
     .news-button:hover {
         background: linear-gradient(45deg, #059669, #047857);
+    }
+
+    .analyze-button:hover {
+        background: linear-gradient(45deg, #0ea5e9, #6366f1);
     }
     
     /* Full width chart styles */
