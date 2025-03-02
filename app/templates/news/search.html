@@ -417,42 +417,45 @@
            analyzeText.classList.add('hidden');
            analyzingText.classList.remove('hidden');
            button.disabled = true;
-           
+
            // Convert TradingView symbol to Yahoo format
            const yahooSymbol = convertTradingViewToYahoo(symbol);
-           
-           if (isMobileDevice()) {
-               // For mobile devices, open in new tab
-               const analysisWindow = window.open('', '_blank');
-               analysisWindow.document.write('Loading analysis...');
-               
-               fetch('/analyze', {
-                   method: 'POST',
-                   body: new FormData().append('ticker', yahooSymbol)
-               })
-               .then(response => {
-                   if (!response.ok) throw new Error('Analysis failed');
-                   return response.text();
-               })
-               .then(html => {
-                   analysisWindow.document.write(html);
-                   analysisWindow.document.close();
-               })
-               .catch(error => {
-                   console.error('Analysis error:', error);
-                   analysisWindow.close();
-                   alert('Failed to analyze stock: ' + error.message);
-               });
 
-               // Reset button state immediately after opening new tab
-               setTimeout(() => {
-                   analyzeText.classList.remove('hidden');
-                   analyzingText.classList.add('hidden');
-                   button.disabled = false;
-               }, 1000); // Short delay to show loading state
-           } else {
-               // Desktop modal code...
-           }
+           // Create form data with converted symbol
+           const formData = new FormData();
+           formData.append('ticker', yahooSymbol);
+
+           // Open the analysis in a new window/tab
+           const analysisWindow = window.open('', '_blank');
+           analysisWindow.document.write('Loading analysis...');
+
+           // Reset button state immediately after opening new tab
+           setTimeout(() => {
+               analyzeText.classList.remove('hidden');
+               analyzingText.classList.add('hidden');
+               button.disabled = false;
+           }, 1000); // Short delay to show loading state
+
+           // Submit POST request to analyze endpoint
+           fetch('/analyze', {
+               method: 'POST',
+               body: formData
+           })
+           .then(response => {
+               if (response.ok) {
+                   return response.text();
+               }
+               throw new Error('Network response was not ok');
+           })
+           .then(html => {
+               analysisWindow.document.write(html);
+               analysisWindow.document.close();
+           })
+           .catch(error => {
+               console.error('Error:', error);
+               analysisWindow.close();
+               alert('Failed to analyze stock: ' + error.message);
+           });
        }
    </script>
 </body>
