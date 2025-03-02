@@ -43,6 +43,63 @@
        .markdown-content h4 {
            @apply font-medium text-gray-700 mt-4 mb-2 text-base;
        }
+       /* Article layout container */
+       .article-layout {
+           display: grid;
+           gap: 1.5rem;
+           margin: 1rem 0;
+       }
+
+       /* Mobile-first: single column */
+       @media (min-width: 1024px) {
+           .article-layout {
+               grid-template-columns: 3fr 2fr; /* 60% left, 40% right */
+           }
+       }
+
+       /* Article main content */
+       .article-main {
+           background-color: white;
+           border-radius: 0.5rem;
+           padding: 1.25rem;
+           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+       }
+
+       /* Article sidebar */
+       .article-insights {
+           background-color: white;
+           border-radius: 0.5rem;
+           padding: 1.25rem;
+           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+       }
+
+       /* Sticky sidebar on desktop */
+       @media (min-width: 1024px) {
+           .article-insights {
+               position: sticky;
+               top: 1rem;
+           }
+       }
+
+       /* Badge styles */
+       .content-badge {
+           display: inline-block;
+           padding: 0.5rem 1rem;
+           border-radius: 9999px;
+           font-size: 0.875rem;
+           font-weight: 500;
+           margin-bottom: 1rem;
+       }
+
+       .badge-summary {
+           background-color: #e0f2fe;
+           color: #0369a1;
+       }
+
+       .badge-insights {
+           background-color: #f3e8ff;
+           color: #7e22ce;
+       }
    </style>
 </head>
 <body class="bg-gray-50">
@@ -122,6 +179,7 @@
            {% if articles and articles.items %}
                {% for article in articles.items %}
                <div class="border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                   <!-- Article header -->
                    <a href="{{ article.url }}" target="_blank" 
                       class="block text-blue-500 text-lg font-medium mb-2 hover:text-blue-600">
                        {{ article.title }}
@@ -144,40 +202,41 @@
                        {% endif %}
                    </div>
 
-                   <div class="article-content mb-4">
-                       {% if article.ai_summary %}
-                       <div class="ai-summary">
-                           <span class="px-4 py-2 mt-4 mb-4 rounded-full text-sm font-medium bg-blue-100 text-blue-800 inline-block">
-                               AI Summary
-                           </span>
-                           <div class="markdown-content">
-                               {{ article.ai_summary|markdown|safe }}
+                   <!-- Two-column layout -->
+                   <div class="article-layout">
+                       <!-- Left column: Main content -->
+                       <div class="article-main">
+                           {% if article.ai_summary %}
+                           <div class="mb-6">
+                               <span class="content-badge badge-summary">AI Summary</span>
+                               <div class="markdown-content">
+                                   {{ article.ai_summary|markdown|safe }}
+                               </div>
                            </div>
+                           {% endif %}
+
+                           {% if article.ai_sentiment_rating is not none %}
+                           <div class="text-sm text-gray-500 mt-4 border-t pt-4">
+                               <span class="px-4 py-2 mb-4 rounded-full text-sm font-medium 
+                                   {% if article.ai_sentiment_rating > 50 %}bg-green-100 text-green-800
+                                   {% elif article.ai_sentiment_rating < -50 %}bg-red-100 text-red-800
+                                   {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                                   AI Sentiment Rating: {{ article.ai_sentiment_rating }}
+                               </span>
+                           </div>
+                           {% endif %}
                        </div>
-                       {% endif %}
-                       
+
+                       <!-- Right column: AI Insights -->
                        {% if article.ai_insights %}
-                       <div class="ai-insights">
-                           <span class="px-4 py-2 mt-4 mb-4 rounded-full text-sm font-medium bg-purple-100 text-purple-800 inline-block">
-                               AI Insights
-                           </span>
+                       <div class="article-insights">
+                           <span class="content-badge badge-insights">AI Insights</span>
                            <div class="markdown-content">
                                {{ article.ai_insights|markdown|safe }}
                            </div>
                        </div>
                        {% endif %}
                    </div>
-
-                   {% if article.ai_sentiment_rating is not none %}
-                   <div class="text-sm text-gray-500 mt-4 border-t pt-4">
-                       <span class="px-4 py-2 mb-4 rounded-full text-sm font-medium 
-                           {% if article.ai_sentiment_rating > 50 %}bg-green-100 text-green-800
-                           {% elif article.ai_sentiment_rating < -50 %}bg-red-100 text-red-800
-                           {% else %}bg-yellow-100 text-yellow-800{% endif %}">
-                           AI Sentiment Rating: {{ article.ai_sentiment_rating }}
-                       </span>
-                   </div>
-                   {% endif %}
                </div>
                {% endfor %}
 
