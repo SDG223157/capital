@@ -113,7 +113,7 @@
         cursor: pointer;
         transition: all 0.3s;
         font-size: 16px;
-        display: inline-flex;  /* Change to inline-flex */
+        display: flex;  /* Use flex */
         align-items: center;
         justify-content: center;
         line-height: 1;
@@ -128,8 +128,9 @@
     /* Ensure the span inside buttons takes full width */
     .analyze-button span,
     .news-button span {
-        display: inline-block;
-        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         text-align: center;
     }
 
