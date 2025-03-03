@@ -552,8 +552,13 @@
                         case 'GC=F': return 'COMEX:GC';
                         case 'SI=F': return 'COMEX:SI';
                         case 'HG=F': return 'COMEX:HG';
-                        case 'CL=F': return 'NYMEX:CL';
-                        case 'BZ=F': return 'TVC:UKOIL';
+                        case 'CL=F':
+                        case 'USOIL':
+                        case 'OIL':
+                            return 'NYMEX:CL1!';
+                        case 'BZ=F':
+                        case 'UKOIL':
+                            return 'TVC:UKOIL';
                         case 'NG=F': return 'NYMEX:NG';
                         
                         // Forex
@@ -565,10 +570,15 @@
                         // TradingView specific
                         case 'XAUUSD':
                         case 'GOLD': return 'TVC:GOLD';
-                        case 'USOIL':
-                        case 'OIL': return 'TVC:USOIL';
                         case 'SILVER': return 'TVC:SILVER';
                         case 'DXY': return 'TVC:DXY';
+                        
+                        // US Dollar Index
+                        case 'DX-Y.NYB':
+                        case 'DXY':
+                        case 'USDX':
+                        case 'USD':
+                            return 'TVC:DXY';  // This is the main US Dollar Index symbol in DEFAULT_SYMBOLS
                     }
                     
                     // Handle exchange suffixes
