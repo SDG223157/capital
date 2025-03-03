@@ -524,12 +524,85 @@
                 analysisResult.style.display = 'block';
                 analysisResult.innerHTML = ''; // Clear any previous content
                 
+                // Convert Yahoo Finance symbol to TradingView format
+                function convertYahooToTradingView(symbol) {
+                    // Remove any whitespace and convert to uppercase
+                    symbol = symbol.trim().toUpperCase();
+                    
+                    // Handle special cases first
+                    switch (symbol) {
+                        // Cryptocurrencies
+                        case 'BTC-USD':
+                        case 'BTCUSD':
+                            return 'BITSTAMP:BTCUSD';
+                        case 'ETH-USD':
+                        case 'ETHUSD':
+                            return 'BITSTAMP:ETHUSD';
+                        
+                        // Indices
+                        case '^GSPC': return 'SP:SPX';
+                        case '^DJI': return 'DJ:DJI';
+                        case '^IXIC': return 'NASDAQ:IXIC';
+                        case '^HSI': return 'HKEX:HSI';
+                        case '^N225': return 'TSE:NI225';
+                        case '^FTSE': return 'LSE:FTSE';
+                        case '^NYA': return 'NYSE:NYA';
+                        
+                        // Commodities
+                        case 'GC=F': return 'COMEX:GC';
+                        case 'SI=F': return 'COMEX:SI';
+                        case 'HG=F': return 'COMEX:HG';
+                        case 'CL=F': return 'NYMEX:CL';
+                        case 'BZ=F': return 'TVC:UKOIL';
+                        case 'NG=F': return 'NYMEX:NG';
+                        
+                        // Forex
+                        case 'EURUSD=X': return 'FOREXCOM:EURUSD';
+                        case 'GBPUSD=X': return 'FOREXCOM:GBPUSD';
+                        case 'USDJPY=X': return 'FOREXCOM:USDJPY';
+                        case 'USDCNH=X': return 'FOREXCOM:USDCNH';
+                        
+                        // TradingView specific
+                        case 'XAUUSD':
+                        case 'GOLD': return 'TVC:GOLD';
+                        case 'USOIL':
+                        case 'OIL': return 'TVC:USOIL';
+                        case 'SILVER': return 'TVC:SILVER';
+                        case 'DXY': return 'TVC:DXY';
+                    }
+                    
+                    // Handle exchange suffixes
+                    if (symbol.endsWith('.HK')) {
+                        return `HKEX:${symbol.replace('.HK', '').replace(/^0+/, '')}`;
+                    } else if (symbol.endsWith('.SS')) {
+                        return `SSE:${symbol.replace('.SS', '')}`;
+                    } else if (symbol.endsWith('.SZ')) {
+                        return `SZSE:${symbol.replace('.SZ', '')}`;
+                    } else if (symbol.endsWith('.T')) {
+                        return `TSE:${symbol.replace('.T', '')}`;
+                    } else if (symbol.endsWith('.L')) {
+                        return `LSE:${symbol.replace('.L', '')}`;
+                    }
+                    
+                    // For US stocks, use NASDAQ/NYSE prefix
+                    if (/^[A-Z]+$/.test(symbol)) {
+                        const nasdaqStocks = new Set([
+                            'AAPL', 'MSFT', 'AMZN', 'GOOGL', 'GOOG', 'META', 'NVDA', 'TSLA',
+                            'ADBE', 'NFLX', 'CSCO', 'INTC', 'CMCSA', 'PEP', 'COST', 'AVGO'
+                        ]);
+                        return nasdaqStocks.has(symbol) ? `NASDAQ:${symbol}` : `NYSE:${symbol}`;
+                    }
+                    
+                    return symbol;
+                }
+                
                 // Show and update news button
                 const buttonContainer = document.getElementById('button-container');
                 const newsButton = document.getElementById('news-button');
                 buttonContainer.classList.add('has-news');
                 newsButton.style.display = 'block';
-                newsButton.href = `/news/search?symbol=${data.ticker}`;
+                const tradingViewSymbol = convertYahooToTradingView(data.ticker);
+                newsButton.href = `/news/search?symbol=${tradingViewSymbol}`;
                 
                 // Configure Plotly layout for responsive display
                 const layout = data.layout;
