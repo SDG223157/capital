@@ -193,13 +193,15 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(255, 255, 255, 0.7);
+        background-color: rgba(255, 255, 255, 0.9);  /* Increase opacity */
         display: flex;
         justify-content: center;
         align-items: center;
         z-index: 1000;
         flex-direction: column;
         display: none;
+        backdrop-filter: none;  /* Remove any backdrop blur */
+        -webkit-backdrop-filter: none;  /* For Safari */
     }
     
     .spinner {
