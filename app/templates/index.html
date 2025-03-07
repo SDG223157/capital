@@ -416,41 +416,34 @@
                         suggestionsDiv.innerHTML = '';
                         
                         if (data.length > 0) {
-                            // Filter out results where symbol equals name
-                            const filteredData = data.filter(item => 
-                                item.symbol.toUpperCase() !== item.name.toUpperCase()
-                            );
-                            
-                            if (filteredData.length > 0) {
-                                filteredData.forEach(item => {
-                                    const div = document.createElement('div');
-                                    div.className = 'suggestion-item';
-                                    const formattedName = formatCompanyName(item.name);
-                                    
-                                    // Create separate spans for symbol and name
-                                    const symbolSpan = document.createElement('span');
-                                    symbolSpan.className = 'symbol';
-                                    symbolSpan.textContent = item.symbol;
-                                    
-                                    const nameSpan = document.createElement('span');
-                                    nameSpan.className = 'name';
-                                    nameSpan.textContent = formattedName;
-                                    
-                                    div.appendChild(symbolSpan);
-                                    div.appendChild(nameSpan);
-                                    
-                                    div.addEventListener('click', function() {
-                                        // Set input value to just the symbol
-                                        tickerInput.value = item.symbol;
-                                        suggestionsDiv.style.display = 'none';
-                                    });
-                                    
-                                    suggestionsDiv.appendChild(div);
+                            // Take only the first result
+                            const item = data[0];
+                            if (item.symbol.toUpperCase() !== item.name.toUpperCase()) {
+                                const div = document.createElement('div');
+                                div.className = 'suggestion-item';
+                                const formattedName = formatCompanyName(item.name);
+                                
+                                // Create separate spans for symbol and name
+                                const symbolSpan = document.createElement('span');
+                                symbolSpan.className = 'symbol';
+                                symbolSpan.textContent = item.symbol;
+                                
+                                const nameSpan = document.createElement('span');
+                                nameSpan.className = 'name';
+                                nameSpan.textContent = formattedName;
+                                
+                                div.appendChild(symbolSpan);
+                                div.appendChild(nameSpan);
+                                
+                                div.addEventListener('click', function() {
+                                    // Set input value to just the symbol
+                                    tickerInput.value = item.symbol;
+                                    suggestionsDiv.style.display = 'none';
                                 });
-                                suggestionsDiv.style.display = 'block';
-                            } else {
-                                suggestionsDiv.style.display = 'none';
+                                
+                                suggestionsDiv.appendChild(div);
                             }
+                            suggestionsDiv.style.display = 'block';
                         } else {
                             suggestionsDiv.style.display = 'none';
                         }
