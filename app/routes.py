@@ -320,8 +320,8 @@ def search_ticker():
             
             if is_valid:
                 # If symbol exists in TICKER_DICT, use that name instead
-                if symbol_to_check in TICKER_DICT:
-                    company_name = TICKER_DICT[symbol_to_check]
+                # if symbol_to_check in TICKER_DICT:
+                #     company_name = TICKER_DICT[symbol_to_check]
                 
                 if symbol_to_check.upper() != company_name.upper():  # Only add if symbol and name are different
                     search_results.append({
